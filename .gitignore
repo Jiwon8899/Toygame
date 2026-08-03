@@ -40,3 +40,10 @@ Desktop.ini
 
 # Local backups and generated verification output
 Backups/
+.plastic/
+.vsconfig
+*.slnx
+ignore.conf
+QA_M1_Fixed/
+QA_MainStreetSlice/
+ValidationReports/

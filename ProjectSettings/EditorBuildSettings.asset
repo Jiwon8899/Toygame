@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/PickAndPlaceShop/Scenes/PickAndPlaceShop_MainMenu.unity
+    guid: e9ec6409cb480e447b2a0ffe291dc02e
+  - enabled: 1
     path: Assets/PickAndPlaceShop/Scenes/PickAndPlaceShop_MainStreetSlice_Multiplayer.unity
     guid: c2f1128bb7201d04e877d2e9d62e791c
   m_configObjects:
