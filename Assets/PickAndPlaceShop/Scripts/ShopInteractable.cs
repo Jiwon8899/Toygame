@@ -14,6 +14,19 @@ namespace PickAndPlaceShop
         private ShopUpgradeTerminal upgradeTerminal;
 
         public ShopAction Action => action;
+        public Vector3 InteractionWorldPosition
+        {
+            get
+            {
+                CacheHandlers();
+                if (networkClaw != null) return networkClaw.OperatorWorldPosition;
+                if (gachaMachine != null) return gachaMachine.InteractionWorldPosition;
+                if (kujiStation != null) return kujiStation.InteractionWorldPosition;
+                if (districtPortal != null) return districtPortal.InteractionWorldPosition;
+                return transform.position;
+            }
+        }
+
         public string Prompt
         {
             get

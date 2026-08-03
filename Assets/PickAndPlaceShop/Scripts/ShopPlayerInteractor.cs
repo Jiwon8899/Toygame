@@ -7,7 +7,8 @@ namespace PickAndPlaceShop
     [RequireComponent(typeof(NetworkObject))]
     public sealed class ShopPlayerInteractor : NetworkBehaviour
     {
-        [SerializeField] private float interactionRange = 5f;
+        [SerializeField] private ShopOperationsConfig interactionConfig;
+        [SerializeField] private float interactionRange = 2.5f;
         [SerializeField] private float cameraRayPadding = 1f;
         [SerializeField, Range(-1f, 1f)] private float proximityFacingThreshold = 0.05f;
 
@@ -17,6 +18,19 @@ namespace PickAndPlaceShop
         private ShopInteractable currentTarget;
         private readonly RaycastHit[] rayHits = new RaycastHit[32];
         private readonly Collider[] nearbyColliders = new Collider[48];
+
+        public float EffectiveInteractionRange => interactionConfig != null
+            ? interactionConfig.InteractionDistance
+            : Mathf.Max(0.5f, interactionRange);
+
+        private float EffectiveFacingThreshold => interactionConfig != null
+            ? interactionConfig.InteractionFacingThreshold
+            : proximityFacingThreshold;
+
+        private void Awake()
+        {
+            if (interactionConfig == null) interactionConfig = ShopOperationsConfig.Load();
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -66,7 +80,8 @@ namespace PickAndPlaceShop
             Vector3 rayOrigin = playerCamera != null ? playerCamera.transform.position : playerCenter;
             Vector3 rayDirection = playerCamera != null ? playerCamera.transform.forward : transform.forward;
             float cameraToPlayer = Vector3.Distance(rayOrigin, playerCenter);
-            float rayDistance = interactionRange + cameraToPlayer + cameraRayPadding;
+            float range = EffectiveInteractionRange;
+            float rayDistance = range + cameraToPlayer + cameraRayPadding;
 
             int hitCount = Physics.RaycastNonAlloc(new Ray(rayOrigin, rayDirection), rayHits, rayDistance, ~0,
                 QueryTriggerInteraction.Collide);
@@ -76,8 +91,8 @@ namespace PickAndPlaceShop
                 RaycastHit hit = rayHits[index];
                 if (hit.collider == null || IsLocalPlayerCollider(hit.collider)) continue;
                 ShopInteractable candidate = hit.collider.GetComponentInParent<ShopInteractable>();
-                if (candidate == null || !IsWithinPlayerRange(hit.collider, playerCenter) ||
-                    hit.distance >= nearestRayHit) continue;
+                if (candidate == null || !IsWithinPlayerRange(candidate, playerCenter) ||
+                    !IsFacing(candidate, playerCenter, rayDirection) || hit.distance >= nearestRayHit) continue;
                 nearestRayHit = hit.distance;
                 currentTarget = candidate;
             }
@@ -92,7 +107,8 @@ namespace PickAndPlaceShop
 
         private ShopInteractable FindNearbyFacingTarget(Vector3 playerCenter, Vector3 facing)
         {
-            int count = Physics.OverlapSphereNonAlloc(playerCenter, interactionRange, nearbyColliders, ~0,
+            float range = EffectiveInteractionRange;
+            int count = Physics.OverlapSphereNonAlloc(playerCenter, range, nearbyColliders, ~0,
                 QueryTriggerInteraction.Collide);
             ShopInteractable best = null;
             float bestScore = float.MaxValue;
@@ -107,15 +123,15 @@ namespace PickAndPlaceShop
                 if (collider == null || IsLocalPlayerCollider(collider)) continue;
                 ShopInteractable candidate = collider.GetComponentInParent<ShopInteractable>();
                 if (candidate == null) continue;
-                Vector3 closest = collider.ClosestPoint(playerCenter);
-                Vector3 direction = Vector3.ProjectOnPlane(closest - playerCenter, Vector3.up);
+                Vector3 direction = Vector3.ProjectOnPlane(
+                    candidate.InteractionWorldPosition - playerCenter, Vector3.up);
                 float distance = direction.magnitude;
-                if (distance > interactionRange) continue;
+                if (distance > range) continue;
                 Vector3 normalizedDirection = distance <= 0.05f ? horizontalFacing : direction / distance;
                 float facingDot = distance <= 0.05f ? 1f : Mathf.Max(
                     Vector3.Dot(horizontalFacing, normalizedDirection),
                     Vector3.Dot(playerFacing, normalizedDirection));
-                if (facingDot < proximityFacingThreshold) continue;
+                if (facingDot < EffectiveFacingThreshold) continue;
                 float score = distance + (1f - facingDot) * 2f;
                 if (score >= bestScore) continue;
                 bestScore = score;
@@ -128,7 +144,17 @@ namespace PickAndPlaceShop
         private bool IsLocalPlayerCollider(Collider collider) =>
             collider.transform == transform || collider.transform.IsChildOf(transform);
 
-        private bool IsWithinPlayerRange(Collider collider, Vector3 playerCenter) =>
-            Vector3.Distance(playerCenter, collider.ClosestPoint(playerCenter)) <= interactionRange;
+        private bool IsWithinPlayerRange(ShopInteractable candidate, Vector3 playerCenter) =>
+            candidate != null && Vector3.Distance(playerCenter, candidate.InteractionWorldPosition) <=
+            EffectiveInteractionRange;
+
+        private bool IsFacing(ShopInteractable candidate, Vector3 playerCenter, Vector3 facing)
+        {
+            Vector3 horizontalFacing = Vector3.ProjectOnPlane(facing, Vector3.up).normalized;
+            Vector3 direction = Vector3.ProjectOnPlane(candidate.InteractionWorldPosition - playerCenter,
+                Vector3.up).normalized;
+            return direction.sqrMagnitude < 0.01f || horizontalFacing.sqrMagnitude < 0.01f ||
+                   Vector3.Dot(horizontalFacing, direction) >= EffectiveFacingThreshold;
+        }
     }
 }

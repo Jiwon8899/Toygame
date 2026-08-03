@@ -78,6 +78,10 @@ namespace PickAndPlaceShop
         [Range(1f, 2f)] [SerializeField] private float regularPriceMultiplier = 1.1f;
         [Range(0f, 1f)] [SerializeField] private float regularExtraPurchaseChance = 0.25f;
 
+        [Header("Interaction")]
+        [Min(0.5f)] [SerializeField] private float interactionDistance = 2.5f;
+        [Range(-1f, 1f)] [SerializeField] private float interactionFacingThreshold = 0.2f;
+
         [Header("Online orders")]
         [Min(1)] [SerializeField] private int orderUnlockExpansionLevel = 2;
         [Min(0)] [SerializeField] private int orderUnlockReputation = 10;
@@ -123,6 +127,8 @@ namespace PickAndPlaceShop
         public float SatisfactionRarityWeight => satisfactionRarityWeight;
         public float RegularPriceMultiplier => regularPriceMultiplier;
         public float RegularExtraPurchaseChance => regularExtraPurchaseChance;
+        public float InteractionDistance => Mathf.Max(0.5f, interactionDistance);
+        public float InteractionFacingThreshold => interactionFacingThreshold;
         public int OrderUnlockExpansionLevel => orderUnlockExpansionLevel;
         public int OrderUnlockReputation => orderUnlockReputation;
         public int BaseConcurrentOrders => baseConcurrentOrders;

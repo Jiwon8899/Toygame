@@ -41,6 +41,7 @@ namespace PickAndPlaceShop
 
         private void Awake()
         {
+            ShopInputModeManager.Push(this, ShopInputMode.Menu);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             Text title = Find<Text>("TitleText");
@@ -50,6 +51,11 @@ namespace PickAndPlaceShop
             RegisterButtons();
             PopulateResolutionDropdown();
             Show("MainPanel", "BtnMainStart");
+        }
+
+        private void OnDestroy()
+        {
+            ShopInputModeManager.Pop(this);
         }
 
         private void Start()

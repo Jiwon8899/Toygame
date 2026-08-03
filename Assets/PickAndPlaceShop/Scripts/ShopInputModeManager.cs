@@ -10,7 +10,8 @@ namespace PickAndPlaceShop
     {
         Gameplay,
         Claw,
-        UI
+        UI,
+        Menu
     }
 
     [DefaultExecutionOrder(-900)]
@@ -34,7 +35,7 @@ namespace PickAndPlaceShop
             instance != null ? instance.ResolveMode() : ShopInputMode.Gameplay;
         public static bool AllowsGameplay => CurrentMode == ShopInputMode.Gameplay;
         public static bool AllowsClaw => CurrentMode == ShopInputMode.Claw;
-        public static bool IsUiOpen => CurrentMode == ShopInputMode.UI;
+        public static bool IsUiOpen => IsPointerFreeMode(CurrentMode);
         public static bool SuppressLookThisFrame => instance != null && instance.suppressLookFrames > 0;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -106,11 +107,12 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            bool returningToLockedPointer = next != ShopInputMode.UI;
+            bool pointerFree = IsPointerFreeMode(next);
+            bool returningToLockedPointer = !pointerFree;
             appliedMode = next;
             appliedOnce = true;
-            Cursor.lockState = next == ShopInputMode.UI ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = next == ShopInputMode.UI;
+            Cursor.lockState = pointerFree ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = pointerFree;
             if (returningToLockedPointer) suppressLookFrames = Mathf.Max(suppressLookFrames, 1);
             ApplyLocalPlayerInput(next);
         }
@@ -147,5 +149,8 @@ namespace PickAndPlaceShop
             }
             if (interactor != null) interactor.enabled = gameplay;
         }
+
+        private static bool IsPointerFreeMode(ShopInputMode mode) =>
+            mode == ShopInputMode.UI || mode == ShopInputMode.Menu;
     }
 }

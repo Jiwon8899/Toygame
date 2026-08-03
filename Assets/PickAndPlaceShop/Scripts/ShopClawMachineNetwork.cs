@@ -248,6 +248,7 @@ namespace PickAndPlaceShop
 
         public override void OnDestroy()
         {
+            ExitLocalMode();
             if (aimGroundMarker != null) Destroy(aimGroundMarker);
             if (Instance == this) Instance = null;
             if (LocalActiveMachine == this) LocalActiveMachine = null;
@@ -1208,10 +1209,11 @@ namespace PickAndPlaceShop
 
         private void ExitLocalMode()
         {
-            if (!localMode) return;
+            bool wasLocal = localMode;
             localMode = false;
             ShopInputModeManager.Pop(this);
             if (LocalActiveMachine == this) LocalActiveMachine = null;
+            if (!wasLocal) return;
             if (operatorCamera != null) operatorCamera.enabled = false;
             if (operatorListener != null) operatorListener.enabled = false;
             if (previousCamera != null) previousCamera.enabled = true;

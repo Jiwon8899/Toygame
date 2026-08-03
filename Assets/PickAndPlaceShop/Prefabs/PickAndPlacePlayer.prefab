@@ -3338,7 +3338,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopPlayerInteractor
   ShowTopMostFoldoutHeaderGroup: 1
-  interactionRange: 5
+  interactionRange: 2.5
   cameraRayPadding: 1
   proximityFacingThreshold: 0.05
 --- !u!114 &6069469466537307360
