@@ -498,7 +498,7 @@ namespace PickAndPlaceShop
                 {
                     progression.RecordSale(product != null ? "product:" + product.ProductId : "sale:unknown",
                         product != null ? product.DisplayName : "상품",
-                        product != null ? product.Category.ToString().ToLowerInvariant() : "general",
+                        product != null ? ShopProductLocalization.CategoryId(product.Category) : "cat_goods",
                         price, product != null && product.Rarity >= ShopProductRarity.Rare, satisfaction);
                 }
                 ShopLiveOperationsNetwork.Instance?.ServerRecordCustomerPurchase(customer.CustomerId,

@@ -13,21 +13,71 @@ MonoBehaviour:
   m_Name: Gacha_Limited
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopGachaMachineConfig
   machineId: gacha_limited
-  displayName: "\uC624\uB298\uC758 \uD55C\uC815 \uAC00\uCC60"
+  displayName: "\uACC4\uC808 \uB0E5\uC774 \uAC00\uCC60"
   attemptCost: 150
   dailyStock: 10
   uncommonChance: 0.25
   rareChance: 0.18
   commonProducts:
-  - "\uD55C\uC815 \uB9AC\uBCF8 \uBC30\uC9C0"
+  - "\uB098\uBE44 \uB0E5\uC774"
+  - "\uD2A4\uB9BD \uB0E5\uC774"
+  - "\uC0C8\uCE5C\uAD6C \uB0E5\uC774"
+  - "\uBE59\uC218 \uB0E5\uC774"
+  - "\uC120\uAE00\uB77C\uC2A4 \uB0E5\uC774"
+  - "\uC544\uC774\uC2A4\uBC14 \uB0E5\uC774"
+  - "\uBD80\uCC44\uC9C8 \uB0E5\uC774"
+  - "\uAD70\uACE0\uAD6C\uB9C8 \uB0E5\uC774"
+  - "\uBC84\uC12F \uB0E5\uC774"
+  - "\uC218\uD655 \uB0E5\uC774"
+  - "\uCF54\uCF54\uC544 \uB0E5\uC774"
+  - "\uB208\uAF43\uC6B0\uC0B0 \uB0E5\uC774"
   uncommonProducts:
-  - "\uD30C\uC2A4\uD154 \uBCC4 \uD53C\uADDC\uC5B4"
+  - "\uC18C\uD48D \uB0E5\uC774"
+  - "\uBD04\uBAA8\uC790 \uB0E5\uC774"
+  - "\uBC00\uC9DA\uBAA8\uC790 \uB0E5\uC774"
+  - "\uBE44\uCE58\uBCFC \uB0E5\uC774"
+  - "\uB3C5\uC11C \uB0E5\uC774"
+  - "\uB099\uC5FD \uB0E5\uC774"
+  - "\uBAA9\uB3C4\uB9AC \uB0E5\uC774"
+  - "\uADC0\uB3C4\uB9AC \uB0E5\uC774"
   rareProducts:
-  - "\uC624\uB85C\uB77C \uD1A0\uB07C \uD55C\uC815\uD310"
+  - "\uD654\uAD00 \uB0E5\uC774"
+  - "\uC218\uBC15 \uB0E5\uC774"
+  - "\uD29C\uBE0C \uB0E5\uC774"
+  - "\uB2E8\uD48D \uB0E5\uC774"
+  - "\uB3C4\uD1A0\uB9AC \uB0E5\uC774"
+  - "\uB208\uC0AC\uB78C \uB0E5\uC774"
+  - "\uC120\uBB3C \uB0E5\uC774"
+  - "\uC370\uB9E4 \uB0E5\uC774"
   commonProductDefinitions:
-  - {fileID: 11400000, guid: 67ff379aa4e5ee74c9aa4f98325527be, type: 2}
+  - {fileID: 11400000, guid: fefe921d1e2ed9f468ac8b41a06bea14, type: 2}
+  - {fileID: 11400000, guid: 2aed368d285bb3d4cba66f8e51d2d6c7, type: 2}
+  - {fileID: 11400000, guid: dd93e5df1910197428d203e8b4e9f6cf, type: 2}
+  - {fileID: 11400000, guid: 0c93080fd9a3b9344981de121ebd912e, type: 2}
+  - {fileID: 11400000, guid: 39977c3d9f194104a970f48b6fc220b5, type: 2}
+  - {fileID: 11400000, guid: 938a0e747cf126f4a91e48e285f67bac, type: 2}
+  - {fileID: 11400000, guid: c092a2568c8af114cad6c2c5aa34d1a4, type: 2}
+  - {fileID: 11400000, guid: 8b18f4148a4c8184e92af18cd5ce3f12, type: 2}
+  - {fileID: 11400000, guid: 9ffef5113b64ac94fb8d65046aa0e87e, type: 2}
+  - {fileID: 11400000, guid: 39b5558e70cc4a04f923b5c8e261f048, type: 2}
+  - {fileID: 11400000, guid: 38a7131b3f69085458e474556c572205, type: 2}
+  - {fileID: 11400000, guid: c2b9c3a745ac53b4c8dba85804dff4eb, type: 2}
   uncommonProductDefinitions:
-  - {fileID: 11400000, guid: 33c0d32d15c9e1546b538e435f4d9479, type: 2}
+  - {fileID: 11400000, guid: db484a5ab0cd8fc4baa9a4decc4e5d35, type: 2}
+  - {fileID: 11400000, guid: 81d3867f4b6430e4d8d440faf17db14e, type: 2}
+  - {fileID: 11400000, guid: c89c02d3146ab3146bbf2622be582f76, type: 2}
+  - {fileID: 11400000, guid: d2808da08ebbfef489cc710ad3c2ab92, type: 2}
+  - {fileID: 11400000, guid: 2fcd04c27f53e8b40adfbc4133eb494c, type: 2}
+  - {fileID: 11400000, guid: dca730377bb5f6d49b141aaede2a2284, type: 2}
+  - {fileID: 11400000, guid: 123b4b3402061d44f80f16c85fd32978, type: 2}
+  - {fileID: 11400000, guid: c3b96d42d6e6f7a4ca5320b426b7af77, type: 2}
   rareProductDefinitions:
-  - {fileID: 11400000, guid: 46b2dcc2593944144831480e04202caf, type: 2}
-  capsuleColor: {r: 1, g: 0.38, b: 0.72, a: 1}
+  - {fileID: 11400000, guid: 684ab9eba4fb84c4badad3cf2ca5460e, type: 2}
+  - {fileID: 11400000, guid: f0e7a21418cb6924f87e53b0af073839, type: 2}
+  - {fileID: 11400000, guid: 787338c25ba65da46a8f3f6bd83d3d2d, type: 2}
+  - {fileID: 11400000, guid: 8851434318c1d1a4dae96ceb81aa7073, type: 2}
+  - {fileID: 11400000, guid: 406335ddda834b045ac7a41809b47081, type: 2}
+  - {fileID: 11400000, guid: 777ada2a0c0bf1242b5c2d3e81057485, type: 2}
+  - {fileID: 11400000, guid: 171b4182ffb249b4e88d96f2e685ef5e, type: 2}
+  - {fileID: 11400000, guid: 6142910122e1ad244a12d49ded440cad, type: 2}
+  capsuleColor: {r: 1, g: 0.44, b: 0.72, a: 1}

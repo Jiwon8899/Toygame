@@ -11,7 +11,12 @@ namespace PickAndPlaceShop
         Space,
         Retro,
         Seasonal,
-        Other
+        Other,
+        CatPlush,
+        CatFigure,
+        CatGoods,
+        CatSeasonal,
+        CatRetro
     }
 
     public enum ShopProductRarity
@@ -50,6 +55,7 @@ namespace PickAndPlaceShop
         [SerializeField] private GameObject prizePrefab;
         [SerializeField] private ShopPrizePhysicsProfile physicsProfile;
         [Min(1)] [SerializeField] private int maxStack = 10;
+        [SerializeField] private bool placeholderArtwork;
 
         public int ProductId => productId;
         public string DisplayName => displayName;
@@ -64,6 +70,7 @@ namespace PickAndPlaceShop
         public GameObject PrizePrefab => prizePrefab;
         public ShopPrizePhysicsProfile PhysicsProfile => physicsProfile;
         public int MaxStack => Mathf.Max(1, maxStack);
+        public bool PlaceholderArtwork => placeholderArtwork;
 
 #if UNITY_EDITOR
         public void EditorConfigure(int id, string label, ShopProductCategory productCategory, int price,
@@ -86,6 +93,9 @@ namespace PickAndPlaceShop
             physicsProfile = profile;
             maxStack = Mathf.Max(1, stackLimit);
         }
+
+        public void EditorSetPlaceholderArtwork(bool placeholder) =>
+            placeholderArtwork = placeholder;
 #endif
     }
 }

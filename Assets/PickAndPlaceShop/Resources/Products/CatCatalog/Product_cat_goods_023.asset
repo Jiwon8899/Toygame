@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 746e9bdbf3621b64aa77dd9acfd77ae8, type: 3}
+  m_Name: Product_cat_goods_023
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProductDefinition
+  productId: 5113
+  displayName: "\uB204\uC6B4\uB0E5 \uC813\uAC00\uB77D\uBC1B\uCE68"
+  category: 10
+  salePrice: 160
+  rarity: 0
+  condition: 2
+  giftWrappable: 1
+  stableItemId: cat_goods_023
+  prizePrefab: {fileID: 0}
+  physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  maxStack: 10
+  placeholderArtwork: 1

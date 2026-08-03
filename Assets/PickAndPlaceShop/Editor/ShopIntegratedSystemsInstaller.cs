@@ -62,55 +62,7 @@ namespace PickAndPlaceShop.Editor
 
         private static void ConfigureCatalog()
         {
-            const string path = "Assets/PickAndPlaceShop/Resources/Progression/ShopProgressionCatalog.asset";
-            ShopProgressionCatalog catalog = AssetDatabase.LoadAssetAtPath<ShopProgressionCatalog>(path);
-            if (catalog == null) return;
-
-            List<ShopCollectionCategory> categories = new()
-            {
-                new("animal", "동물"), new("space", "우주"), new("retro", "레트로"),
-                new("seasonal", "계절"), new("other", "기타")
-            };
-            int[] categoryCounts = { 50, 40, 40, 30, 40 };
-            string[] categoryIds = { "animal", "space", "retro", "seasonal", "other" };
-            List<ShopCollectionItem> items = new(200);
-            int itemIndex = 0;
-            for (int category = 0; category < categoryCounts.Length; category++)
-            {
-                for (int number = 1; number <= categoryCounts[category]; number++, itemIndex++)
-                {
-                    ShopProgressRarity rarity = itemIndex < 110 ? ShopProgressRarity.Common :
-                        itemIndex < 150 ? ShopProgressRarity.Uncommon :
-                        itemIndex < 190 ? ShopProgressRarity.Rare : ShopProgressRarity.Premium;
-                    items.Add(new ShopCollectionItem(
-                        "collection:" + categoryIds[category] + ":" + number.ToString("000"),
-                        categories[category].DisplayName + " 수집품 " + number.ToString("000"),
-                        categoryIds[category], rarity));
-                }
-            }
-
-            List<ShopDistrictUnlock> districts = new();
-            foreach (ShopDistrictUnlock district in catalog.DistrictUnlocks)
-            {
-                if (district == null) continue;
-                string label = district.DisplayName;
-                bool provisional = false;
-                if (label.Contains("잠긴 건물")) { label = "옛 문구점"; provisional = true; }
-                else if (label.Contains("두 번째 거리")) { label = "벚꽃길"; provisional = true; }
-                else if (label.Contains("세 번째 상권")) { label = "강변 상가"; provisional = true; }
-                else if (label == "Collector Street") { label = "수집가의 거리"; provisional = true; }
-                districts.Add(new ShopDistrictUnlock(district.DistrictId, label,
-                    district.RequiredReputation, district.Placeholder, provisional));
-            }
-
-            const string decisions =
-                "확정: 스택 10개, 캡슐 희귀도 선결정/상품 후결정, 기계 기준 이동, " +
-                "하루 8분(준비2/영업5/마감1), 고유 손님 30명, 단골 3회, 일일 유행 +15%, " +
-                "포장대 Lv2·평판10, 자동화 평판40. 가제 지명은 provisionalName으로 표시.";
-            catalog.EditorConfigure(decisions, catalog.Stages, catalog.ExpansionTiers, districts,
-                items, catalog.GoalPool, catalog.CollectionMilestones, catalog.MasteryTiers,
-                catalog.DailyGoalCount, catalog.WeeklyGoalCount, categories);
-            EditorUtility.SetDirty(catalog);
+            ShopCatThemeCatalogBuilder.Apply();
         }
 
         private static void ConfigureMachineConfigs()

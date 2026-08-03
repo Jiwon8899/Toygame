@@ -24,6 +24,10 @@ namespace PickAndPlaceShop
         [SerializeField] private ShopProductDefinition dPrizeDefinition;
         [SerializeField] private ShopProductDefinition lastPrizeDefinition;
         [SerializeField] private ShopProductDefinition ceilingPrizeDefinition;
+        [SerializeField] private ShopProductDefinition[] commonCatalog = System.Array.Empty<ShopProductDefinition>();
+        [SerializeField] private ShopProductDefinition[] uncommonCatalog = System.Array.Empty<ShopProductDefinition>();
+        [SerializeField] private ShopProductDefinition[] rareCatalog = System.Array.Empty<ShopProductDefinition>();
+        [SerializeField] private ShopProductDefinition[] premiumCatalog = System.Array.Empty<ShopProductDefinition>();
 
         public string PoolId => poolId;
         public string DisplayName => displayName;
@@ -35,23 +39,45 @@ namespace PickAndPlaceShop
         public ShopProductDefinition LastPrizeDefinition => lastPrizeDefinition;
         public ShopProductDefinition CeilingPrizeDefinition => ceilingPrizeDefinition;
 
-        public string PrizeFor(ShopKujiRank rank) => rank switch
-        {
-            ShopKujiRank.S => sPrize,
-            ShopKujiRank.A => aPrize,
-            ShopKujiRank.B => bPrize,
-            ShopKujiRank.C => cPrize,
-            _ => dPrize
-        };
+        public string PrizeFor(ShopKujiRank rank) => PrizeFor(rank, 0);
 
-        public ShopProductDefinition PrizeDefinitionFor(ShopKujiRank rank) => rank switch
+        public string PrizeFor(ShopKujiRank rank, int attemptId)
         {
-            ShopKujiRank.S => sPrizeDefinition,
-            ShopKujiRank.A => aPrizeDefinition,
-            ShopKujiRank.B => bPrizeDefinition,
-            ShopKujiRank.C => cPrizeDefinition,
-            _ => dPrizeDefinition
-        };
+            ShopProductDefinition definition = PrizeDefinitionFor(rank, attemptId);
+            if (definition != null) return definition.DisplayName;
+            return rank switch
+            {
+                ShopKujiRank.S => sPrize,
+                ShopKujiRank.A => aPrize,
+                ShopKujiRank.B => bPrize,
+                ShopKujiRank.C => cPrize,
+                _ => dPrize
+            };
+        }
+
+        public ShopProductDefinition PrizeDefinitionFor(ShopKujiRank rank) =>
+            PrizeDefinitionFor(rank, 0);
+
+        public ShopProductDefinition PrizeDefinitionFor(ShopKujiRank rank, int attemptId)
+        {
+            ShopProductDefinition[] catalog = rank switch
+            {
+                ShopKujiRank.S => premiumCatalog,
+                ShopKujiRank.A => rareCatalog,
+                ShopKujiRank.B => uncommonCatalog,
+                _ => commonCatalog
+            };
+            if (catalog != null && catalog.Length > 0)
+                return catalog[Mathf.Abs(attemptId) % catalog.Length];
+            return rank switch
+            {
+                ShopKujiRank.S => sPrizeDefinition,
+                ShopKujiRank.A => aPrizeDefinition,
+                ShopKujiRank.B => bPrizeDefinition,
+                ShopKujiRank.C => cPrizeDefinition,
+                _ => dPrizeDefinition
+            };
+        }
 
 #if UNITY_EDITOR
         public void EditorConfigure(string id, string label, int price, ShopKujiStock stock,
@@ -89,6 +115,16 @@ namespace PickAndPlaceShop
             dPrize = d != null ? d.DisplayName : string.Empty;
             lastPrize = last != null ? last.DisplayName : string.Empty;
             ceilingPrize = ceiling != null ? ceiling.DisplayName : string.Empty;
+        }
+
+        public void EditorConfigureCatalog(ShopProductDefinition[] common,
+            ShopProductDefinition[] uncommon, ShopProductDefinition[] rare,
+            ShopProductDefinition[] premium)
+        {
+            commonCatalog = common ?? System.Array.Empty<ShopProductDefinition>();
+            uncommonCatalog = uncommon ?? System.Array.Empty<ShopProductDefinition>();
+            rareCatalog = rare ?? System.Array.Empty<ShopProductDefinition>();
+            premiumCatalog = premium ?? System.Array.Empty<ShopProductDefinition>();
         }
 #endif
     }

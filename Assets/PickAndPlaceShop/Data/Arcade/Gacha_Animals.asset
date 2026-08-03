@@ -13,23 +13,69 @@ MonoBehaviour:
   m_Name: Gacha_Animals
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopGachaMachineConfig
   machineId: gacha_animals
-  displayName: "\uB3D9\uBB3C \uCE5C\uAD6C\uB4E4 \uAC00\uCC60"
+  displayName: "\uB0E5\uB0E5 \uD504\uB80C\uC988 \uAC00\uCC60"
   attemptCost: 80
   dailyStock: 16
   uncommonChance: 0.25
   rareChance: 0.06
   commonProducts:
-  - "\uACE0\uC591\uC774 \uD0A4\uB9C1"
-  - "\uAC15\uC544\uC9C0 \uBC30\uC9C0"
+  - "\uACF5\uB8E1\uC7A0\uC637 \uB0E5\uC774"
+  - "\uAC1C\uAD6C\uB9AC\uC7A0\uC637 \uB0E5\uC774"
+  - "\uAFC0\uBC8C \uB0E5\uC774"
+  - "\uBB34\uB2F9\uBC8C\uB808 \uB0E5\uC774"
+  - "\uC0C1\uC5B4\uC7A0\uC637 \uB0E5\uC774"
+  - "\uD1A0\uB07C\uC7A0\uC637 \uB0E5\uC774"
+  - "\uD310\uB2E4\uC7A0\uC637 \uB0E5\uC774"
+  - "\uAD50\uBCF5 \uB0E5\uC774"
+  - "\uBE7C\uAF3C\uB0E5 \uC2A4\uD2F0\uCEE4"
+  - "\uC9C0\uD37C\uC785 \uB3D9\uC804\uC9C0\uAC11"
+  - "\uD3F0 \uBC1B\uCE68 \uB0E5\uC774"
+  - "\uBC1C\uB3C4\uC7A5 \uB178\uD2B8"
+  - "\uC549\uC740\uB0E5 \uC9C0\uC6B0\uAC1C"
+  - "\uB0E5\uADC0 \uD5E4\uC5B4\uD540"
+  - "\uB6B1\uB0E5 \uC790\uC11D"
+  - "\uB300\uB871\uB0E5 \uCC45\uAC08\uD53C"
+  - "\uC549\uC740\uB0E5 \uCE94\uB4E4"
+  - "\uB0E5\uC774 \uBD80\uCC44"
+  - "\uB0E5\uC774 \uC5BC\uAD74 \uB124\uC784\uD0DD"
+  - "\uBC1C\uBC14\uB2E5 \uC591\uB9D0"
   uncommonProducts:
-  - "\uD1A0\uB07C \uD53C\uADDC\uC5B4"
+  - "\uC719\uD06C\uB0E5 \uBC30\uC9C0"
+  - "\uC2E4\uB8E8\uC5E3 \uC5D0\uCF54\uBC31"
+  - "\uB0E5\uC774 \uCEA1 \uBCFC\uD39C"
+  - "\uB0E5\uADC0 \uC190\uAC70\uC6B8"
   rareProducts:
-  - "\uBCC4\uBE5B \uC5EC\uC6B0 \uD55C\uC815\uD310"
+  - "\uB0E5\uC774 \uD0A4\uB9C1"
+  - "\uC7A0\uB0E5 \uCFE0\uC158"
+  - "\uB0E5\uBC1C \uC2AC\uB9AC\uD37C"
   commonProductDefinitions:
-  - {fileID: 11400000, guid: 140736dca7f31f947a60b57f2ecbf48f, type: 2}
-  - {fileID: 11400000, guid: be3c9bd1b6a764a4fac775021fb2d91b, type: 2}
+  - {fileID: 11400000, guid: e6c4381896b24b043bc0b63e9cda46cd, type: 2}
+  - {fileID: 11400000, guid: 44f7f7ab8f479bc4890644549f8c7bab, type: 2}
+  - {fileID: 11400000, guid: ae03616bea072044db0a4b4b8502583b, type: 2}
+  - {fileID: 11400000, guid: 23d616a5b1ce91341a69a3df195611af, type: 2}
+  - {fileID: 11400000, guid: 14e470f31c324924d8f74c229ebaeb8d, type: 2}
+  - {fileID: 11400000, guid: 007ae74a1e7012843b0c058e9b9ebdac, type: 2}
+  - {fileID: 11400000, guid: 19868b25654f13e46842baea612cd289, type: 2}
+  - {fileID: 11400000, guid: e566bbeeec3130e45989299485156f2d, type: 2}
+  - {fileID: 11400000, guid: 683f729462b8d8546933f9ac17ae9102, type: 2}
+  - {fileID: 11400000, guid: ef21a8d2a5f0dcb49b693e5d3bf2ff4e, type: 2}
+  - {fileID: 11400000, guid: 94f3c5ade817cb04388145db2b77ae77, type: 2}
+  - {fileID: 11400000, guid: 4520ae33e24192b488654edc5774b60c, type: 2}
+  - {fileID: 11400000, guid: 5587aca7d98422b46a4eae7c8423ca82, type: 2}
+  - {fileID: 11400000, guid: d2ed9351ae5c1fb49ac760f290828035, type: 2}
+  - {fileID: 11400000, guid: 11ac070e73482fa41a3fcf9128da0418, type: 2}
+  - {fileID: 11400000, guid: 68ea814bff593bb4589c20c796eed087, type: 2}
+  - {fileID: 11400000, guid: 04377da0a9be9c94cae33aa520cb1527, type: 2}
+  - {fileID: 11400000, guid: 8cb1744093870a44c952352412fc89c7, type: 2}
+  - {fileID: 11400000, guid: a3f78951b88ad1a41b99fdf99ef90b28, type: 2}
+  - {fileID: 11400000, guid: 80b1949aed884c04591716c147a49dd4, type: 2}
   uncommonProductDefinitions:
-  - {fileID: 11400000, guid: 17accdea2605ffb439e528149ba0a996, type: 2}
+  - {fileID: 11400000, guid: c78147e24c0d1c845bb37473dcc80c43, type: 2}
+  - {fileID: 11400000, guid: 324a62649abc84c4395a8427619231d8, type: 2}
+  - {fileID: 11400000, guid: 6be35070346641f4c9e262bfbdf293a2, type: 2}
+  - {fileID: 11400000, guid: 3b01f1de93a0fab48bae7b3a8573a57f, type: 2}
   rareProductDefinitions:
-  - {fileID: 11400000, guid: b3aecb74017532d4a9d535ea9f405f97, type: 2}
-  capsuleColor: {r: 0.28, g: 0.86, b: 0.72, a: 1}
+  - {fileID: 11400000, guid: c3f7baa555f2a8b44a9e967acb33d583, type: 2}
+  - {fileID: 11400000, guid: 956fda14866a2174d839f1187e8266df, type: 2}
+  - {fileID: 11400000, guid: c21cf52a76e22ae4db05b58c28423e3e, type: 2}
+  capsuleColor: {r: 0.35, g: 0.86, b: 0.72, a: 1}

@@ -1,0 +1,201 @@
+﻿id,display_name,category_id,category_name,rarity,rarity_name,sale_price,placeholder
+cat_plush_001,"치즈냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_002,"치즈냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_003,"치즈냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_004,"치즈냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_005,"치즈냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_006,"까망냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_007,"까망냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_008,"까망냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_009,"까망냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_010,"까망냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_011,"하양냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_012,"하양냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_013,"하양냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_014,"하양냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_015,"하양냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_016,"회색냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_017,"회색냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_018,"회색냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_019,"회색냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_020,"회색냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_021,"삼색냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_022,"삼색냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_023,"삼색냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_024,"삼색냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_025,"삼색냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_026,"턱시도냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_027,"턱시도냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_028,"턱시도냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_029,"턱시도냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_030,"턱시도냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_031,"샴냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_032,"샴냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_033,"샴냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_034,"샴냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_035,"샴냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_036,"블루냥 앉은 인형",cat_plush,"고양이 인형",Uncommon,고급,280,true
+cat_plush_037,"블루냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_038,"블루냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_039,"블루냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_040,"블루냥 기지개 인형",cat_plush,"고양이 인형",Rare,희귀,480,true
+cat_plush_041,"줄무늬냥 앉은 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_042,"줄무늬냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_043,"줄무늬냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_044,"줄무늬냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_045,"줄무늬냥 기지개 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_046,"크림냥 앉은 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_047,"크림냥 잠자는 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_048,"크림냥 식빵 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_049,"크림냥 벌러덩 인형",cat_plush,"고양이 인형",Common,일반,160,true
+cat_plush_050,"크림냥 기지개 인형",cat_plush,"고양이 인형",UltraRare,초희귀,800,true
+cat_figure_001,"우주비행사 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_002,"요리사 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_003,"마법사 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_004,"해적 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_005,"소방관 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_006,"경찰 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_007,"의사 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_008,"닌자 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_009,"사무라이 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_010,"기사 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_011,"발레리나 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_012,"록스타 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_013,"탐정 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_014,"화가 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_015,"야구 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_016,"축구 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_017,"수영 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_018,"스키 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_019,"카우보이 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_020,"임금님 냥이",cat_figure,"고양이 피규어",UltraRare,초희귀,800,true
+cat_figure_021,"천사 냥이",cat_figure,"고양이 피규어",UltraRare,초희귀,800,true
+cat_figure_022,"악마 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_023,"공룡잠옷 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_024,"개구리잠옷 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_025,"꿀벌 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_026,"무당벌레 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_027,"상어잠옷 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_028,"토끼잠옷 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_029,"판다잠옷 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_030,"교복 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_031,"과학자 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_032,"바리스타 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_033,"집배원 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_034,"정원사 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_035,"낚시꾼 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_036,"레이서 냥이",cat_figure,"고양이 피규어",Uncommon,고급,280,true
+cat_figure_037,"파일럿 냥이",cat_figure,"고양이 피규어",Rare,희귀,480,true
+cat_figure_038,"세일러 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_039,"바이킹 냥이",cat_figure,"고양이 피규어",Common,일반,160,true
+cat_figure_040,"히어로 냥이",cat_figure,"고양이 피규어",UltraRare,초희귀,800,true
+cat_goods_001,"냥이 얼굴 머그",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_goods_002,"꼬리 손잡이 머그",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_003,"발자국 접시",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_004,"냥귀 유리컵",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_005,"냥이 키링",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_goods_006,"윙크냥 배지",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_007,"빼꼼냥 스티커",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_008,"잠냥 쿠션",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_goods_009,"지퍼입 동전지갑",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_010,"실루엣 에코백",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_011,"폰 받침 냥이",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_012,"냥이 캡 볼펜",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_013,"발도장 노트",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_014,"앉은냥 지우개",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_015,"냥귀 헤어핀",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_016,"냥이 얼굴 코스터",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_017,"꼬리 시계",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_018,"뚱냥 저금통",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_goods_019,"발바닥 비누받침",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_020,"하품냥 칫솔꽂이",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_021,"냥귀 그릇",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_022,"냥이 숟가락",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_023,"누운냥 젓가락받침",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_024,"뚱냥 자석",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_025,"대롱냥 책갈피",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_026,"앉은냥 캔들",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_027,"냥귀 손거울",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_028,"냥이 부채",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_029,"냥이 얼굴 네임택",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_030,"냥발 슬리퍼",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_goods_031,"발바닥 양말",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_032,"냥주머니 앞치마",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_033,"냥발 오븐장갑",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_034,"냥이 도시락",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_goods_035,"냥귀 물병",cat_goods,"냥냥 잡화",Uncommon,고급,280,true
+cat_goods_036,"꼬리 보온병",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_goods_037,"냥가족 쟁반",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_038,"길쭉냥 티슈케이스",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_039,"꼬리 열쇠걸이",cat_goods,"냥냥 잡화",Common,일반,160,true
+cat_goods_040,"냥이 정리함",cat_goods,"냥냥 잡화",Rare,희귀,480,true
+cat_seasonal_001,"벚꽃 냥이",cat_seasonal,"계절 한정 냥이",UltraRare,초희귀,800,true
+cat_seasonal_002,"화관 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_003,"소풍 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_004,"나비 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_005,"튤립 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_006,"봄모자 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_007,"새친구 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_008,"수박 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_009,"튜브 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_010,"밀짚모자 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_011,"빙수 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_012,"선글라스 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_013,"비치볼 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_014,"아이스바 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_015,"부채질 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_016,"단풍 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_017,"도토리 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_018,"독서 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_019,"군고구마 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_020,"낙엽 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_021,"버섯 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_022,"수확 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_023,"산타 냥이",cat_seasonal,"계절 한정 냥이",UltraRare,초희귀,800,true
+cat_seasonal_024,"눈사람 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_025,"목도리 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_026,"선물 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_027,"코코아 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_seasonal_028,"귀도리 냥이",cat_seasonal,"계절 한정 냥이",Uncommon,고급,280,true
+cat_seasonal_029,"썰매 냥이",cat_seasonal,"계절 한정 냥이",Rare,희귀,480,true
+cat_seasonal_030,"눈꽃우산 냥이",cat_seasonal,"계절 한정 냥이",Common,일반,160,true
+cat_retro_001,"브라운관 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_002,"다이얼전화 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_003,"카세트 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_004,"붐박스 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_005,"LP 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_006,"오락기 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_007,"게임패드 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_008,"픽셀액자 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_009,"폴라로이드 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_010,"필름카메라 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_011,"타자기 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_012,"자명종 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_013,"주크박스 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_014,"네온사인 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_015,"자판기 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_016,"뽑기통 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_017,"다루마 냥이",cat_retro,"레트로 냥이",UltraRare,초희귀,800,true
+cat_retro_018,"마네키네코 냥이",cat_retro,"레트로 냥이",UltraRare,초희귀,800,true
+cat_retro_019,"종이등 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_020,"종이접기 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_021,"목마 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_022,"양철로봇 냥이",cat_retro,"레트로 냥이",Rare,희귀,480,true
+cat_retro_023,"만화경 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_024,"오르골 냥이",cat_retro,"레트로 냥이",UltraRare,초희귀,800,true
+cat_retro_025,"스노우볼 냥이",cat_retro,"레트로 냥이",UltraRare,초희귀,800,true
+cat_retro_026,"우표 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_027,"우체통 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_028,"우유병 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_029,"병뚜껑 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_030,"성냥갑 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_031,"구슬 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_032,"라무네 냥이",cat_retro,"레트로 냥이",Uncommon,고급,280,true
+cat_retro_033,"불량식품 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_034,"딱지 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_035,"켄다마 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_036,"팽이 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_037,"운세쪽지 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_038,"주판 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_039,"책가방 냥이",cat_retro,"레트로 냥이",Common,일반,160,true
+cat_retro_040,"스쿠터 냥이",cat_retro,"레트로 냥이",Common,일반,160,true

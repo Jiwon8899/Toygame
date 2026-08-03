@@ -29,7 +29,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> AppearanceIndex = new(0);
         public NetworkVariable<FixedString64Bytes> PersistentCustomerId =
             new(new FixedString64Bytes("customer:unassigned"));
-        public NetworkVariable<int> PreferredCategory = new((int)ShopProductCategory.Other);
+        public NetworkVariable<int> PreferredCategory = new((int)ShopProductCategory.CatGoods);
 
         [Header("Appearance")]
         [SerializeField] private Transform appearanceRoot;
@@ -99,7 +99,8 @@ namespace PickAndPlaceShop
         {
             ServerInitialize(archetype, budget, entrance, firstBrowsePoint,
                 new ShopCustomerProfileSelection("customer:" + NetworkObjectId,
-                    archetype != null ? archetype.PreferredCategory : ShopProductCategory.Other, 0, 70));
+                    archetype != null && ShopProductLocalization.IsCatTheme(archetype.PreferredCategory)
+                        ? archetype.PreferredCategory : ShopProductCategory.CatGoods, 0, 70));
         }
 
         public void ServerInitialize(ShopCustomerArchetypeDefinition archetype, int budget,

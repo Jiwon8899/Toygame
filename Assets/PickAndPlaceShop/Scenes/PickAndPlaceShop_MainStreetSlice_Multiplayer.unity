@@ -4960,7 +4960,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 278883375}
-  m_Text: "\uBCC4\uBE5B \uD504\uB9AC\uBBF8\uC5C4"
+  m_Text: "\uB0E5\uB0E5 \uD504\uB9AC\uBBF8\uC5C4"
   m_OffsetZ: 0
   m_CharacterSize: 0.07
   m_LineSpacing: 1
@@ -5625,7 +5625,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uBCC4\uBE5B \uAC00\uCC60\uAD00 \xB7 \uAC00\uCC60 4\uC885 / \uCFE0\uC9C0
+  m_Text: "\uB0E5\uB0E5 \uAD7F\uC988\uAD00 \xB7 \uAC00\uCC60 4\uC885 / \uCFE0\uC9C0
     2\uC885"
 --- !u!222 &297346923
 CanvasRenderer:
@@ -6785,7 +6785,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uAC00\uCC60 \xB7 \uCFE0\uC9C0 \uC0C1\uD488 \uC870\uB2EC \uCF54\uB108"
+  m_Text: "\uACE0\uC591\uC774 \uAD7F\uC988 \uC870\uB2EC \uCF54\uB108"
 --- !u!222 &338700792
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7768,7 +7768,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "E \xB7 \uBCC4\uBE5B \uAC00\uCC60\uAD00 \uCD9C\uAD6C"
+  m_Text: "E \xB7 \uB0E5\uB0E5 \uAD7F\uC988\uAD00 \uCD9C\uAD6C"
 --- !u!222 &376121021
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9830,7 +9830,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 461643470}
-  m_Text: "\uC74C\uC2DD \uCE90\uB9AD\uD130 \uAC00\uCC60"
+  m_Text: "\uAC04\uC2DD \uB0E5\uC774 \uAC00\uCC60"
   m_OffsetZ: 0
   m_CharacterSize: 0.045
   m_LineSpacing: 1
@@ -12524,7 +12524,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 596572628}
-  m_Text: "\uB2EC\uD1A0\uB07C \uCFE0\uC9C0\uC0F5"
+  m_Text: "\uACC4\uC808 \uB0E5\uC774 \uCFE0\uC9C0\uC0F5"
   m_OffsetZ: 0
   m_CharacterSize: 0.07
   m_LineSpacing: 1
@@ -14250,7 +14250,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "E \xB7 \uBCC4\uBE5B \uAC00\uCC60\uAD00 \uC785\uAD6C"
+  m_Text: "E \xB7 \uB0E5\uB0E5 \uAD7F\uC988\uAD00 \uC785\uAD6C"
 --- !u!222 &628315244
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -18564,7 +18564,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uAC00\uCC60 \xB7 \uCFE0\uC9C0 \uC0C1\uD488 \uC870\uB2EC \uCF54\uB108"
+  m_Text: "\uACE0\uC591\uC774 \uAD7F\uC988 \uC870\uB2EC \uCF54\uB108"
 --- !u!222 &853637218
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -19331,7 +19331,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 875792428}
-  m_Text: "\uAC00\uCC60 \xB7 \uCFE0\uC9C0 \uC0C1\uD488 \uC870\uB2EC \uCF54\uB108"
+  m_Text: "\uACE0\uC591\uC774 \uAD7F\uC988 \uC870\uB2EC \uCF54\uB108"
   m_OffsetZ: 0
   m_CharacterSize: 0.15
   m_LineSpacing: 1
@@ -20092,7 +20092,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uBCC4\uBE5B \uBF51\uAE30 \uACE8\uBAA9"
+  m_Text: "\uB0E5\uB0E5 \uBF51\uAE30 \uACE8\uBAA9"
 --- !u!222 &908271847
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -24132,7 +24132,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1071628102}
-  m_Text: "\uB2EC\uD1A0\uB07C \uCFE0\uC9C0"
+  m_Text: "\uACC4\uC808 \uB0E5\uC774 \uCFE0\uC9C0"
   m_OffsetZ: 0
   m_CharacterSize: 0.042
   m_LineSpacing: 1
@@ -26311,7 +26311,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1178856959}
-  m_Text: "\uAC00\uCC60 \xB7 \uCFE0\uC9C0 \uC804\uBB38\uC810"
+  m_Text: "\uACE0\uC591\uC774 \uAD7F\uC988 \uC804\uBB38\uC810"
   m_OffsetZ: 0
   m_CharacterSize: 0.07
   m_LineSpacing: 1
@@ -27742,7 +27742,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1232106735}
-  m_Text: "\uC624\uB298\uC758 \uD55C\uC815 \uAC00\uCC60"
+  m_Text: "\uACC4\uC808 \uB0E5\uC774 \uAC00\uCC60"
   m_OffsetZ: 0
   m_CharacterSize: 0.045
   m_LineSpacing: 1
@@ -31329,7 +31329,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1408168641}
-  m_Text: "\uC6B0\uC8FC \uD0D0\uD5D8\uB300 \uAC00\uCC60"
+  m_Text: "\uC6B0\uC8FC \uB0E5\uC0AC\uB300 \uAC00\uCC60"
   m_OffsetZ: 0
   m_CharacterSize: 0.045
   m_LineSpacing: 1
@@ -31523,7 +31523,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1412555723}
-  m_Text: "\uBCC4\uBE5B \uAC00\uCC60\uC0F5"
+  m_Text: "\uB0E5\uB0E5 \uAC00\uCC60\uC0F5"
   m_OffsetZ: 0
   m_CharacterSize: 0.07
   m_LineSpacing: 1
@@ -36940,7 +36940,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1622834120}
-  m_Text: "\uC6B0\uB9AC \uC18C\uD488\uC0F5 \xB7 \uB9AC\uB274\uC5BC"
+  m_Text: "\uC6B0\uB9AC \uB0E5\uB0E5 \uC18C\uD488\uC0F5"
   m_OffsetZ: 0
   m_CharacterSize: 0.04
   m_LineSpacing: 1
@@ -37564,7 +37564,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1649979775}
-  m_Text: "\uB808\uD2B8\uB85C \uB85C\uBD07 \uCFE0\uC9C0"
+  m_Text: "\uC9D1\uC0AC \uD504\uB9AC\uBBF8\uC5C4 \uCFE0\uC9C0"
   m_OffsetZ: 0
   m_CharacterSize: 0.042
   m_LineSpacing: 1
@@ -44246,7 +44246,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uAC00\uCC60 4\uC885 \xB7 \uCFE0\uC9C0 2\uC885 \uCCB4\uD5D8\uAD00"
+  m_Text: "\uB0E5\uC774 \uAC00\uCC60 4\uC885 \xB7 \uCFE0\uC9C0 2\uC885 \uCCB4\uD5D8\uAD00"
 --- !u!222 &1923355575
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -46802,7 +46802,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2039745195}
-  m_Text: "\uB3D9\uBB3C \uCE5C\uAD6C\uB4E4 \uAC00\uCC60"
+  m_Text: "\uB0E5\uB0E5 \uD504\uB80C\uC988 \uAC00\uCC60"
   m_OffsetZ: 0
   m_CharacterSize: 0.045
   m_LineSpacing: 1
@@ -49105,7 +49105,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2138645842}
-  m_Text: "\uBCC4\uBE5B \uBF51\uAE30 \uACE8\uBAA9"
+  m_Text: "\uB0E5\uB0E5 \uBF51\uAE30 \uACE8\uBAA9"
   m_OffsetZ: 0
   m_CharacterSize: 0.052
   m_LineSpacing: 1
@@ -49392,6 +49392,14 @@ PrefabInstance:
     - target: {fileID: 4420841450930118492, guid: 8f8c8af28716e624b89ae001ab209f75, type: 3}
       propertyPath: m_Name
       value: Network_ClawMachine_VerticalSlice
+      objectReference: {fileID: 0}
+    - target: {fileID: 6440413452195484172, guid: 8f8c8af28716e624b89ae001ab209f75, type: 3}
+      propertyPath: m_Text
+      value: "\uACC4\uC808 \uB0E5\uC774 \uC778\uD615 \uD30C\uD2F0"
+      objectReference: {fileID: 0}
+    - target: {fileID: 7476308823329637511, guid: 8f8c8af28716e624b89ae001ab209f75, type: 3}
+      propertyPath: m_Text
+      value: "\uACC4\uC808 \uB0E5\uC774 \uC778\uD615 \uD30C\uD2F0"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: "ClawMachine_\uB3D9\uBB3C\uCE5C\uAD6C"
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawMachineConfig
   machineId: 102
-  displayName: "\uB3D9\uBB3C \uCE5C\uAD6C \uBD09\uC81C\uAD00"
+  displayName: "\uD3EC\uADFC\uD55C \uB0E5\uC774 \uC778\uD615\uBF51\uAE30"
   attemptCost: 120
   aimDuration: 25
   moveSpeed: 2.1
@@ -30,7 +30,7 @@ MonoBehaviour:
   interactionRange: 4.5
   inputSendInterval: 0.06
   autoDropDelay: 3
-  prizePool: {fileID: 11400000, guid: 6c86a35e06aedb14790ce02875f78a8e, type: 2}
+  prizePool: {fileID: 11400000, guid: 3c03ac0f5c452fa4d86f19eb61dc17b1, type: 2}
   rarityWeights:
     common: 110
     uncommon: 40

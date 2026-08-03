@@ -13,23 +13,73 @@ MonoBehaviour:
   m_Name: Gacha_Space
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopGachaMachineConfig
   machineId: gacha_space
-  displayName: "\uC6B0\uC8FC \uD0D0\uD5D8\uB300 \uAC00\uCC60"
+  displayName: "\uC6B0\uC8FC \uB0E5\uC0AC\uB300 \uAC00\uCC60"
   attemptCost: 120
   dailyStock: 12
   uncommonChance: 0.3
   rareChance: 0.12
   commonProducts:
-  - "\uC791\uC740 \uB85C\uCF13"
-  - "\uD589\uC131 \uBC30\uC9C0"
+  - "\uACBD\uCC30 \uB0E5\uC774"
+  - "\uB2CC\uC790 \uB0E5\uC774"
+  - "\uC0AC\uBB34\uB77C\uC774 \uB0E5\uC774"
+  - "\uC57C\uAD6C \uB0E5\uC774"
+  - "\uCD95\uAD6C \uB0E5\uC774"
+  - "\uC218\uC601 \uB0E5\uC774"
+  - "\uC2A4\uD0A4 \uB0E5\uC774"
+  - "\uC545\uB9C8 \uB0E5\uC774"
+  - "\uC9D1\uBC30\uC6D0 \uB0E5\uC774"
+  - "\uC815\uC6D0\uC0AC \uB0E5\uC774"
+  - "\uB09A\uC2DC\uAFBC \uB0E5\uC774"
+  - "\uC138\uC77C\uB7EC \uB0E5\uC774"
+  - "\uBC14\uC774\uD0B9 \uB0E5\uC774"
   uncommonProducts:
-  - "\uC6B0\uC8FC\uC778 \uD53C\uADDC\uC5B4"
+  - "\uC694\uB9AC\uC0AC \uB0E5\uC774"
+  - "\uC18C\uBC29\uAD00 \uB0E5\uC774"
+  - "\uC758\uC0AC \uB0E5\uC774"
+  - "\uBC1C\uB808\uB9AC\uB098 \uB0E5\uC774"
+  - "\uD654\uAC00 \uB0E5\uC774"
+  - "\uCE74\uC6B0\uBCF4\uC774 \uB0E5\uC774"
+  - "\uBC14\uB9AC\uC2A4\uD0C0 \uB0E5\uC774"
+  - "\uB808\uC774\uC11C \uB0E5\uC774"
   rareProducts:
-  - "\uC740\uD558 \uD0D0\uC0AC\uC120"
+  - "\uC6B0\uC8FC\uBE44\uD589\uC0AC \uB0E5\uC774"
+  - "\uB9C8\uBC95\uC0AC \uB0E5\uC774"
+  - "\uD574\uC801 \uB0E5\uC774"
+  - "\uAE30\uC0AC \uB0E5\uC774"
+  - "\uB85D\uC2A4\uD0C0 \uB0E5\uC774"
+  - "\uD0D0\uC815 \uB0E5\uC774"
+  - "\uACFC\uD559\uC790 \uB0E5\uC774"
+  - "\uD30C\uC77C\uB7FF \uB0E5\uC774"
   commonProductDefinitions:
-  - {fileID: 11400000, guid: c14718abbbb7a4049a9359e6f884a275, type: 2}
-  - {fileID: 11400000, guid: 2fee1d30115898944a30ee57be1d7410, type: 2}
+  - {fileID: 11400000, guid: b8dabf6bf3c466947987541e9522b2a0, type: 2}
+  - {fileID: 11400000, guid: 89a77edda9c604f4aa2c7c1e40cd27a9, type: 2}
+  - {fileID: 11400000, guid: c38bfb5b07f4aef489d5cf02634295e0, type: 2}
+  - {fileID: 11400000, guid: 3fe9f0c206986cc4b96935bd142185f3, type: 2}
+  - {fileID: 11400000, guid: bdfce149ef2e88745ac15544636459d6, type: 2}
+  - {fileID: 11400000, guid: b9ef636b36003ea4bb48a3cd64265b0d, type: 2}
+  - {fileID: 11400000, guid: 2a244fd546d1af14a98a0234bf3497e7, type: 2}
+  - {fileID: 11400000, guid: 55499f0ba40ea634abd87831808767ba, type: 2}
+  - {fileID: 11400000, guid: 6ef6fe7fff1735a46a874b83778a4a98, type: 2}
+  - {fileID: 11400000, guid: 5bcc16c06b8b0354fa51857c2ee88329, type: 2}
+  - {fileID: 11400000, guid: 3c109ee57d57d994682bd5c71b804b50, type: 2}
+  - {fileID: 11400000, guid: 900d7020dbeb4534489513135f99efe0, type: 2}
+  - {fileID: 11400000, guid: 9fc8b32ba3492ce448c906ad4126da72, type: 2}
   uncommonProductDefinitions:
-  - {fileID: 11400000, guid: 61f25b949c70fb84b99ce8c6d84fa7ce, type: 2}
+  - {fileID: 11400000, guid: fd868cc9b18535447b0ba1e376c37203, type: 2}
+  - {fileID: 11400000, guid: 28259941d2024964d8b66b800e75fff1, type: 2}
+  - {fileID: 11400000, guid: 6c4909bac43b4494282245d15212dc6f, type: 2}
+  - {fileID: 11400000, guid: 9e34e2a8e3e99ff4d9a3df48c835460e, type: 2}
+  - {fileID: 11400000, guid: 6b2c7fd7fec38514fb0cba7cb55bba94, type: 2}
+  - {fileID: 11400000, guid: 60f27ff54c6f667429462395319beb71, type: 2}
+  - {fileID: 11400000, guid: 9a944a93284a86248856a6e156c0c939, type: 2}
+  - {fileID: 11400000, guid: 959ab2bb05c6b024bbcc6888ea64f5e4, type: 2}
   rareProductDefinitions:
-  - {fileID: 11400000, guid: 7fe8e1352ae0d0c489cf0c0e88bb03d9, type: 2}
-  capsuleColor: {r: 0.24, g: 0.55, b: 1, a: 1}
+  - {fileID: 11400000, guid: 63f3c5fe759452d4783afc8725306efe, type: 2}
+  - {fileID: 11400000, guid: 0d65617c84392d547bd6aa5d8a003fb6, type: 2}
+  - {fileID: 11400000, guid: 87d506c234dfa4544a3ecc5df1431e02, type: 2}
+  - {fileID: 11400000, guid: fc1696e0007c7124f925fae3cdb2a413, type: 2}
+  - {fileID: 11400000, guid: 34ea22bd4a034214ab7b77e0529a9412, type: 2}
+  - {fileID: 11400000, guid: d5ca2d1e8700462409d146d8ff0fc6aa, type: 2}
+  - {fileID: 11400000, guid: f3bf71fb5d7aad241bd0321685414af1, type: 2}
+  - {fileID: 11400000, guid: e64cbd6930fa30142a1229b52cb50767, type: 2}
+  capsuleColor: {r: 0.28, g: 0.58, b: 1, a: 1}

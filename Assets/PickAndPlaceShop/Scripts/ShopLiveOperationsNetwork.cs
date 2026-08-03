@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Unity.Collections;
 using Unity.Netcode;
@@ -90,7 +91,7 @@ namespace PickAndPlaceShop
         [SerializeField] private ShopOperationsConfig config;
 
         public NetworkVariable<int> PhaseSecondsRemaining = new(0);
-        public NetworkVariable<int> TrendCategory = new((int)ShopProductCategory.Animal);
+        public NetworkVariable<int> TrendCategory = new((int)ShopProductCategory.CatPlush);
         public NetworkVariable<int> DailySalesGoal = new(5);
         public NetworkVariable<int> DailySalesProgress = new(0);
         public NetworkVariable<int> AutomatedAcquiredToday = new(0);
@@ -111,7 +112,9 @@ namespace PickAndPlaceShop
 
         public ShopOperationsConfig Config => config != null ? config : config = ShopOperationsConfig.Load();
         public ShopProductCategory CurrentTrendCategory =>
-            (ShopProductCategory)Mathf.Clamp(TrendCategory.Value, 0, (int)ShopProductCategory.Other);
+            ShopProductLocalization.IsCatTheme((ShopProductCategory)TrendCategory.Value)
+                ? (ShopProductCategory)TrendCategory.Value
+                : ShopProductCategory.CatPlush;
         public int RegularCustomerCount
         {
             get
@@ -245,11 +248,11 @@ namespace PickAndPlaceShop
         {
             ShopProductCategory[] categories =
             {
-                ShopProductCategory.Animal,
-                ShopProductCategory.Space,
-                ShopProductCategory.Retro,
-                ShopProductCategory.Seasonal,
-                ShopProductCategory.Other
+                ShopProductCategory.CatPlush,
+                ShopProductCategory.CatFigure,
+                ShopProductCategory.CatGoods,
+                ShopProductCategory.CatSeasonal,
+                ShopProductCategory.CatRetro
             };
             TrendCategory.Value = (int)categories[Mathf.Abs(day * 17 + 3) % categories.Length];
             if (ShopNetworkGame.Instance != null)
@@ -299,7 +302,7 @@ namespace PickAndPlaceShop
         {
             EnsureCustomerPool();
             if (customerProfiles.Count == 0)
-                return new ShopCustomerProfileSelection("customer:001", ShopProductCategory.Animal, 0, 70);
+                return new ShopCustomerProfileSelection("customer:001", ShopProductCategory.CatPlush, 0, 70);
             float total = 0f;
             for (int i = 0; i < customerProfiles.Count; i++) total += ProfileWeight(customerProfiles[i]);
             float roll = UnityEngine.Random.value * Mathf.Max(0.01f, total);
@@ -368,8 +371,9 @@ namespace PickAndPlaceShop
             if (Config == null) return;
             ShopProductCategory[] categories =
             {
-                ShopProductCategory.Animal, ShopProductCategory.Space, ShopProductCategory.Retro,
-                ShopProductCategory.Seasonal, ShopProductCategory.Other
+                ShopProductCategory.CatPlush, ShopProductCategory.CatFigure,
+                ShopProductCategory.CatGoods, ShopProductCategory.CatSeasonal,
+                ShopProductCategory.CatRetro
             };
             for (int i = customerProfiles.Count; i < Config.PersistentCustomerCount; i++)
             {
@@ -430,7 +434,9 @@ namespace PickAndPlaceShop
             int capacity = progression.ExpansionLevel >= Config.OrderRoomExpansionLevel
                 ? Config.OrderRoomConcurrentOrders
                 : Config.BaseConcurrentOrders;
-            ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products");
+            ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products")
+                .Where(product => product != null &&
+                                  ShopProductLocalization.IsCatTheme(product.Category)).ToArray();
             if (products == null || products.Length == 0) return;
             while (OnlineOrders.Count < capacity)
             {
@@ -547,7 +553,10 @@ namespace PickAndPlaceShop
         private void Restore(ShopProgressionSaveData save)
         {
             phaseRemaining = Mathf.Max(0f, save.livePhaseSecondsRemaining);
-            TrendCategory.Value = Mathf.Clamp(save.trendCategory, 0, (int)ShopProductCategory.Other);
+            TrendCategory.Value = ShopProductLocalization.IsCatTheme(
+                    (ShopProductCategory)save.trendCategory)
+                ? save.trendCategory
+                : (int)ShopProductCategory.CatPlush;
             DailySalesGoal.Value = Mathf.Max(1, save.dailySalesGoal);
             DailySalesProgress.Value = Mathf.Max(0, save.dailySalesProgress);
             nextOrderId = Mathf.Max(1, save.nextOrderId);

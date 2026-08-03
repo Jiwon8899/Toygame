@@ -138,7 +138,7 @@ namespace PickAndPlaceShop
             TodayAcquired.Value++;
             ShopLiveOperationsNetwork.Instance?.ServerRecordAutomation(1, 0);
             ShopProgressionManager.Instance?.RecordAcquisition(product.StableItemId,
-                product.DisplayName, product.Category.ToString().ToLowerInvariant(),
+                product.DisplayName, ShopProductLocalization.CategoryId(product.Category),
                 product.Rarity >= ShopProductRarity.Rare);
         }
 
@@ -147,10 +147,12 @@ namespace PickAndPlaceShop
             ShopProductDefinition[] all = Resources.LoadAll<ShopProductDefinition>("Products");
             List<ShopProductDefinition> candidates = new();
             for (int i = 0; i < all.Length; i++)
-                if (all[i] != null && all[i].Rarity == rarity) candidates.Add(all[i]);
+                if (all[i] != null && ShopProductLocalization.IsCatTheme(all[i].Category) &&
+                    all[i].Rarity == rarity) candidates.Add(all[i]);
             if (candidates.Count == 0)
                 for (int i = 0; i < all.Length; i++)
-                    if (all[i] != null && all[i].Rarity != ShopProductRarity.UltraRare) candidates.Add(all[i]);
+                    if (all[i] != null && ShopProductLocalization.IsCatTheme(all[i].Category) &&
+                        all[i].Rarity != ShopProductRarity.UltraRare) candidates.Add(all[i]);
             return candidates.Count == 0 ? null : candidates[random.Next(candidates.Count)];
         }
 

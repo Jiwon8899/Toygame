@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ClawMachine_Arcade_Config
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawMachineConfig
   machineId: 1
-  displayName: "\uBB3C\uB9AC \uC778\uD615\uBF51\uAE30"
+  displayName: "\uD3EC\uADFC\uD55C \uB0E5\uC774 \uC778\uD615\uBF51\uAE30"
   attemptCost: 120
   aimDuration: 25
   moveSpeed: 2.1
@@ -30,36 +30,35 @@ MonoBehaviour:
   interactionRange: 4.5
   inputSendInterval: 0.06
   autoDropDelay: 3
-  prizePool: {fileID: 11400000, guid: 817674d24615eef47a34a7e424b31f48, type: 2}
+  prizePool: {fileID: 11400000, guid: 3c03ac0f5c452fa4d86f19eb61dc17b1, type: 2}
   rarityWeights:
     common: 45
     uncommon: 30
     rare: 20
     ultraRare: 5
   multiPrizePolicy: 1
+  scoopDiameter: 1.24
+  scoopBottomThickness: 0.065
+  scoopRimHeight: 0.46
+  scoopOpenRimHeight: 0.04
+  scoopLipCloseDuration: 0.55
+  scrapeDistance: 0.72
+  scrapeSpeed: 0.68
+  scrapeTiltAngle: 10
+  pourAngle: 62
+  sweepSkin: 0.006
+  floorClearance: 0.004
+  chuteHorizontalInset: 0
+  scoopVerticalAcceleration: 4.5
+  loadedLiftSpeedMultiplier: 0.82
+  commonCapsuleMass: 0.34
+  uncommonCapsuleMass: 0.4
+  rareCapsuleMass: 0.48
+  ultraRareCapsuleMass: 0.58
   operatorCameraDistance: 4.2
   operatorCameraPitch: 35
   operatorCameraFieldOfView: 60
   operatorCameraFocusHeight: 2
-  fingerLayoutRadius: 0.69
-  fingerLayoutHeight: -0.38
-  fingerLayoutTilt: 120
-  clawMass: 1.35
-  suspensionTravel: 0.14
-  suspensionSpring: 42
-  suspensionDamper: 5.5
-  housingSwingDamper: 2.1
-  verticalAcceleration: 4.5
-  loadedLiftSpeedMultiplier: 0.82
-  closedFingerAngle: -18
-  closedFingerClearanceAngle: 8
-  openFingerAngle: 32
-  closeMotorTorque: 24
-  openMotorTorque: 18
-  closeMotorSpeed: 82
-  openMotorSpeed: 68
-  ascentGripTorqueMultiplier: 0.68
-  contactCenteringMultiplier: 0.02
   chuteSettleDuration: 0.45
   chuteSettleLinearSpeed: 0.18
   antiStuckDelay: 3.5
@@ -70,5 +69,5 @@ MonoBehaviour:
   returnTimeout: 6
   releaseTimeout: 2
   judgeTimeout: 1.6
-  clawFingerMaterial: {fileID: 13400000, guid: 5a17b886b4ed639418f5c65d2ba1ce4a, type: 2}
+  scoopPhysicsMaterial: {fileID: 13400000, guid: 5a17b886b4ed639418f5c65d2ba1ce4a, type: 2}
   machineFloorMaterial: {fileID: 13400000, guid: b4b09659acf44754eba2dd5257ea0516, type: 2}

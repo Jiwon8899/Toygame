@@ -12,12 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6963dc6da4b057741b9a8fb81dfa1325, type: 3}
   m_Name: ShopProgressionCatalog
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProgressionCatalog
-  designDecisions: "\uD655\uC815: \uC2A4\uD0DD 10\uAC1C, \uCEA1\uC290 \uD76C\uADC0\uB3C4
-    \uC120\uACB0\uC815/\uC0C1\uD488 \uD6C4\uACB0\uC815, \uAE30\uACC4 \uAE30\uC900
-    \uC774\uB3D9, \uD558\uB8E8 8\uBD84(\uC900\uBE442/\uC601\uC5C55/\uB9C8\uAC101),
-    \uACE0\uC720 \uC190\uB2D8 30\uBA85, \uB2E8\uACE8 3\uD68C, \uC77C\uC77C \uC720\uD589
-    +15%, \uD3EC\uC7A5\uB300 Lv2\xB7\uD3C9\uD31010, \uC790\uB3D9\uD654 \uD3C9\uD31040.
-    \uAC00\uC81C \uC9C0\uBA85\uC740 provisionalName\uC73C\uB85C \uD45C\uC2DC."
+  designDecisions: "\uACE0\uC591\uC774 \uBD90 \uD14C\uB9C8: cat_plush 50 / cat_figure
+    40 / cat_goods 40 / cat_seasonal 30 / cat_retro 40. 200\uC885\uACFC \uD76C\uADC0\uB3C4
+    110/40/40/10 \uC720\uC9C0. \uC544\uD2B8 \uBBF8\uC81C\uC791 \uC0C1\uD488\uC740
+    placeholderArtwork\uB85C \uCEA1\uC290\uACFC \uB370\uC774\uD130 \uC774\uB984\uD45C\uB97C
+    \uC0AC\uC6A9."
   stages:
   - stageId: small_shop
     displayName: "\uC791\uC740 \uC18C\uD488\uC0F5"
@@ -216,39 +215,39 @@ MonoBehaviour:
     displayName: "\uAC00\uCC60\uC0F5"
     requiredReputation: 5
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: kuji_shop
     displayName: "\uCFE0\uC9C0\uC0F5"
     requiredReputation: 10
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: retro_alley
     displayName: "\uB808\uD2B8\uB85C \uACE8\uBAA9"
     requiredReputation: 20
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: used_market
     displayName: "\uC911\uACE0\uC2DC\uC7A5"
     requiredReputation: 30
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: bus_service
     displayName: "\uBC84\uC2A4 \uAC1C\uD1B5"
     requiredReputation: 40
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: auction_house
     displayName: "\uACBD\uB9E4\uC7A5"
     requiredReputation: 50
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: subway
     displayName: "\uC9C0\uD558\uCCA0"
     requiredReputation: 60
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: collector_street
-    displayName: "\uC218\uC9D1\uAC00\uC758 \uAC70\uB9AC"
+    displayName: "\uC9D1\uC0AC\uC758 \uAC70\uB9AC"
     requiredReputation: 70
     placeholder: 0
     provisionalName: 1
@@ -256,834 +255,834 @@ MonoBehaviour:
     displayName: "\uD504\uB9AC\uBBF8\uC5C4 \uC774\uBCA4\uD2B8\uD640"
     requiredReputation: 90
     placeholder: 0
-    provisionalName: 0
+    provisionalName: 1
   - districtId: locked_building_placeholder
     displayName: "\uC61B \uBB38\uAD6C\uC810"
     requiredReputation: 2147483647
     placeholder: 1
     provisionalName: 1
   - districtId: second_street_placeholder
-    displayName: "\uBC9A\uAF43\uAE38"
+    displayName: "\uBC9A\uAF43 \uB0E5\uC774\uAE38"
     requiredReputation: 2147483647
     placeholder: 1
     provisionalName: 1
   - districtId: third_district_placeholder
-    displayName: "\uAC15\uBCC0 \uC0C1\uAC00"
+    displayName: "\uAC15\uBCC0 \uB0E5\uC774 \uC0C1\uAC00"
     requiredReputation: 2147483647
     placeholder: 1
     provisionalName: 1
   collectionCategories:
-  - categoryId: animal
-    displayName: "\uB3D9\uBB3C"
-  - categoryId: space
-    displayName: "\uC6B0\uC8FC"
-  - categoryId: retro
-    displayName: "\uB808\uD2B8\uB85C"
-  - categoryId: seasonal
-    displayName: "\uACC4\uC808"
-  - categoryId: other
-    displayName: "\uAE30\uD0C0"
+  - categoryId: cat_plush
+    displayName: "\uACE0\uC591\uC774 \uC778\uD615"
+  - categoryId: cat_figure
+    displayName: "\uACE0\uC591\uC774 \uD53C\uADDC\uC5B4"
+  - categoryId: cat_goods
+    displayName: "\uB0E5\uB0E5 \uC7A1\uD654"
+  - categoryId: cat_seasonal
+    displayName: "\uACC4\uC808 \uD55C\uC815 \uB0E5\uC774"
+  - categoryId: cat_retro
+    displayName: "\uB808\uD2B8\uB85C \uB0E5\uC774"
   collectionItems:
-  - itemId: collection:animal:001
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 001"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:002
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 002"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:003
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 003"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:004
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 004"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:005
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 005"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:006
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 006"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:007
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 007"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:008
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 008"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:009
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 009"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:010
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 010"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:011
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 011"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:012
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 012"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:013
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 013"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:014
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 014"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:015
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 015"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:016
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 016"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:017
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 017"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:018
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 018"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:019
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 019"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:020
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 020"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:021
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 021"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:022
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 022"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:023
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 023"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:024
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 024"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:025
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 025"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:026
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 026"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:027
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 027"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:028
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 028"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:029
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 029"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:030
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 030"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:031
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 031"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:032
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 032"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:033
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 033"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:034
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 034"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:035
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 035"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:036
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 036"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:037
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 037"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:038
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 038"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:039
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 039"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:040
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 040"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:041
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 041"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:042
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 042"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:043
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 043"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:044
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 044"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:045
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 045"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:046
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 046"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:047
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 047"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:048
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 048"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:049
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 049"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:animal:050
-    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 050"
-    categoryId: animal
-    rarity: 0
-  - itemId: collection:space:001
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 001"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:002
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 002"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:003
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 003"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:004
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 004"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:005
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 005"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:006
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 006"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:007
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 007"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:008
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 008"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:009
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 009"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:010
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 010"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:011
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 011"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:012
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 012"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:013
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 013"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:014
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 014"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:015
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 015"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:016
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 016"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:017
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 017"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:018
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 018"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:019
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 019"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:020
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 020"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:021
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 021"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:022
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 022"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:023
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 023"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:024
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 024"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:025
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 025"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:026
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 026"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:027
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 027"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:028
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 028"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:029
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 029"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:030
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 030"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:031
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 031"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:032
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 032"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:033
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 033"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:034
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 034"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:035
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 035"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:036
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 036"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:037
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 037"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:038
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 038"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:039
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 039"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:space:040
-    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 040"
-    categoryId: space
-    rarity: 0
-  - itemId: collection:retro:001
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 001"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:002
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 002"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:003
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 003"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:004
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 004"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:005
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 005"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:006
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 006"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:007
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 007"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:008
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 008"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:009
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 009"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:010
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 010"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:011
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 011"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:012
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 012"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:013
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 013"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:014
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 014"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:015
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 015"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:016
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 016"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:017
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 017"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:018
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 018"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:019
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 019"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:020
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 020"
-    categoryId: retro
-    rarity: 0
-  - itemId: collection:retro:021
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 021"
-    categoryId: retro
+  - itemId: cat_plush_001
+    displayName: "\uCE58\uC988\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:022
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 022"
-    categoryId: retro
+  - itemId: cat_plush_002
+    displayName: "\uCE58\uC988\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_003
+    displayName: "\uCE58\uC988\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_004
+    displayName: "\uCE58\uC988\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_005
+    displayName: "\uCE58\uC988\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 2
+  - itemId: cat_plush_006
+    displayName: "\uAE4C\uB9DD\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:023
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 023"
-    categoryId: retro
+  - itemId: cat_plush_007
+    displayName: "\uAE4C\uB9DD\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_008
+    displayName: "\uAE4C\uB9DD\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_009
+    displayName: "\uAE4C\uB9DD\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_010
+    displayName: "\uAE4C\uB9DD\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 2
+  - itemId: cat_plush_011
+    displayName: "\uD558\uC591\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:024
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 024"
-    categoryId: retro
+  - itemId: cat_plush_012
+    displayName: "\uD558\uC591\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_013
+    displayName: "\uD558\uC591\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_014
+    displayName: "\uD558\uC591\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_015
+    displayName: "\uD558\uC591\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 2
+  - itemId: cat_plush_016
+    displayName: "\uD68C\uC0C9\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:025
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 025"
-    categoryId: retro
+  - itemId: cat_plush_017
+    displayName: "\uD68C\uC0C9\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_018
+    displayName: "\uD68C\uC0C9\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_019
+    displayName: "\uD68C\uC0C9\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_020
+    displayName: "\uD68C\uC0C9\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 2
+  - itemId: cat_plush_021
+    displayName: "\uC0BC\uC0C9\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:026
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 026"
-    categoryId: retro
+  - itemId: cat_plush_022
+    displayName: "\uC0BC\uC0C9\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_023
+    displayName: "\uC0BC\uC0C9\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_024
+    displayName: "\uC0BC\uC0C9\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_025
+    displayName: "\uC0BC\uC0C9\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 2
+  - itemId: cat_plush_026
+    displayName: "\uD131\uC2DC\uB3C4\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:027
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 027"
-    categoryId: retro
+  - itemId: cat_plush_027
+    displayName: "\uD131\uC2DC\uB3C4\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_028
+    displayName: "\uD131\uC2DC\uB3C4\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_029
+    displayName: "\uD131\uC2DC\uB3C4\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_030
+    displayName: "\uD131\uC2DC\uB3C4\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 2
+  - itemId: cat_plush_031
+    displayName: "\uC0F4\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:028
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 028"
-    categoryId: retro
+  - itemId: cat_plush_032
+    displayName: "\uC0F4\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_033
+    displayName: "\uC0F4\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_034
+    displayName: "\uC0F4\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_035
+    displayName: "\uC0F4\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 2
+  - itemId: cat_plush_036
+    displayName: "\uBE14\uB8E8\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
     rarity: 1
-  - itemId: collection:retro:029
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 029"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:030
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 030"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:031
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 031"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:032
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 032"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:033
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 033"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:034
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 034"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:035
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 035"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:036
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 036"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:037
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 037"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:038
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 038"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:039
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 039"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:retro:040
-    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 040"
-    categoryId: retro
-    rarity: 1
-  - itemId: collection:seasonal:001
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 001"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:002
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 002"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:003
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 003"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:004
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 004"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:005
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 005"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:006
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 006"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:007
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 007"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:008
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 008"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:009
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 009"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:010
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 010"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:011
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 011"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:012
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 012"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:013
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 013"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:014
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 014"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:015
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 015"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:016
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 016"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:017
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 017"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:018
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 018"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:019
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 019"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:020
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 020"
-    categoryId: seasonal
-    rarity: 1
-  - itemId: collection:seasonal:021
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 021"
-    categoryId: seasonal
+  - itemId: cat_plush_037
+    displayName: "\uBE14\uB8E8\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_038
+    displayName: "\uBE14\uB8E8\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_039
+    displayName: "\uBE14\uB8E8\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_040
+    displayName: "\uBE14\uB8E8\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
     rarity: 2
-  - itemId: collection:seasonal:022
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 022"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:023
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 023"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:024
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 024"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:025
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 025"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:026
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 026"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:027
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 027"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:028
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 028"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:029
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 029"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:seasonal:030
-    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 030"
-    categoryId: seasonal
-    rarity: 2
-  - itemId: collection:other:001
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 001"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:002
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 002"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:003
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 003"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:004
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 004"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:005
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 005"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:006
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 006"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:007
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 007"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:008
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 008"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:009
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 009"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:010
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 010"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:011
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 011"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:012
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 012"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:013
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 013"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:014
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 014"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:015
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 015"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:016
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 016"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:017
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 017"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:018
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 018"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:019
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 019"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:020
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 020"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:021
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 021"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:022
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 022"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:023
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 023"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:024
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 024"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:025
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 025"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:026
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 026"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:027
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 027"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:028
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 028"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:029
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 029"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:030
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 030"
-    categoryId: other
-    rarity: 2
-  - itemId: collection:other:031
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 031"
-    categoryId: other
+  - itemId: cat_plush_041
+    displayName: "\uC904\uBB34\uB2AC\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_042
+    displayName: "\uC904\uBB34\uB2AC\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_043
+    displayName: "\uC904\uBB34\uB2AC\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_044
+    displayName: "\uC904\uBB34\uB2AC\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_045
+    displayName: "\uC904\uBB34\uB2AC\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_046
+    displayName: "\uD06C\uB9BC\uB0E5 \uC549\uC740 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_047
+    displayName: "\uD06C\uB9BC\uB0E5 \uC7A0\uC790\uB294 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_048
+    displayName: "\uD06C\uB9BC\uB0E5 \uC2DD\uBE75 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_049
+    displayName: "\uD06C\uB9BC\uB0E5 \uBC8C\uB7EC\uB369 \uC778\uD615"
+    categoryId: cat_plush
+    rarity: 0
+  - itemId: cat_plush_050
+    displayName: "\uD06C\uB9BC\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+    categoryId: cat_plush
     rarity: 3
-  - itemId: collection:other:032
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 032"
-    categoryId: other
+  - itemId: cat_figure_001
+    displayName: "\uC6B0\uC8FC\uBE44\uD589\uC0AC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_002
+    displayName: "\uC694\uB9AC\uC0AC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_003
+    displayName: "\uB9C8\uBC95\uC0AC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_004
+    displayName: "\uD574\uC801 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_005
+    displayName: "\uC18C\uBC29\uAD00 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_006
+    displayName: "\uACBD\uCC30 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_007
+    displayName: "\uC758\uC0AC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_008
+    displayName: "\uB2CC\uC790 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_009
+    displayName: "\uC0AC\uBB34\uB77C\uC774 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_010
+    displayName: "\uAE30\uC0AC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_011
+    displayName: "\uBC1C\uB808\uB9AC\uB098 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_012
+    displayName: "\uB85D\uC2A4\uD0C0 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_013
+    displayName: "\uD0D0\uC815 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_014
+    displayName: "\uD654\uAC00 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_015
+    displayName: "\uC57C\uAD6C \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_016
+    displayName: "\uCD95\uAD6C \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_017
+    displayName: "\uC218\uC601 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_018
+    displayName: "\uC2A4\uD0A4 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_019
+    displayName: "\uCE74\uC6B0\uBCF4\uC774 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_020
+    displayName: "\uC784\uAE08\uB2D8 \uB0E5\uC774"
+    categoryId: cat_figure
     rarity: 3
-  - itemId: collection:other:033
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 033"
-    categoryId: other
+  - itemId: cat_figure_021
+    displayName: "\uCC9C\uC0AC \uB0E5\uC774"
+    categoryId: cat_figure
     rarity: 3
-  - itemId: collection:other:034
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 034"
-    categoryId: other
+  - itemId: cat_figure_022
+    displayName: "\uC545\uB9C8 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_023
+    displayName: "\uACF5\uB8E1\uC7A0\uC637 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_024
+    displayName: "\uAC1C\uAD6C\uB9AC\uC7A0\uC637 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_025
+    displayName: "\uAFC0\uBC8C \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_026
+    displayName: "\uBB34\uB2F9\uBC8C\uB808 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_027
+    displayName: "\uC0C1\uC5B4\uC7A0\uC637 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_028
+    displayName: "\uD1A0\uB07C\uC7A0\uC637 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_029
+    displayName: "\uD310\uB2E4\uC7A0\uC637 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_030
+    displayName: "\uAD50\uBCF5 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_031
+    displayName: "\uACFC\uD559\uC790 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_032
+    displayName: "\uBC14\uB9AC\uC2A4\uD0C0 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_033
+    displayName: "\uC9D1\uBC30\uC6D0 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_034
+    displayName: "\uC815\uC6D0\uC0AC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_035
+    displayName: "\uB09A\uC2DC\uAFBC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_036
+    displayName: "\uB808\uC774\uC11C \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 1
+  - itemId: cat_figure_037
+    displayName: "\uD30C\uC77C\uB7FF \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 2
+  - itemId: cat_figure_038
+    displayName: "\uC138\uC77C\uB7EC \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_039
+    displayName: "\uBC14\uC774\uD0B9 \uB0E5\uC774"
+    categoryId: cat_figure
+    rarity: 0
+  - itemId: cat_figure_040
+    displayName: "\uD788\uC5B4\uB85C \uB0E5\uC774"
+    categoryId: cat_figure
     rarity: 3
-  - itemId: collection:other:035
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 035"
-    categoryId: other
+  - itemId: cat_goods_001
+    displayName: "\uB0E5\uC774 \uC5BC\uAD74 \uBA38\uADF8"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_goods_002
+    displayName: "\uAF2C\uB9AC \uC190\uC7A1\uC774 \uBA38\uADF8"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_003
+    displayName: "\uBC1C\uC790\uAD6D \uC811\uC2DC"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_004
+    displayName: "\uB0E5\uADC0 \uC720\uB9AC\uCEF5"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_005
+    displayName: "\uB0E5\uC774 \uD0A4\uB9C1"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_goods_006
+    displayName: "\uC719\uD06C\uB0E5 \uBC30\uC9C0"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_007
+    displayName: "\uBE7C\uAF3C\uB0E5 \uC2A4\uD2F0\uCEE4"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_008
+    displayName: "\uC7A0\uB0E5 \uCFE0\uC158"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_goods_009
+    displayName: "\uC9C0\uD37C\uC785 \uB3D9\uC804\uC9C0\uAC11"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_010
+    displayName: "\uC2E4\uB8E8\uC5E3 \uC5D0\uCF54\uBC31"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_011
+    displayName: "\uD3F0 \uBC1B\uCE68 \uB0E5\uC774"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_012
+    displayName: "\uB0E5\uC774 \uCEA1 \uBCFC\uD39C"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_013
+    displayName: "\uBC1C\uB3C4\uC7A5 \uB178\uD2B8"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_014
+    displayName: "\uC549\uC740\uB0E5 \uC9C0\uC6B0\uAC1C"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_015
+    displayName: "\uB0E5\uADC0 \uD5E4\uC5B4\uD540"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_016
+    displayName: "\uB0E5\uC774 \uC5BC\uAD74 \uCF54\uC2A4\uD130"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_017
+    displayName: "\uAF2C\uB9AC \uC2DC\uACC4"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_018
+    displayName: "\uB6B1\uB0E5 \uC800\uAE08\uD1B5"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_goods_019
+    displayName: "\uBC1C\uBC14\uB2E5 \uBE44\uB204\uBC1B\uCE68"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_020
+    displayName: "\uD558\uD488\uB0E5 \uCE6B\uC194\uAF42\uC774"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_021
+    displayName: "\uB0E5\uADC0 \uADF8\uB987"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_022
+    displayName: "\uB0E5\uC774 \uC21F\uAC00\uB77D"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_023
+    displayName: "\uB204\uC6B4\uB0E5 \uC813\uAC00\uB77D\uBC1B\uCE68"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_024
+    displayName: "\uB6B1\uB0E5 \uC790\uC11D"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_025
+    displayName: "\uB300\uB871\uB0E5 \uCC45\uAC08\uD53C"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_026
+    displayName: "\uC549\uC740\uB0E5 \uCE94\uB4E4"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_027
+    displayName: "\uB0E5\uADC0 \uC190\uAC70\uC6B8"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_028
+    displayName: "\uB0E5\uC774 \uBD80\uCC44"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_029
+    displayName: "\uB0E5\uC774 \uC5BC\uAD74 \uB124\uC784\uD0DD"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_030
+    displayName: "\uB0E5\uBC1C \uC2AC\uB9AC\uD37C"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_goods_031
+    displayName: "\uBC1C\uBC14\uB2E5 \uC591\uB9D0"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_032
+    displayName: "\uB0E5\uC8FC\uBA38\uB2C8 \uC55E\uCE58\uB9C8"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_033
+    displayName: "\uB0E5\uBC1C \uC624\uBE10\uC7A5\uAC11"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_034
+    displayName: "\uB0E5\uC774 \uB3C4\uC2DC\uB77D"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_goods_035
+    displayName: "\uB0E5\uADC0 \uBB3C\uBCD1"
+    categoryId: cat_goods
+    rarity: 1
+  - itemId: cat_goods_036
+    displayName: "\uAF2C\uB9AC \uBCF4\uC628\uBCD1"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_goods_037
+    displayName: "\uB0E5\uAC00\uC871 \uC7C1\uBC18"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_038
+    displayName: "\uAE38\uCB49\uB0E5 \uD2F0\uC288\uCF00\uC774\uC2A4"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_039
+    displayName: "\uAF2C\uB9AC \uC5F4\uC1E0\uAC78\uC774"
+    categoryId: cat_goods
+    rarity: 0
+  - itemId: cat_goods_040
+    displayName: "\uB0E5\uC774 \uC815\uB9AC\uD568"
+    categoryId: cat_goods
+    rarity: 2
+  - itemId: cat_seasonal_001
+    displayName: "\uBC9A\uAF43 \uB0E5\uC774"
+    categoryId: cat_seasonal
     rarity: 3
-  - itemId: collection:other:036
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 036"
-    categoryId: other
+  - itemId: cat_seasonal_002
+    displayName: "\uD654\uAD00 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_003
+    displayName: "\uC18C\uD48D \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_004
+    displayName: "\uB098\uBE44 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_005
+    displayName: "\uD2A4\uB9BD \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_006
+    displayName: "\uBD04\uBAA8\uC790 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_007
+    displayName: "\uC0C8\uCE5C\uAD6C \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_008
+    displayName: "\uC218\uBC15 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_009
+    displayName: "\uD29C\uBE0C \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_010
+    displayName: "\uBC00\uC9DA\uBAA8\uC790 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_011
+    displayName: "\uBE59\uC218 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_012
+    displayName: "\uC120\uAE00\uB77C\uC2A4 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_013
+    displayName: "\uBE44\uCE58\uBCFC \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_014
+    displayName: "\uC544\uC774\uC2A4\uBC14 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_015
+    displayName: "\uBD80\uCC44\uC9C8 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_016
+    displayName: "\uB2E8\uD48D \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_017
+    displayName: "\uB3C4\uD1A0\uB9AC \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_018
+    displayName: "\uB3C5\uC11C \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_019
+    displayName: "\uAD70\uACE0\uAD6C\uB9C8 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_020
+    displayName: "\uB099\uC5FD \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_021
+    displayName: "\uBC84\uC12F \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_022
+    displayName: "\uC218\uD655 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_023
+    displayName: "\uC0B0\uD0C0 \uB0E5\uC774"
+    categoryId: cat_seasonal
     rarity: 3
-  - itemId: collection:other:037
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 037"
-    categoryId: other
+  - itemId: cat_seasonal_024
+    displayName: "\uB208\uC0AC\uB78C \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_025
+    displayName: "\uBAA9\uB3C4\uB9AC \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_026
+    displayName: "\uC120\uBB3C \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_027
+    displayName: "\uCF54\uCF54\uC544 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_seasonal_028
+    displayName: "\uADC0\uB3C4\uB9AC \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 1
+  - itemId: cat_seasonal_029
+    displayName: "\uC370\uB9E4 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 2
+  - itemId: cat_seasonal_030
+    displayName: "\uB208\uAF43\uC6B0\uC0B0 \uB0E5\uC774"
+    categoryId: cat_seasonal
+    rarity: 0
+  - itemId: cat_retro_001
+    displayName: "\uBE0C\uB77C\uC6B4\uAD00 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_002
+    displayName: "\uB2E4\uC774\uC5BC\uC804\uD654 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_003
+    displayName: "\uCE74\uC138\uD2B8 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_004
+    displayName: "\uBD90\uBC15\uC2A4 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_005
+    displayName: "LP \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_006
+    displayName: "\uC624\uB77D\uAE30 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_007
+    displayName: "\uAC8C\uC784\uD328\uB4DC \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_008
+    displayName: "\uD53D\uC140\uC561\uC790 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_009
+    displayName: "\uD3F4\uB77C\uB85C\uC774\uB4DC \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_010
+    displayName: "\uD544\uB984\uCE74\uBA54\uB77C \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_011
+    displayName: "\uD0C0\uC790\uAE30 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_012
+    displayName: "\uC790\uBA85\uC885 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_013
+    displayName: "\uC8FC\uD06C\uBC15\uC2A4 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_014
+    displayName: "\uB124\uC628\uC0AC\uC778 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_015
+    displayName: "\uC790\uD310\uAE30 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_016
+    displayName: "\uBF51\uAE30\uD1B5 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_017
+    displayName: "\uB2E4\uB8E8\uB9C8 \uB0E5\uC774"
+    categoryId: cat_retro
     rarity: 3
-  - itemId: collection:other:038
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 038"
-    categoryId: other
+  - itemId: cat_retro_018
+    displayName: "\uB9C8\uB124\uD0A4\uB124\uCF54 \uB0E5\uC774"
+    categoryId: cat_retro
     rarity: 3
-  - itemId: collection:other:039
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 039"
-    categoryId: other
+  - itemId: cat_retro_019
+    displayName: "\uC885\uC774\uB4F1 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_020
+    displayName: "\uC885\uC774\uC811\uAE30 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_021
+    displayName: "\uBAA9\uB9C8 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_022
+    displayName: "\uC591\uCCA0\uB85C\uBD07 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 2
+  - itemId: cat_retro_023
+    displayName: "\uB9CC\uD654\uACBD \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_024
+    displayName: "\uC624\uB974\uACE8 \uB0E5\uC774"
+    categoryId: cat_retro
     rarity: 3
-  - itemId: collection:other:040
-    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 040"
-    categoryId: other
+  - itemId: cat_retro_025
+    displayName: "\uC2A4\uB178\uC6B0\uBCFC \uB0E5\uC774"
+    categoryId: cat_retro
     rarity: 3
+  - itemId: cat_retro_026
+    displayName: "\uC6B0\uD45C \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_027
+    displayName: "\uC6B0\uCCB4\uD1B5 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_028
+    displayName: "\uC6B0\uC720\uBCD1 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_029
+    displayName: "\uBCD1\uB69C\uAED1 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_030
+    displayName: "\uC131\uB0E5\uAC11 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_031
+    displayName: "\uAD6C\uC2AC \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_032
+    displayName: "\uB77C\uBB34\uB124 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 1
+  - itemId: cat_retro_033
+    displayName: "\uBD88\uB7C9\uC2DD\uD488 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_034
+    displayName: "\uB531\uC9C0 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_035
+    displayName: "\uCF04\uB2E4\uB9C8 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_036
+    displayName: "\uD33D\uC774 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_037
+    displayName: "\uC6B4\uC138\uCABD\uC9C0 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_038
+    displayName: "\uC8FC\uD310 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_039
+    displayName: "\uCC45\uAC00\uBC29 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
+  - itemId: cat_retro_040
+    displayName: "\uC2A4\uCFE0\uD130 \uB0E5\uC774"
+    categoryId: cat_retro
+    rarity: 0
   goalPool:
   - goalId: daily_revenue
     displayName: "\uC624\uB298 \uB9E4\uCD9C"

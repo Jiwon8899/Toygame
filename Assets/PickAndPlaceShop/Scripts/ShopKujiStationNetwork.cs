@@ -160,9 +160,9 @@ namespace PickAndPlaceShop
             CurrentDrawHasCeiling.Value = ceiling;
             ScratchProgress.Value = 0f;
             ResultRank.Value = rank;
-            ResultProduct.Value = new FixedString64Bytes(config.PrizeFor(rank));
             OccupantClientId.Value = sender;
             AttemptId.Value++;
+            ResultProduct.Value = new FixedString64Bytes(config.PrizeFor(rank, AttemptId.Value));
             SetState(ShopKujiState.DrawingTicket);
             game.ServerSetEvent(config.DisplayName + ": 티켓을 뽑았습니다. 마우스로 은박을 긁어주세요.");
         }
@@ -244,7 +244,7 @@ namespace PickAndPlaceShop
                             CurrentDrawHasLastPrize.Value) || CurrentDrawHasCeiling.Value;
             List<ShopProductDefinition> rewardProducts = new()
             {
-                config.PrizeDefinitionFor(ResultRank.Value)
+                config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)
             };
             if (CurrentDrawHasLastPrize.Value)
                 rewardProducts.Add(config.LastPrizeDefinition);
@@ -270,8 +270,11 @@ namespace PickAndPlaceShop
             if (progression == null)
                 Debug.LogError("[Progression] 쿠지 컬렉션 관리자를 찾지 못했습니다.", this);
             else
-                progression.RecordAcquisition(config.PrizeDefinitionFor(ResultRank.Value)?.StableItemId,
-                    config.PrizeDefinitionFor(ResultRank.Value)?.DisplayName, config.PoolId,
+                progression.RecordAcquisition(config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)?.StableItemId,
+                    config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)?.DisplayName,
+                    ShopProductLocalization.CategoryId(
+                        config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)?.Category ??
+                        ShopProductCategory.CatSeasonal),
                     rare, storedRewards);
             string last = CurrentDrawHasLastPrize.Value ? " + " + config.LastPrize : string.Empty;
             string ceiling = CurrentDrawHasCeiling.Value ? " + 천장 " + config.CeilingPrize : string.Empty;

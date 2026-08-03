@@ -11,7 +11,7 @@ namespace PickAndPlaceShop
 {
     public sealed class ShopMainMenuController : MonoBehaviour
     {
-        [SerializeField] private string gameTitle = "뽑아온 가게";
+        [SerializeField] private string gameTitle = "냥냥 뽑아온 가게";
         private const string versionLabel = "버전 0.1.0 · 싱글플레이";
 
         private readonly string[] panelNames =
@@ -27,7 +27,7 @@ namespace PickAndPlaceShop
 
         private readonly string[] helpBodies =
         {
-            "나만의 소품샵을 운영하세요.\n\n낮 상품 확보  →  상품 진열  →  밤 영업  →  하루 정산  →  다음 날\n\n낮에는 인형뽑기와 캡슐 기계에서 판매할 상품을 확보하고, 밤에는 상품을 진열하고 손님을 계산합니다.",
+            "고양이 붐이 도시를 휩쓸었습니다. 우리는 고양이 굿즈 전문 소품샵을 열기로 했습니다.\n\n낮 상품 확보  →  상품 진열  →  밤 영업  →  하루 정산  →  다음 날\n\n낮에는 냥이 뽑기와 캡슐 기계에서 판매할 상품을 확보하고, 밤에는 상품을 진열하고 손님을 계산합니다.",
             "WASD          이동\n마우스         시점 이동\nE              상호작용\nEsc            일시정지\n\n게임패드를 사용하면 방향키와 확인/취소 버튼으로 메뉴를 조작할 수 있습니다.",
             "기계 앞에서 E를 눌러 조작을 시작합니다.\n\nWASD          팬 이동\nSpace         팬 내리기\nEsc            하강 전 취소\n\n팬을 상품 더미 앞에 맞춘 뒤 내려 퍼올리세요. 담긴 상품은 물리적으로 흔들리고 미끄러질 수 있습니다.",
             "진열대       가게 창고의 상품을 진열합니다.\n계산대       줄을 선 손님을 계산합니다.\n마감 종       영업을 시작하거나 종료합니다.\n\n손님의 예산과 취향에 맞는 상품이 없으면 구매를 포기할 수 있습니다.",

@@ -1,0 +1,119 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba1fe25caeb3e434788cc007fdb0e0d2, type: 3}
+  m_Name: ClawPrizePool_cat_plush
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawPrizePool
+  poolId: cat_plush
+  entries:
+  - prize: {fileID: 11400000, guid: fc3c48fbfdd80004b9195e756a7289f2, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: 4546dccdef3de8541ad7bd92e27ae719, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: f908146b74cd9cb44beaf5a8032c1915, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: f6441768939993a4694293c8058c398a, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: ae95853907002ba4f8984e709ce98ef0, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: 0c93e3a2c6ebd4b4d834a52c92f0d7db, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: 5a02facdf5b65674faa9359f769e3ad2, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: bcd3956627721d542a10a951c084ada0, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: f5c7a927d7142ed47a65373d46fd3fbb, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 1879c734642dc9a4a9edaa8922ba4591, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: 05accf3d6862e5a4c8151cf38b1652a2, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: 4d11f296547f2cc458c4ed0319a2e36a, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 38739bb955d93a4498d3811984413a3f, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 66fb5b10fa2590844ba68183fc82244b, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 4303c01d986879a4ebdce2cb5f2e80a0, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: cdcc8613e4690e748a5b969361c396a7, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: eaf905388523e264e8c5918d18a6f617, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 1eb2101a33386c3438a0557ce26552a3, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 50ca57c016abcba4d96cd886d1065420, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 90f4d674077ed564c81f4494c402d960, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: 1dcc31d882137b042b7e1e6b88c61a18, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: d99a3e3b48c40fb4e80ee1f87ceedd3c, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: e1e93bb7bdc75c848819cb2daed1a3fb, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: ad14cb1916fc9ec479e630b64ebc459a, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 8730bd40c20f2c742be7fef80887cb0a, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: 58aea7ccc1b77304da671a5cf69ad692, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: 14f37f89afbf25941807a9a3dc72c670, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 5b6e72332e0bfe64f9aa953e2de54f15, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: ce72f4dee11d08a429feb32b4a294220, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 73b7e056ab4d1594b91878cdb6e67387, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: 6cc0930e12973ad469da91b84ba2100c, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: b5889062ce755394bbfc12e46c04c504, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 90f1bc2e420a91e48986e194511b6967, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 48162b8bb3fc61c4385af03e29345ad8, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: f6ac7aad3b9a9bd4ca6418d6737f8c2b, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: 720fd0ee5a42e6a4d9f1d4d5e6f5e173, type: 2}
+    rarityWeight: 7
+  - prize: {fileID: 11400000, guid: ea83b0b446bf9c94da03165aadd38f8e, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: b6bc35bf522044147b94d188b5e97008, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 2fc707efefe4ab448a18085f989e6700, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: d2313c31f1fc05144a269d10b6a649d8, type: 2}
+    rarityWeight: 3
+  - prize: {fileID: 11400000, guid: 1baae5d366b39d140b518bec361e54ab, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 5eb47f8f0c514294aacc6c7f84ca2977, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: ded52229fa2e7724d804800679ec69fc, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: edb00fa978244154d9c5a0bf2ab064a2, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 7a3266eba82c20b40bcd31ed85566740, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: fb626cb879b1c93468284177c29141fc, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: af7ba8c65f9cc8c4fb12cd5824129835, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: e2016d22d340e3c4b95ea720f19abc6e, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 8847b4c189223004b99516228b4a03ac, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 81196196a2a42484896c67689dcb648c, type: 2}
+    rarityWeight: 1
+  maxConcurrentPrizes: 7
+  spawnAttemptsPerPrize: 18
+  spawnClearance: 0.045

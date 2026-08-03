@@ -93,7 +93,7 @@ namespace PickAndPlaceShop
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
         private const string FileName = "ShopProgressionSave.json";
 
         public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);
@@ -113,6 +113,7 @@ namespace PickAndPlaceShop
                     return false;
                 }
                 EnsureCollections(data);
+                if (data.version < 5) MigrateToCatTheme(data);
                 data.version = CurrentVersion;
                 return true;
             }
@@ -180,5 +181,67 @@ namespace PickAndPlaceShop
             data.onlineOrders ??= new List<ShopOnlineOrderSave>();
             data.automationMachines ??= new List<ShopAutomationMachineSave>();
         }
+
+        private static void MigrateToCatTheme(ShopProgressionSaveData data)
+        {
+            for (int i = 0; i < data.ownedCollectionItemIds.Count; i++)
+                data.ownedCollectionItemIds[i] = MigrateCollectionItemId(
+                    data.ownedCollectionItemIds[i]);
+            MigrateGoals(data.dailyGoals);
+            MigrateGoals(data.weeklyGoals);
+            data.trendCategory = (int)MigrateCategory((ShopProductCategory)data.trendCategory);
+            for (int i = 0; i < data.customerProfiles.Count; i++)
+            {
+                ShopCustomerProfileSave profile = data.customerProfiles[i];
+                if (profile != null)
+                    profile.preferredCategory = (int)MigrateCategory(
+                        (ShopProductCategory)profile.preferredCategory);
+            }
+
+            // 기존 주문은 구 상품 이름과 ProductId를 함께 저장하므로 새 테마에서 재생성한다.
+            data.onlineOrders.Clear();
+        }
+
+        private static void MigrateGoals(List<ShopProgressGoalSave> goals)
+        {
+            if (goals == null) return;
+            for (int i = 0; i < goals.Count; i++)
+            {
+                ShopProgressGoalSave goal = goals[i];
+                if (goal != null) goal.categoryId = MigrateCategoryId(goal.categoryId);
+            }
+        }
+
+        private static string MigrateCollectionItemId(string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(itemId)) return itemId;
+            const string prefix = "collection:";
+            if (!itemId.StartsWith(prefix, StringComparison.Ordinal)) return itemId;
+            string[] segments = itemId.Split(':');
+            return segments.Length == 3
+                ? MigrateCategoryId(segments[1]) + "_" + segments[2]
+                : itemId;
+        }
+
+        private static string MigrateCategoryId(string categoryId) => categoryId switch
+        {
+            "animal" => "cat_plush",
+            "space" => "cat_figure",
+            "retro" => "cat_retro",
+            "seasonal" => "cat_seasonal",
+            "other" => "cat_goods",
+            _ => categoryId ?? string.Empty
+        };
+
+        private static ShopProductCategory MigrateCategory(ShopProductCategory category) => category switch
+        {
+            ShopProductCategory.Animal or ShopProductCategory.Plush => ShopProductCategory.CatPlush,
+            ShopProductCategory.Space or ShopProductCategory.CapsuleToy => ShopProductCategory.CatFigure,
+            ShopProductCategory.Retro => ShopProductCategory.CatRetro,
+            ShopProductCategory.Seasonal => ShopProductCategory.CatSeasonal,
+            ShopProductCategory.Other or ShopProductCategory.Decoration => ShopProductCategory.CatGoods,
+            _ when ShopProductLocalization.IsCatTheme(category) => category,
+            _ => ShopProductCategory.CatGoods
+        };
     }
 }

@@ -11090,7 +11090,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac6d01d49c9503f479464955e6cc6aac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopMainMenuController
-  gameTitle: "\uBF51\uC544\uC628 \uAC00\uAC8C"
+  gameTitle: "냥냥 뽑아온 가게"
 --- !u!4 &1515044861
 Transform:
   m_ObjectHideFlags: 0

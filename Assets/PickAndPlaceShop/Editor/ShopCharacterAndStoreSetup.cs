@@ -638,9 +638,9 @@ namespace PickAndPlaceShopEditor
             {
                 originalSign.gameObject.SetActive(false);
                 CreateSign(originalSign.gameObject, generated.transform, "가챠샵_간판",
-                    "별빛 가챠샵", new Vector3(60.5f, 5.95f, 7.25f));
+                    "냥냥 가챠샵", new Vector3(60.5f, 5.95f, 7.25f));
                 CreateSign(originalSign.gameObject, generated.transform, "쿠지샵_간판",
-                    "달토끼 쿠지샵", new Vector3(72f, 5.95f, 7.25f));
+                    "계절 냥이 쿠지샵", new Vector3(72f, 5.95f, 7.25f));
             }
 
             EditorSceneManager.MarkSceneDirty(scene);

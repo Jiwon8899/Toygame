@@ -19,7 +19,7 @@ MonoBehaviour:
   priceSensitivity: 0.35
   patienceSeconds: 27
   spawnWeight: 0.1
-  preferredCategory: 2
+  preferredCategory: 8
   rarityPreference: 2
   conditionPreference: 1.8
   giftPreference: 0.2

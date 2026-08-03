@@ -648,7 +648,7 @@ namespace PickAndPlaceShop
                 progression.RecordAcquisition(
                     product != null ? "product:" + product.ProductId : "claw:" + awardedVisualIndex,
                     product != null ? product.DisplayName : "인형뽑기 상품",
-                    product != null ? product.Category.ToString().ToLowerInvariant() : "claw",
+                    product != null ? ShopProductLocalization.CategoryId(product.Category) : "cat_plush",
                     product != null && product.Rarity >= ShopProductRarity.Rare);
             LastAwardedName.Value = new FixedString64Bytes(
                 product != null ? product.DisplayName : prize.VisualDisplayName.Value.ToString());
@@ -1098,12 +1098,14 @@ namespace PickAndPlaceShop
             ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products");
             List<ShopProductDefinition> matches = new();
             for (int i = 0; i < products.Length; i++)
-                if (products[i] != null && products[i].Rarity == rarity)
+                if (products[i] != null && ShopProductLocalization.IsCatTheme(products[i].Category) &&
+                    products[i].Rarity == rarity)
                     matches.Add(products[i]);
             if (matches.Count == 0 && rarity == ShopProductRarity.UltraRare)
             {
                 for (int i = 0; i < products.Length; i++)
-                    if (products[i] != null && products[i].Rarity == ShopProductRarity.Rare)
+                    if (products[i] != null && ShopProductLocalization.IsCatTheme(products[i].Category) &&
+                        products[i].Rarity == ShopProductRarity.Rare)
                         matches.Add(products[i]);
             }
             if (matches.Count == 0) return products.Length > 0 ? products[0] : null;
