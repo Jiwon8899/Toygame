@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39ed306f8c1cdd04d9e5ab93c94efd3b, type: 3}
+  m_Name: ClawPrize_Figure_Robot
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawPrizeDefinition
+  displayName: "\uD30C\uB791 \uBBF8\uB2C8 \uB85C\uBD07"
+  product: {fileID: 11400000, guid: d6d303d47fe7d64419ed2c67dd0b7124, type: 2}
+  weight: 0.72
+  size: 0.5
+  gripDifficulty: 0.62
+  gripScoreModifier: 2
+  friction: 0.5
+  color: {r: 0.3, g: 0.65, b: 1, a: 1}

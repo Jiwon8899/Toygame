@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 746e9bdbf3621b64aa77dd9acfd77ae8, type: 3}
+  m_Name: Product_baby_rake
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProductDefinition
+  productId: 1000
+  displayName: "\uC544\uAE30 \uAC08\uD034"
+  category: 3
+  salePrice: 480
+  rarity: 3
+  condition: 2
+  giftWrappable: 1
+  stableItemId: lowpoly:baby_rake
+  prizePrefab: {fileID: 2186757100407443295, guid: 7fa9977163867d34fb529e514deb20a7, type: 3}
+  physicsProfile: {fileID: 11400000, guid: a03839957176f7748abbcd8b9181edfb, type: 2}
+  maxStack: 10

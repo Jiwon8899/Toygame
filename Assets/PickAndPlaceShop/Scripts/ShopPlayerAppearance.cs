@@ -1,0 +1,64 @@
+using UnityEngine;
+
+namespace PickAndPlaceShop
+{
+    public sealed class ShopPlayerAppearance : MonoBehaviour
+    {
+        private static readonly int MovingParameter = Animator.StringToHash("Moving");
+        private static readonly int RunningParameter = Animator.StringToHash("Running");
+        private static readonly int SpeedParameter = Animator.StringToHash("Speed");
+
+        [SerializeField] private Animator appearanceAnimator;
+        [Min(0.1f)] [SerializeField] private float runThreshold = 3.8f;
+
+        private Vector3 lastPosition;
+
+        public Animator AppearanceAnimator => appearanceAnimator;
+        public float CurrentSpeed { get; private set; }
+        public bool IsRunning { get; private set; }
+
+#if UNITY_EDITOR
+        public void EditorConfigure(Animator animator, float runningSpeedThreshold)
+        {
+            appearanceAnimator = animator;
+            runThreshold = runningSpeedThreshold;
+        }
+#endif
+
+        private void Awake()
+        {
+            if (appearanceAnimator == null) appearanceAnimator = GetComponentInChildren<Animator>(true);
+            lastPosition = transform.position;
+
+            if (appearanceAnimator == null)
+            {
+                Debug.LogError("[ShopPlayerAppearance] 플레이어 외형 Animator가 연결되지 않았습니다.", this);
+                enabled = false;
+                return;
+            }
+
+            appearanceAnimator.applyRootMotion = false;
+            appearanceAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            Debug.Log(
+                $"[ShopPlayerAppearance] READY model={appearanceAnimator.gameObject.name} " +
+                $"controller={appearanceAnimator.runtimeAnimatorController?.name ?? "none"} " +
+                $"renderers={appearanceAnimator.GetComponentsInChildren<Renderer>(true).Length}",
+                this);
+        }
+
+        private void Update()
+        {
+            float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
+            Vector3 displacement = transform.position - lastPosition;
+            displacement.y = 0f;
+            CurrentSpeed = displacement.magnitude / deltaTime;
+            lastPosition = transform.position;
+
+            bool moving = CurrentSpeed > 0.08f;
+            IsRunning = moving && CurrentSpeed >= runThreshold;
+            appearanceAnimator.SetFloat(SpeedParameter, CurrentSpeed);
+            appearanceAnimator.SetBool(MovingParameter, moving);
+            appearanceAnimator.SetBool(RunningParameter, IsRunning);
+        }
+    }
+}

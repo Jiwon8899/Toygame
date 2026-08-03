@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91545cb5337c3fc45a9999b918c604b5, type: 3}
+  m_Name: Kuji_MoonRabbit
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopKujiPoolConfig
+  poolId: kuji_moon_rabbit
+  displayName: "\uB2EC\uD1A0\uB07C \uCFE0\uC9C0"
+  ticketPrice: 110
+  initialStock:
+    S: 1
+    A: 2
+    B: 4
+    C: 6
+    D: 9
+  sPrize: "\uB2EC\uD1A0\uB07C \uB300\uD615 \uC778\uD615"
+  aPrize: "\uB2EC\uBE5B \uCFE0\uC158"
+  bPrize: "\uBCC4\uBB34\uB2AC \uD53C\uADDC\uC5B4"
+  cPrize: "\uC544\uD06C\uB9B4 \uC7A5\uC2DD"
+  dPrize: "\uBBF8\uB2C8 \uBC30\uC9C0"
+  lastPrize: "\uB9C8\uC9C0\uB9C9\uC0C1 \uB2EC\uD1A0\uB07C \uD55C\uC815\uD310"
+  ceilingDraws: 7
+  ceilingPrize: "\uCC9C\uC7A5 \uB2EC\uBE5B \uC655\uAD00 \uC138\uD2B8"
+  sPrizeDefinition: {fileID: 11400000, guid: 10b9c3ad0d5cb454d8fc2a7b0e6758de, type: 2}
+  aPrizeDefinition: {fileID: 11400000, guid: 021e26df535f25d4ba97c4efa7092253, type: 2}
+  bPrizeDefinition: {fileID: 11400000, guid: 4525cc47daa7ac440880bbde8f0186d8, type: 2}
+  cPrizeDefinition: {fileID: 11400000, guid: 17cd25f916e84ca4abf61dc701ab7386, type: 2}
+  dPrizeDefinition: {fileID: 11400000, guid: d7ea8dd6f32f61e44a580f27bba037a3, type: 2}
+  lastPrizeDefinition: {fileID: 11400000, guid: 1a06b2d079e6ff24d83b59e97e90a3e1, type: 2}
+  ceilingPrizeDefinition: {fileID: 11400000, guid: baa130dad616081419fd910e9d2b8657, type: 2}

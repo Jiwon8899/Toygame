@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 746e9bdbf3621b64aa77dd9acfd77ae8, type: 3}
+  m_Name: Product_kuji_moon_rabbit_s
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProductDefinition
+  productId: 2015
+  displayName: "\uB2EC\uD1A0\uB07C \uB300\uD615 \uC778\uD615"
+  category: 0
+  salePrice: 280
+  rarity: 0
+  condition: 2
+  giftWrappable: 1
+  stableItemId: arcade:kuji_moon_rabbit:s
+  prizePrefab: {fileID: 7359648400202469059, guid: a7f5d405641ea7643b269f94008fd2f0, type: 3}
+  physicsProfile: {fileID: 11400000, guid: 5c8474869e64dc7458701361319eca26, type: 2}
+  maxStack: 10

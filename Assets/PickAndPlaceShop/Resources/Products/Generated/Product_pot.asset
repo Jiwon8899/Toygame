@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 746e9bdbf3621b64aa77dd9acfd77ae8, type: 3}
+  m_Name: Product_pot
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProductDefinition
+  productId: 1018
+  displayName: "\uB0C4\uBE44"
+  category: 2
+  salePrice: 214
+  rarity: 2
+  condition: 2
+  giftWrappable: 1
+  stableItemId: lowpoly:pot
+  prizePrefab: {fileID: 8796507577779225388, guid: 3f8462c17d3ea8d488c157699eba4eb0, type: 3}
+  physicsProfile: {fileID: 11400000, guid: 5c8474869e64dc7458701361319eca26, type: 2}
+  maxStack: 10

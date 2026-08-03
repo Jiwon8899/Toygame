@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ea91337cc2991d4391c0fdad527f87f, type: 3}
+  m_Name: ShopOperationsConfig
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopOperationsConfig
+  preparationSeconds: 120
+  openingSeconds: 300
+  closingSeconds: 60
+  salesGoalByStage: 05000000080000000c00000010000000160000001e000000
+  trendPriceBonus: 0.15
+  trendCustomerWeight: 1.7
+  trendSatisfactionBonus: 4
+  persistentCustomerCount: 30
+  regularPurchaseThreshold: 3
+  maximumConcurrentCustomers: 6
+  satisfactionWaitWeight: 0.55
+  satisfactionVarietyWeight: 0.3
+  satisfactionRarityWeight: 0.15
+  regularPriceMultiplier: 1.1
+  regularExtraPurchaseChance: 0.25
+  orderUnlockExpansionLevel: 2
+  orderUnlockReputation: 10
+  baseConcurrentOrders: 2
+  orderRoomConcurrentOrders: 5
+  orderRoomExpansionLevel: 5
+  minimumOrderDeadlineDays: 1
+  maximumOrderDeadlineDays: 3
+  orderPriceMultiplier: 1.35
+  orderReputationReward: 2
+  orderFailureReputationPenalty: 1
+  automationUnlockReputation: 40
+  automationPurchasePrice: 1800
+  automationAttemptInterval: 60
+  manualAverageSuccessRate: 0.58
+  automationSuccessMultiplier: 0.5
+  automationBufferSlots: 10
+  automationNearFullSlots: 8
+  automatedSuccessCountsForDailyGoal: 0
+  standardRarityWeights:
+    common: 110
+    uncommon: 40
+    rare: 40
+    ultraRare: 10

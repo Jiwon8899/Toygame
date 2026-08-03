@@ -1,0 +1,21 @@
+{
+  "name": "PickAndPlaceShop.Runtime",
+  "rootNamespace": "PickAndPlaceShop",
+  "references": [
+    "Unity.Netcode.Runtime",
+    "Unity.Networking.Transport",
+    "Unity.InputSystem",
+    "Unity.Collections",
+    "UnityEngine.UI",
+    "Blocks.Gameplay.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

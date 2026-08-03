@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e04d5488029b1b44b3419208146e88f, type: 3}
+  m_Name: "ClawMachine_\uB300\uD615\uCFE0\uC158"
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawMachineConfig
+  machineId: 104
+  displayName: "\uB300\uD615 \uCFE0\uC158 \uCC4C\uB9B0\uC9C0"
+  attemptCost: 150
+  aimDuration: 25
+  moveSpeed: 2.1
+  acceleration: 8
+  xBounds: {x: -1.45, y: 1.45}
+  zBounds: {x: -1.18, y: 1.18}
+  topHeight: 3.55
+  dropHeight: 1
+  descendSpeed: 0.55
+  liftSpeed: 1.55
+  returnSpeed: 1.15
+  closeDuration: 1.2
+  releaseDuration: 0.45
+  interactionRange: 4.5
+  inputSendInterval: 0.06
+  autoDropDelay: 3
+  prizePool: {fileID: 11400000, guid: 817674d24615eef47a34a7e424b31f48, type: 2}
+  rarityWeights:
+    common: 110
+    uncommon: 40
+    rare: 40
+    ultraRare: 10
+  multiPrizePolicy: 0
+  operatorCameraDistance: 4.15
+  operatorCameraPitch: 25
+  operatorCameraFieldOfView: 60
+  operatorCameraFocusHeight: 2.15
+  fingerLayoutRadius: 0.69
+  fingerLayoutHeight: -0.38
+  fingerLayoutTilt: 120
+  clawMass: 1.35
+  suspensionTravel: 0.08
+  suspensionSpring: 2200
+  suspensionDamper: 120
+  housingSwingDamper: 8
+  verticalAcceleration: 4.5
+  loadedLiftSpeedMultiplier: 0.82
+  closedFingerAngle: -18
+  closedFingerClearanceAngle: 8
+  openFingerAngle: 32
+  closeMotorTorque: 75
+  openMotorTorque: 45
+  closeMotorSpeed: 40
+  openMotorSpeed: 80
+  ascentGripTorqueMultiplier: 0.4
+  contactCenteringMultiplier: 0.012
+  chuteSettleDuration: 0.45
+  chuteSettleLinearSpeed: 0.18
+  antiStuckDelay: 3.5
+  reservedTimeout: 1
+  descendTimeout: 6.6363635
+  closeTimeout: 4.5
+  ascendTimeout: 6
+  returnTimeout: 6
+  releaseTimeout: 2
+  judgeTimeout: 3.25
+  clawFingerMaterial: {fileID: 13400000, guid: 5a17b886b4ed639418f5c65d2ba1ce4a, type: 2}
+  machineFloorMaterial: {fileID: 13400000, guid: b4b09659acf44754eba2dd5257ea0516, type: 2}

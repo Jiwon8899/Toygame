@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39ed306f8c1cdd04d9e5ab93c94efd3b, type: 3}
+  m_Name: ClawPrize_soccer_boot
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawPrizeDefinition
+  displayName: soccer boot
+  product: {fileID: 11400000, guid: afcd2b1bb68acc9439804d47592df1ce, type: 2}
+  weight: 1.18
+  size: 0.72
+  gripDifficulty: 0.82
+  gripScoreModifier: -5
+  friction: 0.48
+  color: {r: 0.9461375, g: 0.5952, b: 0.96, a: 1}

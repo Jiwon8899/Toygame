@@ -1,0 +1,91 @@
+using UnityEngine;
+
+namespace PickAndPlaceShop
+{
+    public sealed class ShopInteractable : MonoBehaviour
+    {
+        [SerializeField] private ShopAction action;
+        [SerializeField] private string prompt = "Interact";
+
+        private ShopClawMachineNetwork networkClaw;
+        private ShopGachaMachineNetwork gachaMachine;
+        private ShopKujiStationNetwork kujiStation;
+        private ShopDistrictPortalNetwork districtPortal;
+        private ShopUpgradeTerminal upgradeTerminal;
+
+        public ShopAction Action => action;
+        public string Prompt
+        {
+            get
+            {
+                CacheHandlers();
+                if (networkClaw != null) return networkClaw.InteractionPrompt;
+                if (gachaMachine != null) return gachaMachine.InteractionPrompt;
+                if (kujiStation != null) return kujiStation.InteractionPrompt;
+                if (districtPortal != null) return districtPortal.InteractionPrompt;
+                if (upgradeTerminal != null) return upgradeTerminal.Prompt;
+                if (action == ShopAction.UpgradeShop && ShopNetworkGame.Instance != null)
+                    return ShopNetworkGame.Instance.ShopUpgradePrompt;
+                return prompt;
+            }
+        }
+
+        public void Configure(ShopAction configuredAction, string configuredPrompt)
+        {
+            action = configuredAction;
+            prompt = configuredPrompt;
+        }
+
+        public void Interact()
+        {
+            CacheHandlers();
+            if (networkClaw != null)
+            {
+                networkClaw.RequestUse();
+                return;
+            }
+            if (gachaMachine != null)
+            {
+                gachaMachine.RequestUse();
+                return;
+            }
+            if (kujiStation != null)
+            {
+                kujiStation.RequestUse();
+                return;
+            }
+            if (districtPortal != null)
+            {
+                districtPortal.RequestUse();
+                return;
+            }
+            if (upgradeTerminal != null)
+            {
+                upgradeTerminal.Interact();
+                return;
+            }
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null)
+            {
+                Debug.LogError("[ShopInteractable] ShopNetworkGame이 없어 상호작용을 처리할 수 없습니다.", this);
+                return;
+            }
+            game.RequestInteraction(action);
+        }
+
+        private void CacheHandlers()
+        {
+            if (networkClaw == null) networkClaw = GetComponent<ShopClawMachineNetwork>();
+            if (gachaMachine == null) gachaMachine = GetComponent<ShopGachaMachineNetwork>();
+            if (kujiStation == null) kujiStation = GetComponent<ShopKujiStationNetwork>();
+            if (districtPortal == null) districtPortal = GetComponent<ShopDistrictPortalNetwork>();
+            if (upgradeTerminal == null) upgradeTerminal = GetComponent<ShopUpgradeTerminal>();
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = new Color(1f, 0.7f, 0.2f, 0.8f);
+            Gizmos.DrawWireSphere(transform.position, 1f);
+        }
+    }
+}

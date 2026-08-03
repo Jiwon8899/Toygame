@@ -1,0 +1,1307 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6963dc6da4b057741b9a8fb81dfa1325, type: 3}
+  m_Name: ShopProgressionCatalog
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProgressionCatalog
+  designDecisions: "\uD655\uC815: \uC2A4\uD0DD 10\uAC1C, \uCEA1\uC290 \uD76C\uADC0\uB3C4
+    \uC120\uACB0\uC815/\uC0C1\uD488 \uD6C4\uACB0\uC815, \uAE30\uACC4 \uAE30\uC900
+    \uC774\uB3D9, \uD558\uB8E8 8\uBD84(\uC900\uBE442/\uC601\uC5C55/\uB9C8\uAC101),
+    \uACE0\uC720 \uC190\uB2D8 30\uBA85, \uB2E8\uACE8 3\uD68C, \uC77C\uC77C \uC720\uD589
+    +15%, \uD3EC\uC7A5\uB300 Lv2\xB7\uD3C9\uD31010, \uC790\uB3D9\uD654 \uD3C9\uD31040.
+    \uAC00\uC81C \uC9C0\uBA85\uC740 provisionalName\uC73C\uB85C \uD45C\uC2DC."
+  stages:
+  - stageId: small_shop
+    displayName: "\uC791\uC740 \uC18C\uD488\uC0F5"
+    conditions: []
+    rewards: []
+  - stageId: neighborhood_favorite
+    displayName: "\uB3D9\uB124 \uC778\uAE30\uC0F5"
+    conditions:
+    - type: 0
+      target: 10
+      categoryId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      target: 2000
+      categoryId: 
+      displayName: "\uB204\uC801 \uB9E4\uCD9C"
+    - type: 2
+      target: 10
+      categoryId: 
+      displayName: "\uD310\uB9E4 \uAC1C\uC218"
+    rewards:
+    - type: 1
+      amount: 500
+      targetId: 
+      displayName: "\uC6B4\uC601 \uC9C0\uC6D0\uAE08"
+  - stageId: shopping_street_leader
+    displayName: "\uC0C1\uC810\uAC00 \uB300\uD45C\uC0F5"
+    conditions:
+    - type: 0
+      target: 25
+      categoryId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      target: 6000
+      categoryId: 
+      displayName: "\uB204\uC801 \uB9E4\uCD9C"
+    - type: 2
+      target: 30
+      categoryId: 
+      displayName: "\uD310\uB9E4 \uAC1C\uC218"
+    - type: 3
+      target: 3
+      categoryId: 
+      displayName: "\uD76C\uADC0\uC0C1\uD488 \uD655\uBCF4"
+    rewards:
+    - type: 4
+      amount: 1
+      targetId: 
+      displayName: "\uD655\uC7A5\uAD8C"
+  - stageId: collector_specialist
+    displayName: "\uC218\uC9D1\uAC00 \uC804\uBB38\uC0F5"
+    conditions:
+    - type: 0
+      target: 40
+      categoryId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      target: 15000
+      categoryId: 
+      displayName: "\uB204\uC801 \uB9E4\uCD9C"
+    - type: 2
+      target: 70
+      categoryId: 
+      displayName: "\uD310\uB9E4 \uAC1C\uC218"
+    - type: 8
+      target: 25
+      categoryId: 
+      displayName: "\uCEEC\uB809\uC158"
+    rewards:
+    - type: 2
+      amount: 1
+      targetId: 
+      displayName: "\uD76C\uADC0 \uB79C\uB364 \uBC15\uC2A4"
+  - stageId: regional_landmark
+    displayName: "\uC9C0\uC5ED \uBA85\uC18C"
+    conditions:
+    - type: 0
+      target: 60
+      categoryId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      target: 30000
+      categoryId: 
+      displayName: "\uB204\uC801 \uB9E4\uCD9C"
+    - type: 2
+      target: 140
+      categoryId: 
+      displayName: "\uD310\uB9E4 \uAC1C\uC218"
+    - type: 5
+      target: 5
+      categoryId: 
+      displayName: "\uB2E8\uACE8\uC190\uB2D8"
+    - type: 8
+      target: 50
+      categoryId: 
+      displayName: "\uCEEC\uB809\uC158"
+    rewards:
+    - type: 1
+      amount: 3000
+      targetId: 
+      displayName: "\uC9C0\uC5ED \uD64D\uBCF4 \uC9C0\uC6D0\uAE08"
+  - stageId: national_goods_shop
+    displayName: "\uC804\uAD6D \uC720\uBA85 \uAD7F\uC988\uC0F5"
+    conditions:
+    - type: 0
+      target: 80
+      categoryId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      target: 60000
+      categoryId: 
+      displayName: "\uB204\uC801 \uB9E4\uCD9C"
+    - type: 2
+      target: 250
+      categoryId: 
+      displayName: "\uD310\uB9E4 \uAC1C\uC218"
+    - type: 3
+      target: 20
+      categoryId: 
+      displayName: "\uD76C\uADC0\uC0C1\uD488 \uD655\uBCF4"
+    - type: 8
+      target: 75
+      categoryId: 
+      displayName: "\uCEEC\uB809\uC158"
+    rewards:
+    - type: 4
+      amount: 1
+      targetId: 
+      displayName: "\uCD5C\uC885 \uD655\uC7A5\uAD8C"
+  - stageId: ultimate_collector_shop
+    displayName: "\uCD5C\uACE0\uC758 \uCEEC\uB809\uD130\uC0F5"
+    conditions:
+    - type: 0
+      target: 100
+      categoryId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      target: 100000
+      categoryId: 
+      displayName: "\uB204\uC801 \uB9E4\uCD9C"
+    - type: 2
+      target: 400
+      categoryId: 
+      displayName: "\uD310\uB9E4 \uAC1C\uC218"
+    - type: 5
+      target: 20
+      categoryId: 
+      displayName: "\uB2E8\uACE8\uC190\uB2D8"
+    - type: 8
+      target: 100
+      categoryId: 
+      displayName: "\uCEEC\uB809\uC158"
+    rewards:
+    - type: 0
+      amount: 10
+      targetId: 
+      displayName: "\uCD5C\uC885 \uD3C9\uD310 \uBCF4\uB108\uC2A4"
+  expansionTiers:
+  - level: 1
+    requiredReputation: 0
+    requiredFunds: 0
+    displaySlots: 4
+    storageSlots: 30
+    checkoutCount: 1
+    features: 1
+  - level: 2
+    requiredReputation: 10
+    requiredFunds: 2000
+    displaySlots: 6
+    storageSlots: 50
+    checkoutCount: 1
+    features: 3
+  - level: 3
+    requiredReputation: 25
+    requiredFunds: 4500
+    displaySlots: 10
+    storageSlots: 80
+    checkoutCount: 2
+    features: 7
+  - level: 4
+    requiredReputation: 40
+    requiredFunds: 8000
+    displaySlots: 12
+    storageSlots: 110
+    checkoutCount: 2
+    features: 15
+  - level: 5
+    requiredReputation: 60
+    requiredFunds: 14000
+    displaySlots: 16
+    storageSlots: 160
+    checkoutCount: 3
+    features: 31
+  districtUnlocks:
+  - districtId: gacha_shop
+    displayName: "\uAC00\uCC60\uC0F5"
+    requiredReputation: 5
+    placeholder: 0
+    provisionalName: 0
+  - districtId: kuji_shop
+    displayName: "\uCFE0\uC9C0\uC0F5"
+    requiredReputation: 10
+    placeholder: 0
+    provisionalName: 0
+  - districtId: retro_alley
+    displayName: "\uB808\uD2B8\uB85C \uACE8\uBAA9"
+    requiredReputation: 20
+    placeholder: 0
+    provisionalName: 0
+  - districtId: used_market
+    displayName: "\uC911\uACE0\uC2DC\uC7A5"
+    requiredReputation: 30
+    placeholder: 0
+    provisionalName: 0
+  - districtId: bus_service
+    displayName: "\uBC84\uC2A4 \uAC1C\uD1B5"
+    requiredReputation: 40
+    placeholder: 0
+    provisionalName: 0
+  - districtId: auction_house
+    displayName: "\uACBD\uB9E4\uC7A5"
+    requiredReputation: 50
+    placeholder: 0
+    provisionalName: 0
+  - districtId: subway
+    displayName: "\uC9C0\uD558\uCCA0"
+    requiredReputation: 60
+    placeholder: 0
+    provisionalName: 0
+  - districtId: collector_street
+    displayName: "\uC218\uC9D1\uAC00\uC758 \uAC70\uB9AC"
+    requiredReputation: 70
+    placeholder: 0
+    provisionalName: 1
+  - districtId: premium_event_hall
+    displayName: "\uD504\uB9AC\uBBF8\uC5C4 \uC774\uBCA4\uD2B8\uD640"
+    requiredReputation: 90
+    placeholder: 0
+    provisionalName: 0
+  - districtId: locked_building_placeholder
+    displayName: "\uC61B \uBB38\uAD6C\uC810"
+    requiredReputation: 2147483647
+    placeholder: 1
+    provisionalName: 1
+  - districtId: second_street_placeholder
+    displayName: "\uBC9A\uAF43\uAE38"
+    requiredReputation: 2147483647
+    placeholder: 1
+    provisionalName: 1
+  - districtId: third_district_placeholder
+    displayName: "\uAC15\uBCC0 \uC0C1\uAC00"
+    requiredReputation: 2147483647
+    placeholder: 1
+    provisionalName: 1
+  collectionCategories:
+  - categoryId: animal
+    displayName: "\uB3D9\uBB3C"
+  - categoryId: space
+    displayName: "\uC6B0\uC8FC"
+  - categoryId: retro
+    displayName: "\uB808\uD2B8\uB85C"
+  - categoryId: seasonal
+    displayName: "\uACC4\uC808"
+  - categoryId: other
+    displayName: "\uAE30\uD0C0"
+  collectionItems:
+  - itemId: collection:animal:001
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 001"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:002
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 002"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:003
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 003"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:004
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 004"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:005
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 005"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:006
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 006"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:007
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 007"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:008
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 008"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:009
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 009"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:010
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 010"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:011
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 011"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:012
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 012"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:013
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 013"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:014
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 014"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:015
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 015"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:016
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 016"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:017
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 017"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:018
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 018"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:019
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 019"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:020
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 020"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:021
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 021"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:022
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 022"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:023
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 023"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:024
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 024"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:025
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 025"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:026
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 026"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:027
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 027"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:028
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 028"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:029
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 029"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:030
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 030"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:031
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 031"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:032
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 032"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:033
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 033"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:034
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 034"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:035
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 035"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:036
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 036"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:037
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 037"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:038
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 038"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:039
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 039"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:040
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 040"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:041
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 041"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:042
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 042"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:043
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 043"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:044
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 044"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:045
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 045"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:046
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 046"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:047
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 047"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:048
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 048"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:049
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 049"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:animal:050
+    displayName: "\uB3D9\uBB3C \uC218\uC9D1\uD488 050"
+    categoryId: animal
+    rarity: 0
+  - itemId: collection:space:001
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 001"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:002
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 002"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:003
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 003"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:004
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 004"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:005
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 005"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:006
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 006"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:007
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 007"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:008
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 008"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:009
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 009"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:010
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 010"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:011
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 011"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:012
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 012"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:013
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 013"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:014
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 014"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:015
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 015"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:016
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 016"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:017
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 017"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:018
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 018"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:019
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 019"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:020
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 020"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:021
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 021"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:022
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 022"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:023
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 023"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:024
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 024"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:025
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 025"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:026
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 026"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:027
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 027"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:028
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 028"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:029
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 029"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:030
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 030"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:031
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 031"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:032
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 032"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:033
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 033"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:034
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 034"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:035
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 035"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:036
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 036"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:037
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 037"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:038
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 038"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:039
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 039"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:space:040
+    displayName: "\uC6B0\uC8FC \uC218\uC9D1\uD488 040"
+    categoryId: space
+    rarity: 0
+  - itemId: collection:retro:001
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 001"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:002
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 002"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:003
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 003"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:004
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 004"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:005
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 005"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:006
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 006"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:007
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 007"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:008
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 008"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:009
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 009"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:010
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 010"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:011
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 011"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:012
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 012"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:013
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 013"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:014
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 014"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:015
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 015"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:016
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 016"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:017
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 017"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:018
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 018"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:019
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 019"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:020
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 020"
+    categoryId: retro
+    rarity: 0
+  - itemId: collection:retro:021
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 021"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:022
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 022"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:023
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 023"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:024
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 024"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:025
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 025"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:026
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 026"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:027
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 027"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:028
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 028"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:029
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 029"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:030
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 030"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:031
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 031"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:032
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 032"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:033
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 033"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:034
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 034"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:035
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 035"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:036
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 036"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:037
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 037"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:038
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 038"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:039
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 039"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:retro:040
+    displayName: "\uB808\uD2B8\uB85C \uC218\uC9D1\uD488 040"
+    categoryId: retro
+    rarity: 1
+  - itemId: collection:seasonal:001
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 001"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:002
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 002"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:003
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 003"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:004
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 004"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:005
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 005"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:006
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 006"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:007
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 007"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:008
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 008"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:009
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 009"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:010
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 010"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:011
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 011"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:012
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 012"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:013
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 013"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:014
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 014"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:015
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 015"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:016
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 016"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:017
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 017"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:018
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 018"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:019
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 019"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:020
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 020"
+    categoryId: seasonal
+    rarity: 1
+  - itemId: collection:seasonal:021
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 021"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:022
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 022"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:023
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 023"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:024
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 024"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:025
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 025"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:026
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 026"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:027
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 027"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:028
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 028"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:029
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 029"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:seasonal:030
+    displayName: "\uACC4\uC808 \uC218\uC9D1\uD488 030"
+    categoryId: seasonal
+    rarity: 2
+  - itemId: collection:other:001
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 001"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:002
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 002"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:003
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 003"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:004
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 004"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:005
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 005"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:006
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 006"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:007
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 007"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:008
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 008"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:009
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 009"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:010
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 010"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:011
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 011"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:012
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 012"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:013
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 013"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:014
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 014"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:015
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 015"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:016
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 016"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:017
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 017"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:018
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 018"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:019
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 019"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:020
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 020"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:021
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 021"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:022
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 022"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:023
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 023"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:024
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 024"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:025
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 025"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:026
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 026"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:027
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 027"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:028
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 028"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:029
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 029"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:030
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 030"
+    categoryId: other
+    rarity: 2
+  - itemId: collection:other:031
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 031"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:032
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 032"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:033
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 033"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:034
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 034"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:035
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 035"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:036
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 036"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:037
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 037"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:038
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 038"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:039
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 039"
+    categoryId: other
+    rarity: 3
+  - itemId: collection:other:040
+    displayName: "\uAE30\uD0C0 \uC218\uC9D1\uD488 040"
+    categoryId: other
+    rarity: 3
+  goalPool:
+  - goalId: daily_revenue
+    displayName: "\uC624\uB298 \uB9E4\uCD9C"
+    weekly: 0
+    conditionType: 1
+    minimumTarget: 500
+    maximumTarget: 1500
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 1
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 100
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 2
+      amount: 1
+      targetId: 
+      displayName: "\uB79C\uB364 \uBC15\uC2A4"
+  - goalId: daily_sales
+    displayName: "\uC0C1\uD488 \uD310\uB9E4"
+    weekly: 0
+    conditionType: 2
+    minimumTarget: 5
+    maximumTarget: 12
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 1
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 100
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 2
+      amount: 1
+      targetId: 
+      displayName: "\uB79C\uB364 \uBC15\uC2A4"
+  - goalId: daily_claw
+    displayName: "\uC778\uD615\uBF51\uAE30 \uC131\uACF5"
+    weekly: 0
+    conditionType: 10
+    minimumTarget: 1
+    maximumTarget: 3
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 1
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 100
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 2
+      amount: 1
+      targetId: 
+      displayName: "\uB79C\uB364 \uBC15\uC2A4"
+  - goalId: daily_rare_sale
+    displayName: "\uD76C\uADC0\uC0C1\uD488 \uD310\uB9E4"
+    weekly: 0
+    conditionType: 4
+    minimumTarget: 1
+    maximumTarget: 2
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 1
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 100
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 2
+      amount: 1
+      targetId: 
+      displayName: "\uB79C\uB364 \uBC15\uC2A4"
+  - goalId: daily_satisfaction
+    displayName: "\uD3C9\uADE0 \uB9CC\uC871\uB3C4"
+    weekly: 0
+    conditionType: 6
+    minimumTarget: 70
+    maximumTarget: 90
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 1
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 100
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 2
+      amount: 1
+      targetId: 
+      displayName: "\uB79C\uB364 \uBC15\uC2A4"
+  - goalId: daily_claw_collection
+    displayName: "\uC778\uD615\uBF51\uAE30 \uC0C1\uD488 \uD655\uBCF4"
+    weekly: 0
+    conditionType: 9
+    minimumTarget: 1
+    maximumTarget: 3
+    categoryId: claw
+    rewards:
+    - type: 0
+      amount: 1
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 100
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 2
+      amount: 1
+      targetId: 
+      displayName: "\uB79C\uB364 \uBC15\uC2A4"
+  - goalId: weekly_revenue
+    displayName: "\uC8FC\uAC04 \uB204\uC801 \uB9E4\uCD9C"
+    weekly: 1
+    conditionType: 1
+    minimumTarget: 5000
+    maximumTarget: 12000
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 4
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 600
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 4
+      amount: 1
+      targetId: 
+      displayName: "\uAC00\uAC8C \uD655\uC7A5\uAD8C"
+  - goalId: weekly_sales
+    displayName: "\uC8FC\uAC04 \uD310\uB9E4"
+    weekly: 1
+    conditionType: 2
+    minimumTarget: 40
+    maximumTarget: 80
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 4
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 600
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 4
+      amount: 1
+      targetId: 
+      displayName: "\uAC00\uAC8C \uD655\uC7A5\uAD8C"
+  - goalId: weekly_claw
+    displayName: "\uC8FC\uAC04 \uC778\uD615\uBF51\uAE30"
+    weekly: 1
+    conditionType: 10
+    minimumTarget: 10
+    maximumTarget: 25
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 4
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 600
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 4
+      amount: 1
+      targetId: 
+      displayName: "\uAC00\uAC8C \uD655\uC7A5\uAD8C"
+  - goalId: weekly_reputation
+    displayName: "\uC8FC\uAC04 \uD3C9\uD310"
+    weekly: 1
+    conditionType: 0
+    minimumTarget: 10
+    maximumTarget: 20
+    categoryId: 
+    rewards:
+    - type: 0
+      amount: 4
+      targetId: 
+      displayName: "\uD3C9\uD310"
+    - type: 1
+      amount: 600
+      targetId: 
+      displayName: "\uACF5\uB3D9 \uC790\uAE08"
+    - type: 4
+      amount: 1
+      targetId: 
+      displayName: "\uAC00\uAC8C \uD655\uC7A5\uAD8C"
+  collectionMilestones:
+  - percent: 25
+    reputationReward: 2
+  - percent: 50
+    reputationReward: 4
+  - percent: 75
+    reputationReward: 7
+  - percent: 100
+    reputationReward: 12
+  masteryTiers:
+  - successes: 0
+    title: "\uCD08\uBCF4 \uC9D1\uAC8C\uC0AC"
+  - successes: 100
+    title: "\uC815\uBC00 \uC9D1\uAC8C\uC0AC"
+  - successes: 300
+    title: "\uC778\uD615\uBF51\uAE30 \uC7A5\uC778"
+  - successes: 1000
+    title: "\uC804\uC124\uC758 \uC9D1\uAC8C\uC655"
+  dailyGoalCount: 3
+  weeklyGoalCount: 2

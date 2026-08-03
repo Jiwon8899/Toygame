@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 746e9bdbf3621b64aa77dd9acfd77ae8, type: 3}
+  m_Name: Product_kuji_retro_robot_c
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProductDefinition
+  productId: 2025
+  displayName: "\uB85C\uBD07 \uD0A4\uB9C1"
+  category: 5
+  salePrice: 100
+  rarity: 0
+  condition: 2
+  giftWrappable: 1
+  stableItemId: arcade:kuji_retro_robot:c
+  prizePrefab: {fileID: 2838039208871010524, guid: d272fc212e8e1c949bc79d9ac3bafb8b, type: 3}
+  physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  maxStack: 10

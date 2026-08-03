@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8878fe5dd27eac42b244e738176e315, type: 3}
+  m_Name: Gacha_Space
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopGachaMachineConfig
+  machineId: gacha_space
+  displayName: "\uC6B0\uC8FC \uD0D0\uD5D8\uB300 \uAC00\uCC60"
+  attemptCost: 120
+  dailyStock: 12
+  uncommonChance: 0.3
+  rareChance: 0.12
+  commonProducts:
+  - "\uC791\uC740 \uB85C\uCF13"
+  - "\uD589\uC131 \uBC30\uC9C0"
+  uncommonProducts:
+  - "\uC6B0\uC8FC\uC778 \uD53C\uADDC\uC5B4"
+  rareProducts:
+  - "\uC740\uD558 \uD0D0\uC0AC\uC120"
+  commonProductDefinitions:
+  - {fileID: 11400000, guid: c14718abbbb7a4049a9359e6f884a275, type: 2}
+  - {fileID: 11400000, guid: 2fee1d30115898944a30ee57be1d7410, type: 2}
+  uncommonProductDefinitions:
+  - {fileID: 11400000, guid: 61f25b949c70fb84b99ce8c6d84fa7ce, type: 2}
+  rareProductDefinitions:
+  - {fileID: 11400000, guid: 7fe8e1352ae0d0c489cf0c0e88bb03d9, type: 2}
+  capsuleColor: {r: 0.24, g: 0.55, b: 1, a: 1}

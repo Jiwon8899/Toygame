@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fd4ae11509e3ca4c96705219ec83fb1, type: 3}
+  m_Name: Customer_Collector
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopCustomerArchetypeDefinition
+  customerType: 2
+  budgetMin: 300
+  budgetMax: 650
+  preferredPrice: 350
+  priceSensitivity: 0.35
+  patienceSeconds: 27
+  spawnWeight: 0.1
+  preferredCategory: 2
+  rarityPreference: 2
+  conditionPreference: 1.8
+  giftPreference: 0.2
+  movementSpeed: 2.1

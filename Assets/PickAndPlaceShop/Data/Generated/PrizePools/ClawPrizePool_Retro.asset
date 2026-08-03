@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba1fe25caeb3e434788cc007fdb0e0d2, type: 3}
+  m_Name: ClawPrizePool_Retro
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawPrizePool
+  poolId: retro
+  entries:
+  - prize: {fileID: 11400000, guid: 38df07b0f8a879545809e932ced4f8e6, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 6e1ca009eeba02b4b97509831899a198, type: 2}
+    rarityWeight: 6
+  - prize: {fileID: 11400000, guid: 07a854d55699903468e553f2710e18d0, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: f1696b97a7705da4cbb6dc4ade29e25f, type: 2}
+    rarityWeight: 6
+  - prize: {fileID: 11400000, guid: 5e1c4ba374ce855488d753c857efe735, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: ab1ac55ce622f2d4db46e6607c1387aa, type: 2}
+    rarityWeight: 6
+  - prize: {fileID: 11400000, guid: f6171584ac5d3454b836f5da592c547b, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: e1b8dbac4de84e5408c4f10a0a3c5faf, type: 2}
+    rarityWeight: 6
+  - prize: {fileID: 11400000, guid: 99ee58c9e7eaf264880463223dbaf3f8, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 6e995d052b8706f449cdc17b9185b17a, type: 2}
+    rarityWeight: 2
+  - prize: {fileID: 11400000, guid: 4db8aa5ae41539f47b4b7d4fc92e0bda, type: 2}
+    rarityWeight: 6
+  - prize: {fileID: 11400000, guid: eb54d3e532ade00468f48f4eb428b97a, type: 2}
+    rarityWeight: 14
+  - prize: {fileID: 11400000, guid: 49b4c55563ea1e8479c63fabc3d544af, type: 2}
+    rarityWeight: 6
+  - prize: {fileID: 11400000, guid: af6b2d62dfa93eb4fbe6e3d53ff8fb0c, type: 2}
+    rarityWeight: 14
+  maxConcurrentPrizes: 6
+  spawnAttemptsPerPrize: 16
+  spawnClearance: 0.045
