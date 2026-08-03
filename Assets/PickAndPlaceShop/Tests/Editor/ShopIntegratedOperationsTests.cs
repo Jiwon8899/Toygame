@@ -53,6 +53,16 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
+        public void PrizeMachines_AreAvailableDuringPreparationAndOpening()
+        {
+            Assert.IsTrue(ShopClawRules.CanOperateDuring(ShopPhase.PrizeHunt));
+            Assert.IsTrue(ShopClawRules.CanOperateDuring(ShopPhase.Setup));
+            Assert.IsTrue(ShopClawRules.CanOperateDuring(ShopPhase.Open));
+            Assert.IsFalse(ShopClawRules.CanOperateDuring(ShopPhase.Summary));
+            Assert.IsFalse(ShopClawRules.CanOperateDuring(ShopPhase.Complete));
+        }
+
+        [Test]
         public void Collection_HasExactCategoryAndRarityDistribution()
         {
             Assert.AreEqual(200, catalog.CollectionItems.Count);

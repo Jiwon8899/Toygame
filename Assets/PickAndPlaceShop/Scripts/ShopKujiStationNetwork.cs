@@ -119,9 +119,9 @@ namespace PickAndPlaceShop
             ulong sender = rpcParams.Receive.SenderClientId;
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (config == null || game == null) return;
-            if (game.Phase.Value != ShopPhase.PrizeHunt)
+            if (!ShopClawRules.CanOperateDuring(game.Phase.Value))
             {
-                game.ServerSetEvent("쿠지는 낮 상품 획득 단계에서만 구매할 수 있습니다.");
+                game.ServerSetEvent("쿠지는 준비 또는 영업 시간에 구매할 수 있습니다.");
                 return;
             }
             if (State.Value != ShopKujiState.Idle)
