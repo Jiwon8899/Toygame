@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace PickAndPlaceShop
 {
@@ -32,7 +33,29 @@ namespace PickAndPlaceShop
             ultraRare = 10
         };
         [SerializeField] private ShopMultiPrizePolicy multiPrizePolicy =
-            ShopMultiPrizePolicy.SingleAndReturnExtras;
+            ShopMultiPrizePolicy.AwardAll;
+
+        [Header("Scoop rig")]
+        [Range(0.8f, 1.8f)] [SerializeField] private float scoopDiameter = 1.24f;
+        [Range(0.04f, 0.18f)] [SerializeField] private float scoopBottomThickness = 0.065f;
+        [Range(0.08f, 0.65f)] [SerializeField] private float scoopRimHeight = 0.46f;
+        [Range(0.01f, 0.08f)] [SerializeField] private float scoopOpenRimHeight = 0.04f;
+        [Range(0.1f, 1.5f)] [SerializeField] private float scoopLipCloseDuration = 0.55f;
+        [Range(0.25f, 1.4f)] [SerializeField] private float scrapeDistance = 0.72f;
+        [Range(0.2f, 2.5f)] [SerializeField] private float scrapeSpeed = 0.68f;
+        [Range(2f, 22f)] [SerializeField] private float scrapeTiltAngle = 10f;
+        [Range(25f, 85f)] [SerializeField] private float pourAngle = 62f;
+        [Range(0.001f, 0.025f)] [SerializeField] private float sweepSkin = 0.006f;
+        [Range(0.001f, 0.03f)] [SerializeField] private float floorClearance = 0.004f;
+        [Range(0f, 0.1f)] [SerializeField] private float chuteHorizontalInset = 0f;
+        [Min(0.1f)] [SerializeField] private float scoopVerticalAcceleration = 4.5f;
+        [Range(0.5f, 1f)] [SerializeField] private float loadedLiftSpeedMultiplier = 0.82f;
+
+        [Header("Capsule mass by rarity")]
+        [Range(0.15f, 1.5f)] [SerializeField] private float commonCapsuleMass = 0.34f;
+        [Range(0.15f, 1.5f)] [SerializeField] private float uncommonCapsuleMass = 0.40f;
+        [Range(0.15f, 1.5f)] [SerializeField] private float rareCapsuleMass = 0.48f;
+        [Range(0.15f, 1.5f)] [SerializeField] private float ultraRareCapsuleMass = 0.58f;
 
         [Header("Operator camera")]
         [Range(2.5f, 7f)] [SerializeField] private float operatorCameraDistance = 4.2f;
@@ -40,30 +63,7 @@ namespace PickAndPlaceShop
         [Range(40f, 85f)] [SerializeField] private float operatorCameraFieldOfView = 60f;
         [Range(0.8f, 3.5f)] [SerializeField] private float operatorCameraFocusHeight = 2.0f;
 
-        [Header("Finger layout")]
-        [Min(0.05f)] [SerializeField] private float fingerLayoutRadius = 0.69f;
-        [SerializeField] private float fingerLayoutHeight = -0.38f;
-        [Range(0f, 180f)] [SerializeField] private float fingerLayoutTilt = 120f;
-
-        [Header("Physical carriage and suspension")]
-        [Min(0.5f)] [SerializeField] private float clawMass = 1.35f;
-        [Range(0.04f, 0.3f)] [SerializeField] private float suspensionTravel = 0.14f;
-        [Min(1f)] [SerializeField] private float suspensionSpring = 42f;
-        [Min(0.1f)] [SerializeField] private float suspensionDamper = 5.5f;
-        [Range(0.1f, 12f)] [SerializeField] private float housingSwingDamper = 2.1f;
-        [Min(0.1f)] [SerializeField] private float verticalAcceleration = 4.5f;
-        [Range(0.5f, 1f)] [SerializeField] private float loadedLiftSpeedMultiplier = 0.82f;
-
-        [Header("Torque driven fingers")]
-        [Range(-45f, 60f)] [SerializeField] private float closedFingerAngle = -18f;
-        [Min(0f)] [SerializeField] private float closedFingerClearanceAngle = 8f;
-        [Range(-45f, 45f)] [SerializeField] private float openFingerAngle = 32f;
-        [Min(1f)] [SerializeField] private float closeMotorTorque = 24f;
-        [Min(1f)] [SerializeField] private float openMotorTorque = 18f;
-        [Min(1f)] [SerializeField] private float closeMotorSpeed = 82f;
-        [Min(1f)] [SerializeField] private float openMotorSpeed = 68f;
-        [Range(0.1f, 1f)] [SerializeField] private float ascentGripTorqueMultiplier = 0.68f;
-        [Range(0f, 0.1f)] [SerializeField] private float contactCenteringMultiplier = 0.02f;
+        [Header("Prize settling and recovery")]
         [Range(0.25f, 8f)] [SerializeField] private float chuteSettleDuration = 0.45f;
         [Range(0.01f, 1f)] [SerializeField] private float chuteSettleLinearSpeed = 0.18f;
         [Range(0.1f, 10f)] [SerializeField] private float antiStuckDelay = 3.5f;
@@ -78,7 +78,8 @@ namespace PickAndPlaceShop
         [Min(0.1f)] [SerializeField] private float judgeTimeout = 1.6f;
 
         [Header("Physics materials")]
-        [SerializeField] private PhysicsMaterial clawFingerMaterial;
+        [FormerlySerializedAs("clawFingerMaterial")]
+        [SerializeField] private PhysicsMaterial scoopPhysicsMaterial;
         [SerializeField] private PhysicsMaterial machineFloorMaterial;
 
         public int MachineId => machineId;
@@ -104,29 +105,24 @@ namespace PickAndPlaceShop
             ? rarityWeights
             : ShopOperationsConfig.Load()?.StandardRarityWeights ?? default;
         public ShopMultiPrizePolicy MultiPrizePolicy => multiPrizePolicy;
+        public float ScoopDiameter => scoopDiameter;
+        public float ScoopBottomThickness => scoopBottomThickness;
+        public float ScoopRimHeight => scoopRimHeight;
+        public float ScoopOpenRimHeight => scoopOpenRimHeight;
+        public float ScoopLipCloseDuration => scoopLipCloseDuration;
+        public float ScrapeDistance => scrapeDistance;
+        public float ScrapeSpeed => scrapeSpeed;
+        public float ScrapeTiltAngle => scrapeTiltAngle;
+        public float PourAngle => pourAngle;
+        public float SweepSkin => sweepSkin;
+        public float FloorClearance => floorClearance;
+        public float ChuteHorizontalInset => chuteHorizontalInset;
+        public float ScoopVerticalAcceleration => scoopVerticalAcceleration;
         public float OperatorCameraDistance => operatorCameraDistance;
         public float OperatorCameraPitch => operatorCameraPitch;
         public float OperatorCameraFieldOfView => operatorCameraFieldOfView;
         public float OperatorCameraFocusHeight => operatorCameraFocusHeight;
-        public float FingerLayoutRadius => fingerLayoutRadius;
-        public float FingerLayoutHeight => fingerLayoutHeight;
-        public float FingerLayoutTilt => fingerLayoutTilt;
-        public float ClawMass => clawMass;
-        public float SuspensionTravel => suspensionTravel;
-        public float SuspensionSpring => suspensionSpring;
-        public float SuspensionDamper => suspensionDamper;
-        public float HousingSwingDamper => housingSwingDamper;
-        public float VerticalAcceleration => verticalAcceleration;
         public float LoadedLiftSpeedMultiplier => loadedLiftSpeedMultiplier;
-        public float ClosedFingerAngle => closedFingerAngle;
-        public float ClosedFingerClearanceAngle => closedFingerClearanceAngle;
-        public float OpenFingerAngle => openFingerAngle;
-        public float CloseMotorTorque => closeMotorTorque;
-        public float OpenMotorTorque => openMotorTorque;
-        public float CloseMotorSpeed => closeMotorSpeed;
-        public float OpenMotorSpeed => openMotorSpeed;
-        public float AscentGripTorqueMultiplier => ascentGripTorqueMultiplier;
-        public float ContactCenteringMultiplier => contactCenteringMultiplier;
         public float ChuteSettleDuration => chuteSettleDuration;
         public float ChuteSettleLinearSpeed => chuteSettleLinearSpeed;
         public float AntiStuckDelay => antiStuckDelay;
@@ -137,8 +133,19 @@ namespace PickAndPlaceShop
         public float ReturnTimeout => returnTimeout;
         public float ReleaseTimeout => releaseTimeout;
         public float JudgeTimeout => judgeTimeout;
-        public PhysicsMaterial ClawFingerMaterial => clawFingerMaterial;
+        public PhysicsMaterial ScoopPhysicsMaterial => scoopPhysicsMaterial;
         public PhysicsMaterial MachineFloorMaterial => machineFloorMaterial;
+
+        public float GetCapsuleMass(ShopProductRarity rarity)
+        {
+            return rarity switch
+            {
+                ShopProductRarity.Uncommon => uncommonCapsuleMass,
+                ShopProductRarity.Rare => rareCapsuleMass,
+                ShopProductRarity.UltraRare => ultraRareCapsuleMass,
+                _ => commonCapsuleMass
+            };
+        }
 
 #if UNITY_EDITOR
         public void EditorConfigure(int id, string label, int cost, float aimSeconds, float speed,
@@ -165,44 +172,12 @@ namespace PickAndPlaceShop
             inputSendInterval = sendInterval;
         }
 
-        public void EditorConfigurePhysical(ShopClawPrizePool pool, float bodyMass,
-            float travel, float spring, float damper, float gripSpring, float gripDamper,
-            float maxGripForce, float fingerAngle, float verticalAccel, float loadedLiftMultiplier,
-            PhysicsMaterial fingerMaterial, PhysicsMaterial floorMaterial)
+        public void EditorConfigurePrizeCatalog(ShopClawPrizePool pool,
+            PhysicsMaterial scoopMaterial, PhysicsMaterial floorMaterial)
         {
             prizePool = pool;
-            clawMass = Mathf.Max(0.5f, bodyMass);
-            suspensionTravel = Mathf.Clamp(travel, 0.04f, 0.3f);
-            suspensionSpring = Mathf.Max(1f, spring);
-            suspensionDamper = Mathf.Max(0.1f, damper);
-            closeMotorTorque = Mathf.Max(1f, maxGripForce);
-            closedFingerAngle = Mathf.Clamp(fingerAngle, -45f, 60f);
-            verticalAcceleration = Mathf.Max(0.1f, verticalAccel);
-            loadedLiftSpeedMultiplier = Mathf.Clamp(loadedLiftMultiplier, 0.5f, 1f);
-            clawFingerMaterial = fingerMaterial;
+            scoopPhysicsMaterial = scoopMaterial;
             machineFloorMaterial = floorMaterial;
-        }
-
-        public void EditorConfigureTorque(float closedAngle, float openAngle, float closedClearance,
-            float closeTorque,
-            float openTorque, float closeSpeed, float openSpeed, float ascentMultiplier,
-            float swingDamper, float settleDuration, float settleSpeed, float stuckDelay)
-        {
-            closedFingerAngle = Mathf.Clamp(closedAngle, -45f, 60f);
-            openFingerAngle = Mathf.Clamp(openAngle, -45f, 75f);
-            closedFingerClearanceAngle = Mathf.Clamp(closedClearance, -30f, 30f);
-            closeMotorTorque = Mathf.Max(1f, closeTorque);
-            openMotorTorque = Mathf.Max(1f, openTorque);
-            closeMotorSpeed = Mathf.Max(1f, closeSpeed);
-            openMotorSpeed = Mathf.Max(1f, openSpeed);
-            ascentGripTorqueMultiplier = Mathf.Clamp(ascentMultiplier, 0.1f, 1f);
-            housingSwingDamper = Mathf.Max(0.1f, swingDamper);
-            chuteSettleDuration = Mathf.Max(0.25f, settleDuration);
-            chuteSettleLinearSpeed = Mathf.Max(0.01f, settleSpeed);
-            antiStuckDelay = Mathf.Max(0.1f, stuckDelay);
-            closeDuration = Mathf.Max(closeDuration, 1.2f);
-            closeTimeout = 4.5f;
-            judgeTimeout = Mathf.Max(chuteSettleDuration + 1.5f, 3.25f);
         }
 
         public void EditorConfigureCaptureMotion(float lowestHeadHeight, float upwardSpeed,
@@ -214,21 +189,9 @@ namespace PickAndPlaceShop
             descendTimeout = Mathf.Max(5f, (topHeight - dropHeight) / descendSpeed + 2f);
         }
 
-        public void EditorConfigureSuspension(float travel, float spring, float damper)
-        {
-            suspensionTravel = Mathf.Clamp(travel, 0.02f, 0.3f);
-            suspensionSpring = Mathf.Max(1f, spring);
-            suspensionDamper = Mathf.Max(0.1f, damper);
-        }
-
         public void EditorConfigureReturnSpeed(float speed)
         {
             returnSpeed = Mathf.Clamp(speed, 0.3f, 5f);
-        }
-
-        public void EditorConfigureGripAssist(float multiplier)
-        {
-            contactCenteringMultiplier = Mathf.Clamp(multiplier, 0f, 0.1f);
         }
 
         public void EditorConfigureOperator(float idleDropSeconds, float distance, float pitch,
@@ -241,13 +204,6 @@ namespace PickAndPlaceShop
             operatorCameraFocusHeight = Mathf.Clamp(focusHeight, 0.8f, 3.5f);
         }
 
-        public void EditorConfigureFingerLayout(float radius, float height, float tilt)
-        {
-            fingerLayoutRadius = Mathf.Max(0.05f, radius);
-            fingerLayoutHeight = height;
-            fingerLayoutTilt = Mathf.Clamp(tilt, 0f, 180f);
-        }
-
         public void EditorConfigureBounds(Vector2 horizontal, Vector2 depth)
         {
             xBounds = horizontal;
@@ -258,6 +214,31 @@ namespace PickAndPlaceShop
         {
             rarityWeights = weights;
             multiPrizePolicy = policy;
+        }
+
+        public void EditorConfigureScoop(float diameter, float bottomThickness, float rimHeight,
+            float forwardDistance, float forwardSpeed, float tiltAngle, float releaseAngle,
+            float skin, float clearance, float loadedLiftMultiplier, Vector4 rarityMasses)
+        {
+            scoopDiameter = Mathf.Clamp(diameter, 0.8f, 1.8f);
+            scoopBottomThickness = Mathf.Clamp(bottomThickness, 0.04f, 0.18f);
+            scoopRimHeight = Mathf.Clamp(rimHeight, 0.08f, 0.65f);
+            scoopOpenRimHeight = Mathf.Min(0.04f, scoopRimHeight);
+            scoopLipCloseDuration = 0.55f;
+            scrapeDistance = Mathf.Clamp(forwardDistance, 0.25f, 1.4f);
+            scrapeSpeed = Mathf.Clamp(forwardSpeed, 0.2f, 2.5f);
+            scrapeTiltAngle = Mathf.Clamp(tiltAngle, 2f, 22f);
+            pourAngle = Mathf.Clamp(releaseAngle, 25f, 85f);
+            sweepSkin = Mathf.Clamp(skin, 0.001f, 0.025f);
+            floorClearance = Mathf.Clamp(clearance, 0.001f, 0.03f);
+            chuteHorizontalInset = 0f;
+            loadedLiftSpeedMultiplier = Mathf.Clamp(loadedLiftMultiplier, 0.5f, 1f);
+            commonCapsuleMass = Mathf.Clamp(rarityMasses.x, 0.15f, 1.5f);
+            uncommonCapsuleMass = Mathf.Clamp(rarityMasses.y, 0.15f, 1.5f);
+            rareCapsuleMass = Mathf.Clamp(rarityMasses.z, 0.15f, 1.5f);
+            ultraRareCapsuleMass = Mathf.Clamp(rarityMasses.w, 0.15f, 1.5f);
+            multiPrizePolicy = ShopMultiPrizePolicy.AwardAll;
+            closeDuration = Mathf.Max(closeDuration, scrapeDistance / scrapeSpeed);
         }
 #endif
     }

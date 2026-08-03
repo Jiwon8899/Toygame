@@ -40,7 +40,7 @@ MonoBehaviour:
   automationUnlockReputation: 40
   automationPurchasePrice: 1800
   automationAttemptInterval: 60
-  manualAverageSuccessRate: 0.58
+  manualAverageSuccessRate: 0.9
   automationSuccessMultiplier: 0.5
   automationBufferSlots: 10
   automationNearFullSlots: 8

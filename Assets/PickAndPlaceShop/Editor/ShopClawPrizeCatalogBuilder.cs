@@ -29,8 +29,8 @@ namespace PickAndPlaceShop.Editor
                 MaterialFolder + "/Prize_Plush.physicMaterial", 0.62f, 0.72f, 0.01f);
             PhysicsMaterial hardMaterial = LoadOrCreatePhysicsMaterial(
                 MaterialFolder + "/Prize_Hard.physicMaterial", 0.44f, 0.52f, 0.025f);
-            PhysicsMaterial fingerMaterial = LoadOrCreatePhysicsMaterial(
-                MaterialFolder + "/Claw_Finger.physicMaterial", 0.78f, 0.86f, 0f);
+            PhysicsMaterial scoopMaterial = LoadOrCreatePhysicsMaterial(
+                MaterialFolder + "/Scoop_Surface.physicMaterial", 0.78f, 0.86f, 0f);
             PhysicsMaterial floorMaterial = LoadOrCreatePhysicsMaterial(
                 MaterialFolder + "/Machine_Floor.physicMaterial", 0.56f, 0.66f, 0.01f);
 
@@ -113,9 +113,7 @@ namespace PickAndPlaceShop.Editor
                 int poolIndex = machine.MachineId is >= 101 and <= 103
                     ? machine.MachineId - 101
                     : machineIndex % pools.Length;
-                machine.EditorConfigurePhysical(pools[poolIndex], 1.35f,
-                    0.14f, 42f, 5.5f, 48f, 4.5f, 26f, 24f, 4.5f, 0.82f,
-                    fingerMaterial, floorMaterial);
+                machine.EditorConfigurePrizeCatalog(pools[poolIndex], scoopMaterial, floorMaterial);
                 EditorUtility.SetDirty(machine);
                 machineIndex++;
             }

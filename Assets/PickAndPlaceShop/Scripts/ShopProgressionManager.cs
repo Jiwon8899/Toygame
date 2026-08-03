@@ -110,7 +110,7 @@ namespace PickAndPlaceShop
         public int CurrentCheckoutCount => CurrentExpansion?.CheckoutCount ?? 1;
         public ShopExpansionFeature CurrentFeatures => CurrentExpansion?.Features ?? ShopExpansionFeature.Checkout;
         public string ClawMasteryTitle =>
-            ShopProgressionRules.FindMasteryTier(clawSuccesses, catalog?.MasteryTiers)?.Title ?? "초보 집게사";
+            ShopProgressionRules.FindMasteryTier(clawSuccesses, catalog?.MasteryTiers)?.Title ?? "초보 뽑기사";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()

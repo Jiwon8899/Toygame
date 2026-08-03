@@ -23,9 +23,9 @@ MonoBehaviour:
   topHeight: 3.55
   dropHeight: 1
   descendSpeed: 0.55
-  liftSpeed: 1.55
-  returnSpeed: 1.15
-  closeDuration: 1.2
+  liftSpeed: 1
+  returnSpeed: 1.2
+  closeDuration: 1.75
   releaseDuration: 0.45
   interactionRange: 4.5
   inputSendInterval: 0.06
@@ -36,30 +36,29 @@ MonoBehaviour:
     uncommon: 40
     rare: 40
     ultraRare: 10
-  multiPrizePolicy: 0
+  multiPrizePolicy: 1
+  scoopDiameter: 1.3599999
+  scoopBottomThickness: 0.065
+  scoopRimHeight: 0.53
+  scoopOpenRimHeight: 0.04
+  scoopLipCloseDuration: 0.55
+  scrapeDistance: 0.84
+  scrapeSpeed: 0.48
+  scrapeTiltAngle: 8
+  pourAngle: 52
+  sweepSkin: 0.006
+  floorClearance: 0.004
+  chuteHorizontalInset: 0
+  scoopVerticalAcceleration: 4.5
+  loadedLiftSpeedMultiplier: 0.76
+  commonCapsuleMass: 0.34
+  uncommonCapsuleMass: 0.4
+  rareCapsuleMass: 0.48
+  ultraRareCapsuleMass: 0.58
   operatorCameraDistance: 4.15
   operatorCameraPitch: 25
   operatorCameraFieldOfView: 60
   operatorCameraFocusHeight: 2.15
-  fingerLayoutRadius: 0.69
-  fingerLayoutHeight: -0.38
-  fingerLayoutTilt: 120
-  clawMass: 1.35
-  suspensionTravel: 0.08
-  suspensionSpring: 2200
-  suspensionDamper: 120
-  housingSwingDamper: 8
-  verticalAcceleration: 4.5
-  loadedLiftSpeedMultiplier: 0.82
-  closedFingerAngle: -18
-  closedFingerClearanceAngle: 8
-  openFingerAngle: 32
-  closeMotorTorque: 75
-  openMotorTorque: 45
-  closeMotorSpeed: 40
-  openMotorSpeed: 80
-  ascentGripTorqueMultiplier: 0.4
-  contactCenteringMultiplier: 0.012
   chuteSettleDuration: 0.45
   chuteSettleLinearSpeed: 0.18
   antiStuckDelay: 3.5
@@ -70,5 +69,5 @@ MonoBehaviour:
   returnTimeout: 6
   releaseTimeout: 2
   judgeTimeout: 3.25
-  clawFingerMaterial: {fileID: 13400000, guid: 5a17b886b4ed639418f5c65d2ba1ce4a, type: 2}
+  scoopPhysicsMaterial: {fileID: 13400000, guid: 5a17b886b4ed639418f5c65d2ba1ce4a, type: 2}
   machineFloorMaterial: {fileID: 13400000, guid: b4b09659acf44754eba2dd5257ea0516, type: 2}

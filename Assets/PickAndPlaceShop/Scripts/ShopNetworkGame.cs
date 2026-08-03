@@ -365,9 +365,9 @@ namespace PickAndPlaceShop
                 },
                 ShopUpgradeCategory.Claw => level switch
                 {
-                    0 => "집게 이동 +25% / 조작시간 +5초",
-                    1 => "집게 힘 +35% / 정밀 그립",
-                    _ => "집게 장비 강화 완료"
+                    0 => "팬 이동 +25% / 조작시간 +5초",
+                    1 => "팬 안정성 +35% / 정밀 퍼올리기",
+                    _ => "뽑기 장비 강화 완료"
                 },
                 ShopUpgradeCategory.Gacha => level == 0
                     ? "가챠 비용 20% 할인"
@@ -393,8 +393,8 @@ namespace PickAndPlaceShop
                 ShopUpgradeCategory.Operations => "계산대를 개선했습니다. 계산 시간이 짧아집니다.",
                 ShopUpgradeCategory.Facility when level == 1 => "매장 천장에 따뜻한 조명을 설치했습니다.",
                 ShopUpgradeCategory.Facility => "카운터와 매장 장식을 새롭게 꾸몄습니다.",
-                ShopUpgradeCategory.Claw when level == 1 => "정밀 레일을 설치해 집게가 빠르고 오래 움직입니다.",
-                ShopUpgradeCategory.Claw => "강화 집게로 교체해 힘과 그립 판정이 좋아졌습니다.",
+                ShopUpgradeCategory.Claw when level == 1 => "정밀 레일을 설치해 팬이 빠르고 오래 움직입니다.",
+                ShopUpgradeCategory.Claw => "강화 팬으로 교체해 퍼올리기 안정성이 좋아졌습니다.",
                 ShopUpgradeCategory.Gacha => "가챠 이용 비용이 20% 할인됩니다.",
                 ShopUpgradeCategory.Kuji when level == 1 => "쿠지의 상세 재고와 마지막상 정보를 확인할 수 있습니다.",
                 ShopUpgradeCategory.Kuji => "쿠지 티켓 비용이 20% 할인됩니다.",
@@ -444,7 +444,7 @@ namespace PickAndPlaceShop
             {
                 FailStreak.Value++;
                 ServerRecordClawResult(false);
-                SetEvent(KoreanMode ? "집게가 미끄러졌습니다. 다음 시도의 보정 확률이 증가합니다." : "The claw slipped. Pity increased for the next attempt.");
+                SetEvent(KoreanMode ? "상품이 팬에서 미끄러졌습니다. 다음 시도의 보정 확률이 증가합니다." : "The prize slipped from the scoop. Pity increased for the next attempt.");
             }
         }
 

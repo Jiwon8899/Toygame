@@ -252,7 +252,7 @@ namespace PickAndPlaceShop
                 ShopUpgradeCategory.Player => new[] { "빠른 걸음", "빠른 달리기" },
                 ShopUpgradeCategory.Operations => new[] { "도로변 홍보", "대기공간 확장", "빠른 계산" },
                 ShopUpgradeCategory.Facility => new[] { "따뜻한 조명", "매장 리뉴얼" },
-                ShopUpgradeCategory.Claw => new[] { "정밀 레일", "강화 집게" },
+                ShopUpgradeCategory.Claw => new[] { "정밀 레일", "강화 팬" },
                 ShopUpgradeCategory.Gacha => new[] { "가챠 20% 할인" },
                 ShopUpgradeCategory.Kuji => new[] { "상세 재고 정보", "쿠지 20% 할인" },
                 _ => System.Array.Empty<string>()

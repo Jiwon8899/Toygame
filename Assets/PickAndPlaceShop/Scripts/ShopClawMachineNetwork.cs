@@ -27,16 +27,13 @@ namespace PickAndPlaceShop
         [SerializeField] private Rigidbody carriageBody;
         [SerializeField] private Transform clawHead;
         [SerializeField] private Rigidbody clawBody;
-        [SerializeField] private ConfigurableJoint suspensionJoint;
+        [SerializeField] private ShopClawScoopRig scoopRig;
         [SerializeField] private Transform cable;
-        [SerializeField] private Transform[] clawFingers;
-        [SerializeField] private Transform gripVolume;
         [SerializeField] private Transform chuteDropPoint;
         [SerializeField] private Transform[] prizeSpawnPoints;
         [SerializeField] private Transform joystickStick;
         [SerializeField] private Renderer statusLamp;
         [SerializeField] private Renderer[] localGlassRenderers;
-        [SerializeField] private Collider[] clawFingerSensors;
 
         [Header("HUD")]
         [SerializeField] private Canvas operatorHud;
@@ -108,11 +105,6 @@ namespace PickAndPlaceShop
         private int requestedReplayAttempt = -1;
         private int awardedAttemptId = -1;
         private int appliedClawUpgradeAppearance = -1;
-        private readonly List<Rigidbody> physicalFingerBodies = new();
-        private readonly List<HingeJoint> physicalFingerJoints = new();
-        private readonly List<float> physicalFingerAngleOffsets = new();
-        private readonly List<ShopClawFingerContactSensor> physicalFingerSensors = new();
-        private readonly List<ShopClawPrizeNetwork> fingerContactScratch = new();
         private GameObject aimGroundMarker;
         private readonly Dictionary<ulong, float> chuteStableSeconds = new();
         private readonly Dictionary<ulong, float> chuteLastObservationTime = new();
@@ -121,6 +113,17 @@ namespace PickAndPlaceShop
         private float verticalVelocity;
         private float autoDropIdleElapsed;
         private System.Random prizeRandom;
+        private Vector2 scrapeOrigin;
+        private Vector2 scrapeTarget;
+        private Quaternion scoopTargetRotation = Quaternion.identity;
+        private Vector3 scoopPourDirectionLocal = Vector3.right;
+        private bool scoopBlockedDuringDescent;
+        private bool scoopTouchedPrize;
+        private float lastFloorPenetrationMillimeters;
+        private int floorContactSamples;
+        private bool floorVerificationOverride;
+        private bool floorVerificationRunning;
+        private int loggedReleaseAttempt = -1;
 
         public ShopClawMachineConfig Config => config;
         public bool IsManuallyBusy => OccupantClientId.Value != ShopClawRules.NoOccupant ||
@@ -138,12 +141,34 @@ namespace PickAndPlaceShop
             ? operatorCamera.transform.position
             : Vector3.zero;
         public int LocalCameraPreset => localCameraPreset;
+        public ShopClawScoopRig ScoopRig => scoopRig;
+        public float LastFloorPenetrationMillimeters => lastFloorPenetrationMillimeters;
+        public int FloorContactSamples => floorContactSamples;
+        public Vector3 ChuteWorldPosition => chuteDropPoint != null
+            ? chuteDropPoint.position
+            : transform.position;
+
+        public bool BeginScoopFloorVerification(int repetitions = 50)
+        {
+            if (!IsServer || scoopRig == null || floorVerificationRunning) return false;
+            StartCoroutine(ServerVerifyScoopFloorContacts(Mathf.Clamp(repetitions, 1, 100)));
+            return true;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool RefillPrizesForScoopVerification()
+        {
+            if (!IsServer || !IsSpawned) return false;
+            ServerRefillPrizes();
+            return true;
+        }
+#endif
 
 #if UNITY_EDITOR
         public void EditorConfigure(ShopClawMachineConfig machineConfig, GameObject networkPrizePrefab,
             ShopClawPrizeDefinition[] definitions, Transform operatorTransform, Camera localCamera,
-            Transform lookPivot, Transform head, Rigidbody headBody, Transform wire, Transform[] fingers,
-            Transform grip, Transform chute, Transform[] spawns, Transform joystick, Renderer lamp,
+            Transform lookPivot, Transform head, Rigidbody headBody, Transform wire,
+            Transform chute, Transform[] spawns, Transform joystick, Renderer lamp,
             Canvas hud, Text hudText, Text developmentText)
         {
             config = machineConfig;
@@ -155,8 +180,6 @@ namespace PickAndPlaceShop
             clawHead = head;
             clawBody = headBody;
             cable = wire;
-            clawFingers = fingers;
-            gripVolume = grip;
             chuteDropPoint = chute;
             prizeSpawnPoints = spawns;
             joystickStick = joystick;
@@ -168,17 +191,12 @@ namespace PickAndPlaceShop
 
         public void EditorConfigureTransition(CanvasGroup transition) => cameraTransition = transition;
 
-        public void EditorConfigurePhysicalPresentation(Renderer[] glassRenderers, Collider[] fingerSensors)
-        {
-            localGlassRenderers = glassRenderers;
-            clawFingerSensors = fingerSensors;
-        }
-
-        public void EditorConfigurePhysicalRig(Rigidbody authoredCarriage,
-            ConfigurableJoint authoredSuspension)
+        public void EditorConfigureScoopRig(Rigidbody authoredCarriage, ShopClawScoopRig authoredScoop)
         {
             carriageBody = authoredCarriage;
-            suspensionJoint = authoredSuspension;
+            scoopRig = authoredScoop;
+            clawHead = authoredScoop != null ? authoredScoop.transform : clawHead;
+            clawBody = authoredScoop != null ? authoredScoop.Body : clawBody;
         }
 #endif
 
@@ -205,7 +223,7 @@ namespace PickAndPlaceShop
             AwardedCount.OnValueChanged += OnAwardedCountChanged;
             if (IsServer)
             {
-                SetupServerPhysicalClaw();
+                SetupServerPhysicalScoop();
                 if (NetworkManager.NetworkConfig.NetworkTopology == NetworkTopologyTypes.DistributedAuthority)
                     NetworkObject.SetOwnershipStatus(NetworkObject.OwnershipStatus.SessionOwner, true);
                 State.Value = ShopClawMachineState.Idle;
@@ -323,14 +341,14 @@ namespace PickAndPlaceShop
             if (!ShopClawRules.TryChargeAttempt(ref coins, config.AttemptCost, attemptId, chargedAttempts))
             {
                 ResultMessage.Value = new FixedString128Bytes("가게 자금이 부족합니다.");
-                ShopNetworkGame.Instance.ServerSetEvent("가게 자금이 부족해 집게를 내릴 수 없습니다.");
+                ShopNetworkGame.Instance.ServerSetEvent("가게 자금이 부족해 팬을 내릴 수 없습니다.");
                 return false;
             }
 
             ShopNetworkGame.Instance.Coins.Value = coins;
             OperatorInput.Value = Vector2.zero;
             railVelocity = Vector2.zero;
-            ResultMessage.Value = new FixedString128Bytes("집게 하강 중");
+            ResultMessage.Value = new FixedString128Bytes("퍼올리기 팬 하강 중");
             SetState(ShopClawMachineState.Descend);
             AutoDropSecondsRemaining.Value = 0;
             return true;
@@ -383,26 +401,22 @@ namespace PickAndPlaceShop
                     ServerUpdateAiming(dt);
                     break;
                 case ShopClawMachineState.Descend:
-                    ServerMoveClawHeight(config.DropHeight, config.DescendSpeed, dt);
-                    float physicalHeadHeight = clawHead != null
-                        ? transform.InverseTransformPoint(clawHead.position).y
-                        : ClawHeight.Value;
-                    bool reachedCaptureBand =
-                        physicalHeadHeight <= config.DropHeight + 0.025f;
-                    if ((stateElapsed >= 0.25f &&
-                         (HasFingerApproach(0.02f) || HasAnyFingerContact())) ||
-                        reachedCaptureBand ||
+                    float sweepTargetHeight = config.DropHeight -
+                                              Mathf.Max(0.12f, config.ScoopBottomThickness * 2f);
+                    ServerMoveClawHeight(sweepTargetHeight, config.DescendSpeed, dt);
+                    if ((stateElapsed >= 0.12f && scoopBlockedDuringDescent) ||
                         stateElapsed >= config.DescendTimeout)
                         SetState(ShopClawMachineState.Close);
                     break;
                 case ShopClawMachineState.Close:
-                    UpdatePhysicalGripDiagnostics();
-                    if ((stateElapsed >= config.CloseDuration && AreFingersAtTarget(config.ClosedFingerAngle, 3f)) ||
+                    ServerUpdateScoopScrape(dt);
+                    UpdateScoopLoadDiagnostics();
+                    if ((RailPosition.Value - scrapeTarget).sqrMagnitude < 0.0025f ||
                         stateElapsed >= config.CloseTimeout)
                         SetState(ShopClawMachineState.Ascend);
                     break;
                 case ShopClawMachineState.Ascend:
-                    UpdatePhysicalGripDiagnostics();
+                    UpdateScoopLoadDiagnostics();
                     float liftSpeed = config.LiftSpeed *
                                       (HeldPrizeNetworkObjectId.Value != 0
                                           ? config.LoadedLiftSpeedMultiplier
@@ -413,7 +427,7 @@ namespace PickAndPlaceShop
                         SetState(ShopClawMachineState.Return);
                     break;
                 case ShopClawMachineState.Return:
-                    UpdatePhysicalGripDiagnostics();
+                    UpdateScoopLoadDiagnostics();
                     Vector2 chute = new(chuteDropPoint.localPosition.x, chuteDropPoint.localPosition.z);
                     RailPosition.Value = Vector2.MoveTowards(RailPosition.Value, chute, config.ReturnSpeed * dt);
                     if ((RailPosition.Value - chute).sqrMagnitude < 0.0025f ||
@@ -421,9 +435,7 @@ namespace PickAndPlaceShop
                         SetState(ShopClawMachineState.Release);
                     break;
                 case ShopClawMachineState.Release:
-                    if ((stateElapsed >= config.ReleaseDuration &&
-                         AreFingersAtTarget(config.OpenFingerAngle, 4f)) ||
-                        stateElapsed >= config.ReleaseTimeout)
+                    if (stateElapsed >= config.ReleaseDuration || stateElapsed >= config.ReleaseTimeout)
                         SetState(ShopClawMachineState.Judge);
                     break;
                 case ShopClawMachineState.Judge:
@@ -435,7 +447,7 @@ namespace PickAndPlaceShop
                         ServerResetMachine();
                     break;
             }
-            ServerDrivePhysicalClaw();
+            ServerDrivePhysicalScoop(dt);
         }
 
         private void Update()
@@ -509,52 +521,48 @@ namespace PickAndPlaceShop
             }
         }
 
-        private void UpdatePhysicalGripDiagnostics()
+        private void UpdateScoopLoadDiagnostics()
         {
             ShopClawPrizeNetwork best = null;
-            int bestContacts = 0;
+            int loadedCount = 0;
             foreach (ShopClawPrizeNetwork prize in activePrizes)
             {
                 if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
-                int contacts = CountDistinctFingerContacts(prize);
-                if (contacts <= bestContacts) continue;
-                bestContacts = contacts;
-                best = prize;
+                if (scoopRig == null || !scoopRig.ContainsPrize(prize,
+                        config.ScoopDiameter, config.ScoopRimHeight)) continue;
+                loadedCount++;
+                if (best == null) best = prize;
             }
 
-            LastGripScore.Value = bestContacts / 3f * 100f;
-            LastJointBreakForce.Value = State.Value == ShopClawMachineState.Ascend ||
-                                        State.Value == ShopClawMachineState.Return
-                ? EffectiveCloseMotorTorque * config.AscentGripTorqueMultiplier
-                : EffectiveCloseMotorTorque;
-
-            if (best != null && bestContacts > 0 && State.Value == ShopClawMachineState.Close &&
-                best.Body != null)
-            {
-                Vector3 clawCenter = clawHead != null ? clawHead.position : transform.position;
-                Vector3 towardCenter = Vector3.ProjectOnPlane(
-                    clawCenter - GetPrizePhysicalCenter(best), transform.up);
-                if (towardCenter.sqrMagnitude > 0.0001f)
-                    best.Body.AddForce(towardCenter.normalized *
-                        (EffectiveCloseMotorTorque * config.ContactCenteringMultiplier * bestContacts),
-                        ForceMode.Force);
-            }
-
-            if (best != null && bestContacts >= 2)
+            LastGripScore.Value = loadedCount;
+            LastJointBreakForce.Value = 0f;
+            if (best != null)
             {
                 HeldPrizeNetworkObjectId.Value = best.NetworkObjectId;
                 if (State.Value == ShopClawMachineState.Ascend &&
                     GetPrizePhysicalCenter(best).y > transform.TransformPoint(
                         new Vector3(0f, config.DropHeight + 0.28f, 0f)).y)
                     roundHadPhysicalLift = true;
-                ResultMessage.Value = new FixedString128Bytes("두 개 이상의 발톱이 상품을 물고 있습니다.");
+                ResultMessage.Value = new FixedString128Bytes(loadedCount + "개 상품을 팬에 담았습니다.");
             }
             else
             {
                 if (HeldPrizeNetworkObjectId.Value != 0)
-                    ResultMessage.Value = new FixedString128Bytes("상품이 마찰을 이기지 못하고 미끄러졌습니다.");
+                    ResultMessage.Value = new FixedString128Bytes("상품이 팬에서 미끄러졌습니다.");
                 HeldPrizeNetworkObjectId.Value = 0;
             }
+        }
+
+        private void ServerMoveClawHeight(float targetHeight, float maxSpeed, float dt)
+        {
+            float direction = Mathf.Sign(targetHeight - ClawHeight.Value);
+            float desiredVelocity = direction * maxSpeed;
+            verticalVelocity = Mathf.MoveTowards(verticalVelocity, desiredVelocity,
+                config.ScoopVerticalAcceleration * dt);
+            float next = Mathf.MoveTowards(ClawHeight.Value, targetHeight,
+                Mathf.Abs(verticalVelocity) * dt);
+            if (Mathf.Approximately(next, targetHeight)) verticalVelocity = 0f;
+            ClawHeight.Value = next;
         }
 
         public void ServerObserveChutePrize(ShopClawPrizeNetwork prize, Collider chuteVolume)
@@ -563,7 +571,8 @@ namespace PickAndPlaceShop
             if (!chargedAttempts.Contains(AttemptId.Value) ||
                 !ShopClawRules.CanAwardChutePrize(State.Value)) return;
             if (!TryGetPrizePhysicalBounds(prize, out Bounds prizeBounds) ||
-                !ShopClawRules.IsFullyInsideChute(prizeBounds, chuteVolume.bounds, 0.04f) ||
+                !ShopClawRules.IsFullyInsideChute(prizeBounds, chuteVolume.bounds,
+                    config.ChuteHorizontalInset) ||
                 !ShopClawRules.IsChuteSettled(prize.Body.linearVelocity, prize.Body.angularVelocity,
                     config.ChuteSettleLinearSpeed))
             {
@@ -705,14 +714,60 @@ namespace PickAndPlaceShop
             stateElapsed = 0f;
             if (next == ShopClawMachineState.Descend || next == ShopClawMachineState.Ascend)
                 verticalVelocity = 0f;
+            if (next == ShopClawMachineState.Descend)
+            {
+                scoopBlockedDuringDescent = false;
+                scoopTouchedPrize = false;
+            }
+            if (next == ShopClawMachineState.Close)
+            {
+                scrapeOrigin = RailPosition.Value;
+                float preferredDirection = RailPosition.Value.y + config.ScrapeDistance <= config.ZBounds.y
+                    ? 1f
+                    : -1f;
+                scrapeTarget = ShopClawRules.ClampRail(
+                    scrapeOrigin + Vector2.up * (config.ScrapeDistance * preferredDirection),
+                    config.XBounds, config.ZBounds);
+                ResultMessage.Value = new FixedString128Bytes("팬을 기울여 상품을 퍼올립니다.");
+            }
             if (next == ShopClawMachineState.Release)
             {
                 HeldPrizeNetworkObjectId.Value = 0;
                 chuteStableSeconds.Clear();
                 chuteLastObservationTime.Clear();
+                Vector3 bodyLocal = scoopRig != null && scoopRig.Body != null
+                    ? transform.InverseTransformPoint(scoopRig.Body.position)
+                    : Vector3.zero;
+                Vector3 chuteLocal = transform.InverseTransformPoint(ChuteWorldPosition);
+                scoopPourDirectionLocal = Vector3.ProjectOnPlane(chuteLocal - bodyLocal, Vector3.up);
+                float depthDirection = Mathf.Sign(scoopPourDirectionLocal.z);
+                if (Mathf.Approximately(depthDirection, 0f)) depthDirection = Mathf.Sign(chuteLocal.z);
+                if (Mathf.Approximately(depthDirection, 0f)) depthDirection = -1f;
+                scoopPourDirectionLocal = Vector3.forward * depthDirection;
             }
             if (next == ShopClawMachineState.Cooldown && IsServer && ShopNetworkGame.Instance != null)
             {
+                ShopClawPrizeNetwork nearest = null;
+                float nearestHorizontal = float.MaxValue;
+                Vector3 chutePosition = ChuteWorldPosition;
+                foreach (ShopClawPrizeNetwork prize in activePrizes)
+                {
+                    if (prize == null || prize.Awarded.Value) continue;
+                    Vector3 prizePosition = prize.transform.position;
+                    float horizontal = Vector2.Distance(
+                        new Vector2(prizePosition.x, prizePosition.z),
+                        new Vector2(chutePosition.x, chutePosition.z));
+                    if (horizontal >= nearestHorizontal) continue;
+                    nearestHorizontal = horizontal;
+                    nearest = prize;
+                }
+                Debug.Log("[ScoopPhysics] POUR_COMPLETE attempt=" + AttemptId.Value +
+                          " awards=" + roundAwardCount +
+                          " nearestHorizontal=" + nearestHorizontal.ToString("F3") +
+                          " nearest=" + (nearest != null
+                              ? nearest.transform.position.ToString("F3") +
+                                " velocity=" + nearest.Body.linearVelocity.ToString("F3")
+                              : "none"), this);
                 LastResultSuccess.Value = roundAwardCount > 0;
                 ShopNetworkGame.Instance.ServerRecordClawResult(LastResultSuccess.Value);
                 ResultMessage.Value = new FixedString128Bytes(LastResultSuccess.Value
@@ -836,6 +891,8 @@ namespace PickAndPlaceShop
                 int definitionIndex = FindDefinitionIndex(definition);
                 prize.ServerInitialize(NetworkObjectId, definitionIndex, definition,
                     spawnPosition, spawnRotation, visualIndex, spawnedRarity);
+                if (prize.Body != null && config != null)
+                    prize.Body.mass = config.GetCapsuleMass(spawnedRarity);
                 activePrizes.Add(prize);
                 occupied.Add((spawnPosition, Mathf.Max(0.16f, definition.Size * 0.48f) + clearance));
             }
@@ -868,6 +925,9 @@ namespace PickAndPlaceShop
                 prize.ServerInitialize(NetworkObjectId, FindDefinitionIndex(definition), definition,
                     position, rotation, item.visualPrefabIndex,
                     (ShopProductRarity)Mathf.Clamp(item.rarity, 0, 3));
+                if (prize.Body != null && config != null)
+                    prize.Body.mass = config.GetCapsuleMass(
+                        (ShopProductRarity)Mathf.Clamp(item.rarity, 0, 3));
                 activePrizes.Add(prize);
             }
             Debug.Log("[ClawMachine] SAVE_RESTORED machine=" + config.MachineId +
@@ -1368,18 +1428,13 @@ namespace PickAndPlaceShop
                 ? ShopNetworkGame.Instance.ClawMoveSpeedMultiplier
                 : 1f);
 
-        public float EffectiveCloseMotorTorque => config == null
-            ? 0f
-            : config.CloseMotorTorque * (ShopNetworkGame.Instance != null
-                ? ShopNetworkGame.Instance.ClawStrengthMultiplier
-                : 1f);
-
         private void ApplyUpgradeAppearance()
         {
             int level = ShopNetworkGame.Instance != null
                 ? ShopNetworkGame.Instance.ClawUpgradeLevel.Value
                 : 0;
-            if (level == appliedClawUpgradeAppearance || clawFingers == null) return;
+            if (level == appliedClawUpgradeAppearance || scoopRig == null ||
+                scoopRig.VisualRoot == null) return;
             appliedClawUpgradeAppearance = level;
             Color color = level switch
             {
@@ -1387,17 +1442,13 @@ namespace PickAndPlaceShop
                 2 => new Color(1f, 0.72f, 0.18f),
                 _ => new Color(0.55f, 0.58f, 0.62f)
             };
-            foreach (Transform finger in clawFingers)
+            foreach (Renderer renderer in scoopRig.VisualRoot.GetComponentsInChildren<Renderer>(true))
             {
-                if (finger == null) continue;
-                foreach (Renderer renderer in finger.GetComponentsInChildren<Renderer>(true))
-                {
-                    MaterialPropertyBlock block = new();
-                    renderer.GetPropertyBlock(block);
-                    block.SetColor("_BaseColor", color);
-                    block.SetColor("_EmissionColor", level > 0 ? color * 0.55f : Color.black);
-                    renderer.SetPropertyBlock(block);
-                }
+                MaterialPropertyBlock block = new();
+                renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor", color);
+                block.SetColor("_EmissionColor", level > 0 ? color * 0.55f : Color.black);
+                renderer.SetPropertyBlock(block);
             }
         }
 
@@ -1408,392 +1459,243 @@ namespace PickAndPlaceShop
                 Transform glass = transform.Find("Cabinet/Glass");
                 if (glass != null) localGlassRenderers = glass.GetComponentsInChildren<Renderer>(true);
             }
-            if (clawFingers != null && !physicalClawReady)
-            {
-                foreach (Transform finger in clawFingers)
-                {
-                    if (finger == null) continue;
-                    foreach (Collider fingerCollider in finger.GetComponentsInChildren<Collider>(true))
-                        if (fingerCollider != null) fingerCollider.isTrigger = true;
-                }
-            }
-            if (clawFingerSensors != null && clawFingerSensors.Length > 0) return;
-            var sensors = new List<Collider>();
-            if (clawFingers != null)
-            {
-                foreach (Transform finger in clawFingers)
-                {
-                    if (finger == null) continue;
-                    foreach (Collider sensor in finger.GetComponentsInChildren<Collider>(true))
-                        if (sensor != null && sensor.gameObject.name.Contains("센서")) sensors.Add(sensor);
-                }
-            }
-            clawFingerSensors = sensors.ToArray();
         }
 
-        private void SetupServerPhysicalClaw()
+        private void SetupServerPhysicalScoop()
         {
-            if (!IsServer || config == null || clawHead == null || clawBody == null || physicalClawReady) return;
-
-            if (!ValidateAuthoredPhysicalClaw()) return;
-
-            carriageBody.transform.localPosition =
-                new Vector3(RailPosition.Value.x, ClawHeight.Value, RailPosition.Value.y);
-            carriageBody.isKinematic = true;
-            carriageBody.useGravity = false;
-            carriageBody.interpolation = RigidbodyInterpolation.Interpolate;
-
-            clawHead.position = carriageBody.position;
-            clawBody.isKinematic = false;
-            clawBody.useGravity = true;
-            clawBody.mass = config.ClawMass;
-            clawBody.linearDamping = 1.25f;
-            clawBody.angularDamping = config.HousingSwingDamper;
-            clawBody.interpolation = RigidbodyInterpolation.Interpolate;
-            clawBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            clawBody.constraints = RigidbodyConstraints.None;
-            clawBody.solverIterations = 12;
-            clawBody.solverVelocityIterations = 6;
-            clawBody.maxAngularVelocity = 8f;
-
-            suspensionJoint.connectedBody = carriageBody;
-            suspensionJoint.autoConfigureConnectedAnchor = false;
-            suspensionJoint.anchor = Vector3.zero;
-            suspensionJoint.connectedAnchor = Vector3.zero;
-            suspensionJoint.xMotion = ConfigurableJointMotion.Limited;
-            suspensionJoint.yMotion = ConfigurableJointMotion.Limited;
-            suspensionJoint.zMotion = ConfigurableJointMotion.Limited;
-            suspensionJoint.angularXMotion = ConfigurableJointMotion.Limited;
-            suspensionJoint.angularYMotion = ConfigurableJointMotion.Limited;
-            suspensionJoint.angularZMotion = ConfigurableJointMotion.Limited;
-            suspensionJoint.linearLimit = new SoftJointLimit
+            if (!IsServer || config == null || physicalClawReady) return;
+            if (scoopRig == null) scoopRig = GetComponentInChildren<ShopClawScoopRig>(true);
+            if (scoopRig == null || scoopRig.Body == null)
             {
-                limit = config.SuspensionTravel,
-                bounciness = 0f,
-                contactDistance = 0.015f
-            };
-            suspensionJoint.linearLimitSpring = new SoftJointLimitSpring
-            {
-                spring = config.SuspensionSpring,
-                damper = config.SuspensionDamper
-            };
-            suspensionJoint.lowAngularXLimit = new SoftJointLimit { limit = -10f };
-            suspensionJoint.highAngularXLimit = new SoftJointLimit { limit = 10f };
-            suspensionJoint.angularYLimit = new SoftJointLimit { limit = 8f };
-            suspensionJoint.angularZLimit = new SoftJointLimit { limit = 10f };
-            suspensionJoint.projectionMode = JointProjectionMode.PositionAndRotation;
-            suspensionJoint.projectionDistance = 0.06f;
-            suspensionJoint.projectionAngle = 14f;
-            suspensionJoint.enableCollision = false;
-
-            if (config.MachineFloorMaterial != null)
-            {
-                foreach (Collider machineCollider in GetComponentsInChildren<Collider>(true))
-                {
-                    if (machineCollider == null || machineCollider.isTrigger) continue;
-                    string colliderName = machineCollider.gameObject.name.ToLowerInvariant();
-                    if (colliderName.Contains("floor") || colliderName.Contains("bed") ||
-                        colliderName.Contains("bottom") || colliderName.Contains("바닥"))
-                        machineCollider.material = config.MachineFloorMaterial;
-                }
+                Debug.LogError("[ScoopPhysics] " + name +
+                               ": 프리팹에 저장된 ShopClawScoopRig/Rigidbody가 없습니다.", this);
+                return;
             }
 
-            physicalFingerBodies.Clear();
-            physicalFingerJoints.Clear();
-            physicalFingerAngleOffsets.Clear();
-            physicalFingerSensors.Clear();
-            if (clawFingers != null)
+            clawHead = scoopRig.transform;
+            clawBody = scoopRig.Body;
+            scoopRig.ConfigureBody();
+            if (carriageBody != null)
             {
-                foreach (Transform finger in clawFingers)
-                {
-                    if (finger == null) continue;
-                    HingeJoint hinge = finger.GetComponent<HingeJoint>();
-                    Vector3 authoredWorldPosition = finger.position;
-                    Quaternion authoredWorldRotation = finger.rotation;
-                    // Rigidbody children of another dynamic Rigidbody do not receive a stable,
-                    // independent solver pose. Keep the authored components, but detach the
-                    // three bodies while preserving their exact prefab world pose.
-                    finger.SetParent(transform, true);
-                    Rigidbody fingerBody = finger.GetComponent<Rigidbody>();
-                    // Configure every joint while its authored open pose is frozen. Enabling
-                    // gravity before all three anchors exist lets an asymmetric first solver
-                    // step pull one finger down and can yield an invalid hinge angle.
-                    fingerBody.isKinematic = true;
-                    fingerBody.useGravity = false;
-                    fingerBody.mass = Mathf.Max(0.08f, config.ClawMass * 0.12f);
-                    fingerBody.linearDamping = 1.8f;
-                    fingerBody.angularDamping = 2.4f;
-                    fingerBody.interpolation = RigidbodyInterpolation.Interpolate;
-                    fingerBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-                    fingerBody.solverIterations = 12;
-                    fingerBody.solverVelocityIterations = 6;
-                    foreach (Collider fingerCollider in finger.GetComponentsInChildren<Collider>(true))
-                    {
-                        fingerCollider.isTrigger = false;
-                        if (config.ClawFingerMaterial != null)
-                            fingerCollider.material = config.ClawFingerMaterial;
-                    }
-
-                    // Joint axis, anchors, limits, and initial motor are authored and saved by
-                    // ShopPhysicalClawInstaller. Reassigning those structural fields here resets
-                    // Unity's joint reference frame and exposes a transient NaN hinge angle.
-                    float authoredClosedOffset = -config.ClosedFingerAngle +
-                                                 config.ClosedFingerClearanceAngle;
-                    ShopClawFingerContactSensor contactSensor =
-                        finger.GetComponent<ShopClawFingerContactSensor>();
-                    fingerBody.position = authoredWorldPosition;
-                    fingerBody.rotation = authoredWorldRotation;
-                    physicalFingerBodies.Add(fingerBody);
-                    physicalFingerJoints.Add(hinge);
-                    physicalFingerAngleOffsets.Add(authoredClosedOffset);
-                    physicalFingerSensors.Add(contactSensor);
-                }
+                carriageBody.isKinematic = true;
+                carriageBody.useGravity = false;
+                carriageBody.interpolation = RigidbodyInterpolation.Interpolate;
             }
-            Physics.SyncTransforms();
             physicalClawReady = true;
-            CachePhysicalPresentation();
-            LogPhysicalFingerLayout("setup");
-            StartCoroutine(ActivateAuthoredFingerBodies());
-            Debug.Log("[ClawMachine] PHYSICAL_CLAW_READY bodyMass=" + clawBody.mass +
-                      " fingers=" + physicalFingerJoints.Count + " suspension=" +
-                      config.SuspensionTravel, this);
+            scoopTargetRotation = transform.rotation;
+            Vector3 start = transform.TransformPoint(
+                new Vector3(RailPosition.Value.x, ClawHeight.Value, RailPosition.Value.y));
+            clawBody.position = start;
+            clawBody.rotation = scoopTargetRotation;
+            Debug.Log("[ScoopPhysics] READY machine=" + config.MachineId +
+                      " colliders=" + scoopRig.CompoundColliderCount +
+                      " diameter=" + config.ScoopDiameter.ToString("F2") +
+                      " rim=" + config.ScoopRimHeight.ToString("F2"), this);
         }
 
-        private bool ValidateAuthoredPhysicalClaw()
+        private void ServerUpdateScoopScrape(float dt)
         {
-            if (carriageBody == null || suspensionJoint == null)
-            {
-                Debug.LogError("[PhysicalClaw] " + name +
-                               ": 프리팹에 저장된 캐리지 Rigidbody/서스펜션 Joint가 없습니다. " +
-                               "물리 컴포넌트는 런타임에 자동 생성하지 않습니다.", this);
-                return false;
-            }
-
-            if (clawFingers == null || clawFingers.Length != 3)
-            {
-                Debug.LogError("[PhysicalClaw] " + name +
-                               ": 프리팹에 저장된 집게발 참조가 정확히 3개여야 합니다.", this);
-                return false;
-            }
-
-            bool valid = true;
-            foreach (Transform finger in clawFingers)
-            {
-                if (finger == null || finger.GetComponent<Rigidbody>() == null ||
-                    finger.GetComponent<HingeJoint>() == null ||
-                    finger.GetComponent<ShopClawFingerContactSensor>() == null)
-                {
-                    Debug.LogError("[PhysicalClaw] " + name + "/" +
-                                   (finger != null ? finger.name : "<missing>") +
-                                   ": 편집 모드에서 저장된 Rigidbody, HingeJoint, 접촉 센서가 필요합니다. " +
-                                   "런타임 AddComponent 대체는 사용하지 않습니다.", this);
-                    valid = false;
-                }
-                else if (finger.GetComponent<HingeJoint>().connectedBody != clawBody)
-                {
-                    Debug.LogError("[PhysicalClaw] " + name + "/" + finger.name +
-                                   ": authored HingeJoint의 Connected Body가 ClawHead가 아닙니다.", this);
-                    valid = false;
-                }
-            }
-
-            return valid;
+            RailPosition.Value = Vector2.MoveTowards(RailPosition.Value, scrapeTarget,
+                config.ScrapeSpeed * dt);
+            float total = Mathf.Max(0.001f, Vector2.Distance(scrapeOrigin, scrapeTarget));
+            FingerClosed.Value = Mathf.Clamp01(Vector2.Distance(scrapeOrigin, RailPosition.Value) / total);
         }
 
-        private IEnumerator ActivateAuthoredFingerBodies()
+        private void ServerDrivePhysicalScoop(float dt)
         {
-            // Authored joints enter the scene kinematic. Releasing them only after one
-            // complete fixed step prevents the first solver sample from exposing a NaN
-            // hinge angle while Unity initializes the three radial constraints.
-            yield return new WaitForFixedUpdate();
-            foreach (Rigidbody fingerBody in physicalFingerBodies)
-            {
-                if (fingerBody == null) continue;
-                fingerBody.position = fingerBody.transform.position;
-                fingerBody.rotation = fingerBody.transform.rotation;
-                fingerBody.isKinematic = false;
-                fingerBody.useGravity = true;
-                fingerBody.linearVelocity = Vector3.zero;
-                fingerBody.angularVelocity = Vector3.zero;
-                fingerBody.WakeUp();
-            }
-            Physics.SyncTransforms();
-            yield return new WaitForFixedUpdate();
-            LogPhysicalFingerLayout("firstDynamicFixed");
-            yield return new WaitForSecondsRealtime(10f);
-            LogPhysicalFingerLayout("10s");
-        }
+            if (floorVerificationOverride || !physicalClawReady || scoopRig == null ||
+                scoopRig.Body == null) return;
 
-        private void LogPhysicalFingerLayout(string phase)
-        {
-            if (clawHead == null || physicalFingerJoints.Count == 0 || config == null) return;
-            float maxPositionError = 0f;
-            float maxRotationError = 0f;
-            float minRadius = float.MaxValue;
-            float maxRadius = 0f;
-            float minHeight = float.MaxValue;
-            float maxHeight = float.MinValue;
-            float minAngle = float.MaxValue;
-            float maxAngle = float.MinValue;
-            int nanAngles = 0;
-            for (int index = 0; index < physicalFingerJoints.Count; index++)
-            {
-                HingeJoint hinge = physicalFingerJoints[index];
-                if (hinge == null) continue;
-                float angle = 360f / physicalFingerJoints.Count * index;
-                Vector3 expectedPosition = new(
-                    Mathf.Sin(angle * Mathf.Deg2Rad) * config.FingerLayoutRadius,
-                    config.FingerLayoutHeight,
-                    Mathf.Cos(angle * Mathf.Deg2Rad) * config.FingerLayoutRadius);
-                Quaternion expectedRotation = Quaternion.Euler(config.FingerLayoutTilt, angle, 0f);
-                Vector3 localPosition = clawHead.InverseTransformPoint(hinge.transform.position);
-                Quaternion localRotation = Quaternion.Inverse(clawHead.rotation) * hinge.transform.rotation;
-                maxPositionError = Mathf.Max(maxPositionError,
-                    Vector3.Distance(localPosition, expectedPosition));
-                maxRotationError = Mathf.Max(maxRotationError,
-                    Quaternion.Angle(localRotation, expectedRotation));
-                float radius = new Vector2(localPosition.x, localPosition.z).magnitude;
-                minRadius = Mathf.Min(minRadius, radius);
-                maxRadius = Mathf.Max(maxRadius, radius);
-                minHeight = Mathf.Min(minHeight, localPosition.y);
-                maxHeight = Mathf.Max(maxHeight, localPosition.y);
-                if (phase != "setup" && float.IsNaN(hinge.angle)) nanAngles++;
-                else if (phase != "setup")
-                {
-                    minAngle = Mathf.Min(minAngle, hinge.angle);
-                    maxAngle = Mathf.Max(maxAngle, hinge.angle);
-                }
-            }
-            float angleSpread = phase == "setup"
-                ? 0f
-                : nanAngles == physicalFingerJoints.Count ? float.NaN : maxAngle - minAngle;
-            Debug.Log($"[ClawLayout] machine={config.MachineId} phase={phase} " +
-                      $"maxPos={maxPositionError:F6} maxRot={maxRotationError:F4} " +
-                      $"radialSpread={maxRadius - minRadius:F6} " +
-                      $"heightSpread={maxHeight - minHeight:F6} " +
-                      $"hingeSpread={angleSpread:F3} nan={nanAngles}", this);
-        }
+            bool pouring = State.Value == ShopClawMachineState.Release ||
+                           State.Value == ShopClawMachineState.Judge;
+            bool entryOpen = State.Value == ShopClawMachineState.Idle ||
+                             State.Value == ShopClawMachineState.Reserved ||
+                             State.Value == ShopClawMachineState.Aiming ||
+                             State.Value == ShopClawMachineState.Descend ||
+                             State.Value == ShopClawMachineState.Close;
+            if (pouring)
+                scoopRig.SetPourOpening(scoopPourDirectionLocal, config.ScoopRimHeight,
+                    config.ScoopOpenRimHeight);
+            else if (State.Value == ShopClawMachineState.Ascend)
+                scoopRig.SetEntryLipHeight(Mathf.Lerp(config.ScoopOpenRimHeight,
+                        config.ScoopRimHeight,
+                        Mathf.Clamp01(stateElapsed / config.ScoopLipCloseDuration)),
+                    config.ScoopRimHeight, config.ScoopOpenRimHeight);
+            else
+                scoopRig.SetEntryLipsOpen(entryOpen, config.ScoopRimHeight,
+                    config.ScoopOpenRimHeight);
 
-        private void ServerDrivePhysicalClaw()
-        {
-            if (!physicalClawReady || carriageBody == null) return;
             Vector3 targetWorld = transform.TransformPoint(
                 new Vector3(RailPosition.Value.x, ClawHeight.Value, RailPosition.Value.y));
-            carriageBody.MovePosition(targetWorld);
-            bool shouldClose = State.Value == ShopClawMachineState.Close ||
-                               State.Value == ShopClawMachineState.Ascend ||
-                               State.Value == ShopClawMachineState.Return;
-            float targetAngle = shouldClose ? config.ClosedFingerAngle : config.OpenFingerAngle;
-            if (State.Value == ShopClawMachineState.Descend)
+            Quaternion targetLocalRotation = Quaternion.identity;
+            if (State.Value == ShopClawMachineState.Close)
             {
-                // A real claw reaches around the prize while fully open, then closes in the
-                // dedicated Close state. Pre-closing here pushed capsules out of the target
-                // footprint before two or more fingers could make contact.
-                targetAngle = config.OpenFingerAngle;
-                shouldClose = false;
+                float direction = Mathf.Sign(scrapeTarget.y - scrapeOrigin.y);
+                float progress = Mathf.Clamp01(stateElapsed /
+                    Mathf.Max(0.05f, config.CloseDuration));
+                targetLocalRotation = Quaternion.Euler(config.ScrapeTiltAngle * direction * progress,
+                    0f, 0f);
             }
-            float motorSpeed = shouldClose ? config.CloseMotorSpeed : config.OpenMotorSpeed;
-            float motorTorque = shouldClose ? EffectiveCloseMotorTorque : config.OpenMotorTorque;
-            if (State.Value == ShopClawMachineState.Ascend || State.Value == ShopClawMachineState.Return)
-                motorTorque *= config.AscentGripTorqueMultiplier;
-
-            float closedSum = 0f;
-            int validJoints = 0;
-            for (int index = 0; index < physicalFingerJoints.Count; index++)
+            else if (State.Value == ShopClawMachineState.Release ||
+                     State.Value == ShopClawMachineState.Judge)
             {
-                HingeJoint hinge = physicalFingerJoints[index];
-                if (hinge == null) continue;
-                float offset = index < physicalFingerAngleOffsets.Count
-                    ? physicalFingerAngleOffsets[index]
-                    : 0f;
-                float physicalTargetAngle = targetAngle + offset;
-                float error = physicalTargetAngle - hinge.angle;
-                JointMotor motor = hinge.motor;
-                motor.force = motorTorque;
-                motor.freeSpin = false;
-                motor.targetVelocity = Mathf.Abs(error) <= 1.25f ? 0f : Mathf.Sign(error) * motorSpeed;
-                hinge.motor = motor;
-                hinge.useMotor = true;
-                closedSum += Mathf.InverseLerp(config.OpenFingerAngle + offset,
-                    config.ClosedFingerAngle + offset, hinge.angle);
-                validJoints++;
+                float progress = State.Value == ShopClawMachineState.Judge
+                    ? 1f
+                    : Mathf.Clamp01(stateElapsed / Mathf.Max(0.05f, config.ReleaseDuration));
+                float angle = config.PourAngle * progress * Mathf.Deg2Rad;
+                Vector3 tiltedNormal = Vector3.up * Mathf.Cos(angle) +
+                                       scoopPourDirectionLocal * Mathf.Sin(angle);
+                targetLocalRotation = Quaternion.FromToRotation(Vector3.up, tiltedNormal);
+                FingerClosed.Value = 1f - progress;
             }
-            if (validJoints > 0) FingerClosed.Value = Mathf.Clamp01(closedSum / validJoints);
-        }
-
-        private void ServerMoveClawHeight(float targetHeight, float maxSpeed, float dt)
-        {
-            float direction = Mathf.Sign(targetHeight - ClawHeight.Value);
-            float desiredVelocity = direction * maxSpeed;
-            verticalVelocity = Mathf.MoveTowards(verticalVelocity, desiredVelocity,
-                config.VerticalAcceleration * dt);
-            float next = Mathf.MoveTowards(ClawHeight.Value, targetHeight,
-                Mathf.Abs(verticalVelocity) * dt);
-            if (Mathf.Approximately(next, targetHeight)) verticalVelocity = 0f;
-            ClawHeight.Value = next;
-        }
-
-        private int CountDistinctFingerContacts(ShopClawPrizeNetwork prize)
-        {
-            if (prize == null) return 0;
-            int contacts = 0;
-            foreach (ShopClawFingerContactSensor sensor in physicalFingerSensors)
-                if (sensor != null && sensor.IsTouching(prize)) contacts++;
-            return contacts;
-        }
-
-        private bool HasAnyFingerContact()
-        {
-            foreach (ShopClawFingerContactSensor sensor in physicalFingerSensors)
-                if (sensor != null && sensor.HasRecentContact) return true;
-            return false;
-        }
-
-        private bool HasFingerApproach(float clearance)
-        {
-            if (!physicalClawReady) return false;
-            var fingerColliders = new List<Collider>(physicalFingerBodies.Count * 3);
-            foreach (Rigidbody body in physicalFingerBodies)
+            else if (State.Value == ShopClawMachineState.Ascend)
             {
-                if (body == null) continue;
-                foreach (Collider collider in body.GetComponentsInChildren<Collider>(true))
-                    if (collider != null && collider.enabled)
-                        fingerColliders.Add(collider);
+                float progress = Mathf.Clamp01(stateElapsed / 0.35f);
+                float direction = Mathf.Sign(scrapeTarget.y - scrapeOrigin.y);
+                targetLocalRotation = Quaternion.Euler(
+                    Mathf.Lerp(config.ScrapeTiltAngle * direction, 0f, progress), 0f, 0f);
             }
+            else
+            {
+                FingerClosed.Value = 0f;
+            }
+
+            scoopTargetRotation = transform.rotation * targetLocalRotation;
+            float tilt = Mathf.Abs(targetLocalRotation.eulerAngles.x);
+            if (tilt > 180f) tilt = 360f - tilt;
+            if (tilt > 0.01f)
+                targetWorld += transform.up *
+                               (config.ScoopDiameter * 0.5f * Mathf.Sin(tilt * Mathf.Deg2Rad));
+            bool wasBlocked = scoopBlockedDuringDescent;
+            bool blocked = scoopRig.SweepMove(targetWorld, scoopTargetRotation,
+                config.SweepSkin, false,
+                out RaycastHit hit, out bool touchedPrize);
+            scoopTouchedPrize |= touchedPrize;
+
+            if (State.Value == ShopClawMachineState.Release &&
+                loggedReleaseAttempt != AttemptId.Value)
+            {
+                loggedReleaseAttempt = AttemptId.Value;
+                Vector3 bodyPosition = scoopRig.Body.position;
+                Vector3 chutePosition = ChuteWorldPosition;
+                float nearestPrizeDistance = float.MaxValue;
+                Vector3 nearestPrizePosition = Vector3.zero;
+                foreach (ShopClawPrizeNetwork prize in activePrizes)
+                {
+                    if (prize == null || prize.Awarded.Value) continue;
+                    float distance = Vector3.Distance(prize.transform.position, bodyPosition);
+                    if (distance >= nearestPrizeDistance) continue;
+                    nearestPrizeDistance = distance;
+                    nearestPrizePosition = prize.transform.position;
+                }
+                Debug.Log("[ScoopPhysics] RELEASE_POSE attempt=" + AttemptId.Value +
+                          " load=" + LastGripScore.Value.ToString("0") +
+                          " body=" + bodyPosition.ToString("F3") +
+                          " chute=" + chutePosition.ToString("F3") +
+                          " horizontalError=" +
+                          Vector2.Distance(new Vector2(bodyPosition.x, bodyPosition.z),
+                              new Vector2(chutePosition.x, chutePosition.z)).ToString("F3"), this);
+                Debug.Log("[ScoopPhysics] RELEASE_NEAREST attempt=" + AttemptId.Value +
+                          " distance=" + nearestPrizeDistance.ToString("F3") +
+                          " prize=" + nearestPrizePosition.ToString("F3"), this);
+            }
+
+            if (State.Value != ShopClawMachineState.Descend || !blocked) return;
+            scoopBlockedDuringDescent = true;
+            Vector3 actualLocal = transform.InverseTransformPoint(scoopRig.Body.position);
+            ClawHeight.Value = Mathf.Max(actualLocal.y, config.DropHeight);
+            if (wasBlocked) return;
+
+            ShopClawPrizeNetwork blockedPrize = hit.collider != null
+                ? hit.collider.GetComponentInParent<ShopClawPrizeNetwork>()
+                : null;
+            if (blockedPrize != null)
+            {
+                Debug.Log("[ScoopPhysics] CAPSULE_CONTACT machine=" + config.MachineId +
+                          " prize=" + blockedPrize.NetworkObjectId, this);
+                return;
+            }
+
+            float floorY = hit.point.y;
+            if (scoopRig.TryGetFloorSurface(out float measuredFloor)) floorY = measuredFloor;
+            lastFloorPenetrationMillimeters = Mathf.Max(0f,
+                floorY + config.FloorClearance - scoopRig.BottomWorldY) * 1000f;
+            floorContactSamples++;
+            Debug.Log("[ScoopPhysics] FLOOR_CONTACT machine=" + config.MachineId +
+                      " bottom=" + scoopRig.BottomWorldY.ToString("F5") +
+                      " floor=" + floorY.ToString("F5") +
+                      " penetrationMm=" + lastFloorPenetrationMillimeters.ToString("F3") +
+                      " blocker=" + (hit.collider != null ? hit.collider.name : "none") +
+                      " hit=" + hit.point.ToString("F3"), this);
+        }
+
+        private IEnumerator ServerVerifyScoopFloorContacts(int repetitions)
+        {
+            floorVerificationRunning = true;
+            floorVerificationOverride = true;
+            Vector3 savedPosition = scoopRig.Body.position;
+            Quaternion savedRotation = scoopRig.Body.rotation;
+            var prizeColliders = new List<(Collider collider, bool enabled)>();
             foreach (ShopClawPrizeNetwork prize in activePrizes)
             {
-                if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
-                foreach (Collider prizeCollider in prize.GetComponentsInChildren<Collider>(true))
+                if (prize == null) continue;
+                foreach (Collider collider in prize.GetComponentsInChildren<Collider>(true))
                 {
-                    if (prizeCollider == null || !prizeCollider.enabled || prizeCollider.isTrigger)
-                        continue;
-                    Vector3 prizeCenter = prizeCollider.bounds.center;
-                    foreach (Collider fingerCollider in fingerColliders)
+                    prizeColliders.Add((collider, collider.enabled));
+                    collider.enabled = false;
+                }
+            }
+
+            int contacts = 0;
+            float maximumPenetration = 0f;
+            try
+            {
+                for (int repetition = 1; repetition <= repetitions; repetition++)
+                {
+                    scoopRig.Body.position = transform.TransformPoint(
+                        new Vector3(0f, config.TopHeight, 0f));
+                    scoopRig.Body.rotation = transform.rotation;
+                    Physics.SyncTransforms();
+                    yield return new WaitForFixedUpdate();
+
+                    for (int step = 0; step < 220; step++)
                     {
-                        Vector3 fingerSurface = fingerCollider.ClosestPoint(prizeCenter);
-                        Vector3 prizeSurface = prizeCollider.ClosestPoint(fingerSurface);
-                        if ((fingerSurface - prizeSurface).sqrMagnitude <= clearance * clearance)
-                            return true;
+                        Vector3 target = scoopRig.Body.position - transform.up * 0.045f;
+                        bool blocked = scoopRig.SweepMove(target, transform.rotation,
+                            config.SweepSkin, false, out RaycastHit hit, out _);
+                        yield return new WaitForFixedUpdate();
+                        if (!blocked) continue;
+                        float floorY = hit.point.y;
+                        if (scoopRig.TryGetFloorSurface(out float measuredFloor)) floorY = measuredFloor;
+                        float penetration = Mathf.Max(0f,
+                            floorY + config.FloorClearance - scoopRig.BottomWorldY) * 1000f;
+                        maximumPenetration = Mathf.Max(maximumPenetration, penetration);
+                        contacts++;
+                        Debug.Log("[ScoopPhysics] FLOOR_CONTACT verify=" + repetition +
+                                  " bottom=" + scoopRig.BottomWorldY.ToString("F5") +
+                                  " floor=" + floorY.ToString("F5") +
+                                  " penetrationMm=" + penetration.ToString("F3"), this);
+                        break;
                     }
                 }
             }
-            return false;
+            finally
+            {
+                foreach ((Collider collider, bool enabled) entry in prizeColliders)
+                    if (entry.collider != null) entry.collider.enabled = entry.enabled;
+                scoopRig.Body.position = savedPosition;
+                scoopRig.Body.rotation = savedRotation;
+                Physics.SyncTransforms();
+                floorContactSamples = contacts;
+                lastFloorPenetrationMillimeters = maximumPenetration;
+                floorVerificationOverride = false;
+                floorVerificationRunning = false;
+                Debug.Log("[ScoopPhysics] FLOOR_VERIFY_COMPLETE machine=" + config.MachineId +
+                          " contacts=" + contacts + "/" + repetitions +
+                          " maxPenetrationMm=" + maximumPenetration.ToString("F3"), this);
+            }
         }
 
-        private bool AreFingersAtTarget(float target, float tolerance)
-        {
-            if (physicalFingerJoints.Count == 0) return stateElapsed >= config.CloseDuration;
-            for (int index = 0; index < physicalFingerJoints.Count; index++)
-            {
-                HingeJoint hinge = physicalFingerJoints[index];
-                float offset = index < physicalFingerAngleOffsets.Count
-                    ? physicalFingerAngleOffsets[index]
-                    : 0f;
-                if (hinge != null && Mathf.Abs(Mathf.DeltaAngle(hinge.angle, target + offset)) > tolerance)
-                    return false;
-            }
-            return true;
-        }
 
         private static Vector3 GetPrizePhysicalCenter(ShopClawPrizeNetwork prize)
         {
@@ -2012,8 +1914,9 @@ namespace PickAndPlaceShop
             if (!showDebug) return;
             debugText.text = "상태 " + StateLabel(State.Value) + "\n점유 " +
                 (OccupantClientId.Value == ShopClawRules.NoOccupant ? "없음" : OccupantClientId.Value.ToString()) +
-                "\n시도 " + AttemptId.Value + "\n집기 점수 " + LastGripScore.Value.ToString("0.0") +
-                "\n파손 한계 " + LastJointBreakForce.Value.ToString("0.0") + "\n보유 상품 " + HeldPrizeNetworkObjectId.Value;
+                "\n시도 " + AttemptId.Value + "\n팬 적재 수 " + LastGripScore.Value.ToString("0") +
+                "\n바닥 관통(mm) " + LastFloorPenetrationMillimeters.ToString("0.000") +
+                "\n팬 위 상품 " + HeldPrizeNetworkObjectId.Value;
         }
 
         private void UpdateQaClient()
@@ -2097,11 +2000,11 @@ namespace PickAndPlaceShop
                 ShopClawMachineState.Idle => "사용 가능",
                 ShopClawMachineState.Reserved => "조작 준비",
                 ShopClawMachineState.Aiming => "조준",
-                ShopClawMachineState.Descend => "집게 하강 중",
-                ShopClawMachineState.Close => "토크로 발톱 닫는 중",
-                ShopClawMachineState.Ascend => "집게 상승 중",
+                ShopClawMachineState.Descend => "팬 하강 중",
+                ShopClawMachineState.Close => "상품 퍼올리는 중",
+                ShopClawMachineState.Ascend => "팬 상승 중",
                 ShopClawMachineState.Return => "출구로 이동 중",
-                ShopClawMachineState.Release => "상품 놓는 중",
+                ShopClawMachineState.Release => "팬을 기울여 배출 중",
                 ShopClawMachineState.Judge => "투하구 안정 판정 중",
                 ShopClawMachineState.Cooldown => "결과",
                 _ => state.ToString()

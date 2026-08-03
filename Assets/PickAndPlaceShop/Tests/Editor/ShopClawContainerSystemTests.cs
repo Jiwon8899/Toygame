@@ -139,7 +139,7 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void PhysicalClaw_PrefabsHaveThreeTorqueFingersAndRealChuteFloor()
+        public void Scoop_PrefabsUseKinematicCompoundRigAndRealChuteFloor()
         {
             string[] paths = AssetDatabase.FindAssets("t:Prefab",
                     new[] { "Assets/PickAndPlaceShop/Prefabs/ClawMachines" })
@@ -154,34 +154,20 @@ namespace PickAndPlaceShop.Tests
                 GameObject root = PrefabUtility.LoadPrefabContents(path);
                 try
                 {
-                    Assert.AreEqual(3,
-                        root.GetComponentsInChildren<ShopClawFingerContactSensor>(true).Length, path);
-                    Assert.AreEqual(3,
-                        root.GetComponentsInChildren<HingeJoint>(true).Length, path);
-                    Assert.AreEqual(3,
-                        root.GetComponentsInChildren<Rigidbody>(true)
-                            .Count(body => body.name.StartsWith("집게발_")), path);
+                    Assert.AreEqual(0, root.GetComponentsInChildren<HingeJoint>(true).Length, path);
                     Rigidbody carriage = root.GetComponentsInChildren<Rigidbody>(true)
-                        .FirstOrDefault(body => body.name == "PhysicalClawCarriage");
+                        .FirstOrDefault(body => body.name == "ScoopRailCarriage");
                     Assert.NotNull(carriage, path);
                     Assert.IsTrue(carriage.isKinematic, path);
-                    ConfigurableJoint suspension = root.GetComponentsInChildren<ConfigurableJoint>(true)
-                        .FirstOrDefault();
-                    Assert.NotNull(suspension, path);
-                    Assert.AreSame(carriage, suspension.connectedBody, path);
-                    Rigidbody head = suspension.GetComponent<Rigidbody>();
-                    Assert.NotNull(head, path);
-                    Assert.IsTrue(root.GetComponentsInChildren<HingeJoint>(true)
-                        .All(hinge => hinge.connectedBody == head && hinge.axis == Vector3.right), path);
-                    Transform sharedRig = root.GetComponentsInChildren<Transform>(true)
-                        .FirstOrDefault(item => item.name == "SharedPhysicalClawRig");
-                    Assert.NotNull(sharedRig, path);
-                    Assert.AreEqual(
-                        "Assets/PickAndPlaceShop/Prefabs/ClawMachines/SharedPhysicalClawRig.prefab",
-                        PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(sharedRig.gameObject), path);
-                    Assert.AreEqual(9,
-                        root.GetComponentsInChildren<CapsuleCollider>(true)
-                            .Count(collider => collider.name.StartsWith("FingerCollider_")), path);
+                    Assert.AreEqual(0, root.GetComponentsInChildren<ConfigurableJoint>(true).Length, path);
+                    ShopClawScoopRig scoop = root.GetComponentInChildren<ShopClawScoopRig>(true);
+                    Assert.NotNull(scoop, path);
+                    Assert.NotNull(scoop.Body, path);
+                    Assert.IsTrue(scoop.Body.isKinematic, path);
+                    Assert.AreEqual(CollisionDetectionMode.ContinuousSpeculative,
+                        scoop.Body.collisionDetectionMode, path);
+                    Assert.AreEqual(9, scoop.CompoundColliderCount, path);
+                    Assert.IsTrue(scoop.RimColliders.All(collider => collider is BoxCollider), path);
                     Assert.AreEqual(0, root.GetComponentsInChildren<MeshCollider>(true).Length, path);
                     Transform floor = root.transform.Find("PhysicalFloorWithChute");
                     Assert.NotNull(floor, path);
@@ -204,20 +190,16 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void PhysicalClaw_NormalMapsAreImportedCorrectly()
+        public void Scoop_MaterialsAreAuthoredAndLegacyRigIsExplicitlyDeprecated()
         {
-            foreach (string path in new[]
-                     {
-                         "Assets/외형들모음/Textures/ClawFinger_2.png",
-                         "Assets/외형들모음/Textures/ClawHousing_2.png",
-                         "Assets/외형들모음/Textures/CableConnector_2.png"
-                     })
-            {
-                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-                Assert.NotNull(importer, path);
-                Assert.AreEqual(TextureImporterType.NormalMap, importer.textureType, path);
-                Assert.IsFalse(importer.sRGBTexture, path);
-            }
+            Assert.NotNull(AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/PickAndPlaceShop/Materials/Scoop/ScoopPan.mat"));
+            Assert.NotNull(AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/PickAndPlaceShop/Materials/Scoop/ScoopEdge.mat"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PickAndPlaceShop/Prefabs/ClawMachines/SharedPhysicalClawRig.prefab"));
+            Assert.NotNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PickAndPlaceShop/Deprecated/Claw/SharedPhysicalClawRig.prefab"));
         }
 
         [Test]
@@ -242,7 +224,7 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void PhysicalClaw_PresetsUseTorqueAndDifferByMachine()
+        public void Scoop_PresetsAreDataDrivenAndAwardEverythingPouredIntoChute()
         {
             ShopClawMachineConfig[] configs = AssetDatabase.FindAssets("t:ShopClawMachineConfig",
                     new[] { "Assets/PickAndPlaceShop/Data" })
@@ -251,47 +233,32 @@ namespace PickAndPlaceShop.Tests
                 .Where(config => config != null && config.MachineId >= 101 && config.MachineId <= 105)
                 .ToArray();
             Assert.GreaterOrEqual(configs.Length, 5);
-            Assert.IsTrue(configs.All(config => config.CloseMotorTorque > 0f));
-            Assert.IsTrue(configs.All(config => config.AscentGripTorqueMultiplier <= 1f));
-            Assert.IsTrue(configs.Any(config => config.AscentGripTorqueMultiplier < 1f));
-            Assert.Greater(configs.Select(config => config.CloseMotorTorque).Distinct().Count(), 1);
-            Assert.Greater(configs.Select(config => config.AscentGripTorqueMultiplier).Distinct().Count(), 1);
-            Assert.IsTrue(configs.All(config => config.OpenFingerAngle > config.ClosedFingerAngle));
-            Assert.IsTrue(configs.All(config => config.ClosedFingerClearanceAngle >= 8f));
+            Assert.IsTrue(configs.All(config => config.ScoopDiameter > 0.8f));
+            Assert.IsTrue(configs.All(config => config.ScoopRimHeight >= 0.08f));
+            Assert.IsTrue(configs.All(config => config.ScrapeDistance > 0.25f));
+            Assert.IsTrue(configs.All(config => config.ScrapeSpeed > 0.2f));
+            Assert.IsTrue(configs.All(config => config.LiftSpeed > 0f));
+            Assert.IsTrue(configs.All(config => config.MultiPrizePolicy == ShopMultiPrizePolicy.AwardAll));
+            Assert.Greater(configs.Select(config => config.ScoopDiameter).Distinct().Count(), 1);
+            Assert.Greater(configs.Select(config => config.ScrapeDistance).Distinct().Count(), 1);
+            Assert.IsTrue(configs.All(config =>
+                config.GetCapsuleMass(ShopProductRarity.UltraRare) >
+                config.GetCapsuleMass(ShopProductRarity.Common)));
         }
 
         [Test]
-        public void PhysicalClaw_SharedRigUsesExactSymmetricAutoLayout()
+        public void Scoop_RimUsesEightSegmentsWithLowFrontLip()
         {
-            const string path =
-                "Assets/PickAndPlaceShop/Prefabs/ClawMachines/SharedPhysicalClawRig.prefab";
+            const string path = "Assets/PickAndPlaceShop/Prefabs/ClawMachines/ClawMachine_101.prefab";
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             try
             {
-                ShopClawFingerAutoLayout layout =
-                    root.GetComponentInChildren<ShopClawFingerAutoLayout>(true);
-                Assert.NotNull(layout);
-                Assert.AreEqual(3, layout.Fingers.Length);
-                Assert.AreEqual(0.69f, layout.Radius, 0.0001f);
-                Assert.AreEqual(-0.38f, layout.Height, 0.0001f);
-                Assert.AreEqual(120f, layout.TiltAngle, 0.001f);
-
-                for (int index = 0; index < layout.Fingers.Length; index++)
-                {
-                    float angle = 120f * index;
-                    Vector3 expectedPosition = new(
-                        Mathf.Sin(angle * Mathf.Deg2Rad) * 0.69f,
-                        -0.38f,
-                        Mathf.Cos(angle * Mathf.Deg2Rad) * 0.69f);
-                    Quaternion expectedRotation = Quaternion.Euler(120f, angle, 0f);
-                    Assert.Less(Vector3.Distance(expectedPosition,
-                        layout.transform.InverseTransformPoint(layout.Fingers[index].position)),
-                        0.0001f, "finger " + (index + 1) + " position");
-                    Assert.Less(Quaternion.Angle(expectedRotation,
-                        Quaternion.Inverse(layout.transform.rotation) *
-                        layout.Fingers[index].rotation), 0.001f,
-                        "finger " + (index + 1) + " rotation");
-                }
+                ShopClawScoopRig rig = root.GetComponentInChildren<ShopClawScoopRig>(true);
+                Assert.NotNull(rig);
+                Assert.AreEqual(8, rig.RimColliders.Count);
+                Assert.Less(rig.RimColliders[0].size.y, rig.RimColliders[1].size.y);
+                Assert.NotNull(rig.VisualRoot.Find("ScoopPanVisual"));
+                Assert.NotNull(rig.VisualRoot.Find("ScoopHandle"));
             }
             finally
             {

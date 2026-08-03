@@ -94,7 +94,7 @@ namespace PickAndPlaceShop
         [Min(0)] [SerializeField] private int automationUnlockReputation = 40;
         [Min(1)] [SerializeField] private int automationPurchasePrice = 1800;
         [Min(1f)] [SerializeField] private float automationAttemptInterval = 60f;
-        [Range(0.01f, 1f)] [SerializeField] private float manualAverageSuccessRate = 0.58f;
+        [Range(0.01f, 1f)] [SerializeField] private float manualAverageSuccessRate = 0.90f;
         [Range(0.01f, 1f)] [SerializeField] private float automationSuccessMultiplier = 0.5f;
         [Range(1, 30)] [SerializeField] private int automationBufferSlots = 10;
         [Range(1, 30)] [SerializeField] private int automationNearFullSlots = 8;
