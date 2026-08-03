@@ -33,7 +33,9 @@ namespace PickAndPlaceShop
         Facility,
         Claw,
         Gacha,
-        Kuji
+        Kuji,
+        StoreExpansion,
+        Staff
     }
 
     [RequireComponent(typeof(NetworkObject))]
@@ -42,7 +44,7 @@ namespace PickAndPlaceShop
         public const int CampaignDays = 7;
         public const int MaxClawInventorySlots = 10;
         public const int MaxShopUpgradeLevel = 3;
-        public const int TotalSupportedUpgradeLevels = 12;
+        public const int TotalSupportedUpgradeLevels = 20;
 
         private static readonly int[] ShopUpgradeCosts = { 250, 450, 700 };
         private static readonly int[] PlayerUpgradeCosts = { 200, 400 };
@@ -69,6 +71,8 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> ClawUpgradeLevel = new(0);
         public NetworkVariable<int> GachaUpgradeLevel = new(0);
         public NetworkVariable<int> KujiUpgradeLevel = new(0);
+        public NetworkVariable<int> StaffHiredMask = new(0);
+        public NetworkVariable<int> StaffAttendanceMask = new(0);
         public NetworkVariable<int> TrendPercent = new(15);
         public NetworkVariable<int> FailStreak = new(0);
         public NetworkVariable<ShopPhase> Phase = new(ShopPhase.PrizeHunt);
@@ -95,7 +99,8 @@ namespace PickAndPlaceShop
                 ? 0
                 : ShopUpgradeCosts[ShopUpgradeLevel.Value];
 
-        public int CustomerCapacityBonus => ShopUpgradeLevel.Value >= 2 ? 1 : 0;
+        public int CustomerCapacityBonus => (ShopUpgradeLevel.Value >= 2 ? 1 : 0) +
+            Mathf.Max(0, (ShopProgressionManager.Instance?.ExpansionLevel ?? 1) - 4);
         public int SharedStorageCapacity =>
             ShopProgressionManager.Instance != null
                 ? ShopProgressionManager.Instance.CurrentStorageSlots
@@ -122,7 +127,8 @@ namespace PickAndPlaceShop
 
         public int TotalUpgradeLevel =>
             PlayerUpgradeLevel.Value + ShopUpgradeLevel.Value + FacilityUpgradeLevel.Value +
-            ClawUpgradeLevel.Value + GachaUpgradeLevel.Value + KujiUpgradeLevel.Value;
+            ClawUpgradeLevel.Value + GachaUpgradeLevel.Value + KujiUpgradeLevel.Value +
+            GetUpgradeLevel(ShopUpgradeCategory.StoreExpansion) + GetUpgradeLevel(ShopUpgradeCategory.Staff);
 
         public string ShopUpgradePrompt =>
             "업그레이드 내역 열기 (" + TotalUpgradeLevel + "/" + TotalSupportedUpgradeLevels + ")";
@@ -216,6 +222,9 @@ namespace PickAndPlaceShop
             ShopUpgradeCategory.Claw => ClawUpgradeLevel.Value,
             ShopUpgradeCategory.Gacha => GachaUpgradeLevel.Value,
             ShopUpgradeCategory.Kuji => KujiUpgradeLevel.Value,
+            ShopUpgradeCategory.StoreExpansion => Mathf.Max(0,
+                (ShopProgressionManager.Instance?.ExpansionLevel ?? 1) - 1),
+            ShopUpgradeCategory.Staff => CountBits(StaffHiredMask.Value),
             _ => 0
         };
 
@@ -227,12 +236,24 @@ namespace PickAndPlaceShop
             ShopUpgradeCategory.Claw => 2,
             ShopUpgradeCategory.Gacha => 1,
             ShopUpgradeCategory.Kuji => 2,
+            ShopUpgradeCategory.StoreExpansion => 5,
+            ShopUpgradeCategory.Staff => 3,
             _ => 0
         };
 
         public int GetNextUpgradeCost(ShopUpgradeCategory category)
         {
             int level = GetUpgradeLevel(category);
+            if (category == ShopUpgradeCategory.StoreExpansion)
+            {
+                ShopExpansionTier next = ShopProgressionManager.Instance?.NextExpansion;
+                return next != null ? next.RequiredFunds : 0;
+            }
+            if (category == ShopUpgradeCategory.Staff)
+            {
+                ShopWorkforceConfig workforce = ShopWorkforceConfig.Load();
+                return workforce != null && level < 3 ? workforce.HireCost((ShopStaffRole)level) : 0;
+            }
             int[] costs = CostsFor(category);
             return level >= costs.Length ? 0 : costs[level];
         }
@@ -291,6 +312,24 @@ namespace PickAndPlaceShop
                 return;
             }
 
+            if (category == ShopUpgradeCategory.StoreExpansion)
+            {
+                ShopProgressionManager progression = ShopProgressionManager.Instance;
+                if (progression == null)
+                {
+                    SetEvent("가게 확장 데이터를 찾지 못했습니다.");
+                    return;
+                }
+                if (!progression.TryExpandShop(out string expansionMessage))
+                {
+                    SetEvent(string.IsNullOrWhiteSpace(expansionMessage)
+                        ? "가게 확장을 진행할 수 없습니다." : expansionMessage);
+                    return;
+                }
+                SetEvent(UpgradePurchasedMessage(category, level + 1));
+                return;
+            }
+
             int cost = GetNextUpgradeCost(category);
             int balance = Coins.Value;
             if (!ShopEconomy.TrySpend(ref balance, cost))
@@ -302,6 +341,7 @@ namespace PickAndPlaceShop
             Coins.Value = balance;
             SetUpgradeLevel(category, level + 1);
             SetEvent(UpgradePurchasedMessage(category, level + 1));
+            ShopProgressionManager.Instance?.SaveNow();
         }
 
         private void SetUpgradeLevel(ShopUpgradeCategory category, int level)
@@ -314,6 +354,10 @@ namespace PickAndPlaceShop
                 case ShopUpgradeCategory.Claw: ClawUpgradeLevel.Value = level; break;
                 case ShopUpgradeCategory.Gacha: GachaUpgradeLevel.Value = level; break;
                 case ShopUpgradeCategory.Kuji: KujiUpgradeLevel.Value = level; break;
+                case ShopUpgradeCategory.Staff:
+                    StaffHiredMask.Value = (1 << Mathf.Clamp(level, 0, 3)) - 1;
+                    StaffAttendanceMask.Value |= StaffHiredMask.Value;
+                    break;
             }
         }
 
@@ -336,6 +380,8 @@ namespace PickAndPlaceShop
             ShopUpgradeCategory.Claw => "인형뽑기 장비",
             ShopUpgradeCategory.Gacha => "가챠 운영",
             ShopUpgradeCategory.Kuji => "쿠지 정보",
+            ShopUpgradeCategory.StoreExpansion => "매장 확장",
+            ShopUpgradeCategory.Staff => "알바 고용",
             _ => "업그레이드"
         };
 
@@ -378,6 +424,22 @@ namespace PickAndPlaceShop
                     1 => "쿠지 티켓 비용 20% 할인",
                     _ => "쿠지 정보 강화 완료"
                 },
+                ShopUpgradeCategory.StoreExpansion => level switch
+                {
+                    0 => "진열대 1개 · 진열 2칸 추가",
+                    1 => "진열대 1개 · 진열 2칸 추가",
+                    2 => "진열대 1개 · 진열 2칸 추가",
+                    3 => "매장 면적 · 창고 용량 확장",
+                    4 => "매장 면적 · 창고 · 계산대 확장",
+                    _ => "모든 매장 확장 완료"
+                },
+                ShopUpgradeCategory.Staff => level switch
+                {
+                    0 => "계산 알바 고용 (일급 80원)",
+                    1 => "진열 알바 고용 (일급 100원)",
+                    2 => "수거 알바 고용 (일급 120원)",
+                    _ => "모든 알바 고용 완료"
+                },
                 _ => string.Empty
             };
         }
@@ -398,6 +460,11 @@ namespace PickAndPlaceShop
                 ShopUpgradeCategory.Gacha => "가챠 이용 비용이 20% 할인됩니다.",
                 ShopUpgradeCategory.Kuji when level == 1 => "쿠지의 상세 재고와 마지막상 정보를 확인할 수 있습니다.",
                 ShopUpgradeCategory.Kuji => "쿠지 티켓 비용이 20% 할인됩니다.",
+                ShopUpgradeCategory.StoreExpansion when level <= 3 => "새 진열대와 진열 공간 2칸을 설치했습니다.",
+                ShopUpgradeCategory.StoreExpansion => "매장과 창고 공간을 확장했습니다.",
+                ShopUpgradeCategory.Staff when level == 1 => "계산 알바를 고용했습니다.",
+                ShopUpgradeCategory.Staff when level == 2 => "진열 알바를 고용했습니다.",
+                ShopUpgradeCategory.Staff => "수거 알바를 고용했습니다.",
                 _ => "업그레이드를 완료했습니다."
             };
         }
@@ -616,6 +683,7 @@ namespace PickAndPlaceShop
             }
 
             int rent = ShopEconomy.CalculateRent(Day.Value);
+            int wages = ServerPayStaffWages();
             if (nightSales != null)
             {
                 nightSales.ServerTakeUnsoldStock(out _, out _);
@@ -635,6 +703,7 @@ namespace PickAndPlaceShop
                     ? "7일 운영 완료! 최종 점수: " + ShopEconomy.CalculateDayScore(Coins.Value, SoldToday.Value, Reputation.Value)
                     : "Seven-day prototype complete! Final score: " +
                       ShopEconomy.CalculateDayScore(Coins.Value, SoldToday.Value, Reputation.Value) + ".");
+                ShopProgressionManager.Instance?.SaveNow();
                 return;
             }
 
@@ -644,8 +713,11 @@ namespace PickAndPlaceShop
             TrendPercent.Value = Random.Range(-10, 36);
             Phase.Value = ShopPhase.PrizeHunt;
             SetEvent(KoreanMode
-                ? completedDay + "일 차 마감. 임대료 " + rent + "원을 지불했고 새 유행이 공개되었습니다."
-                : "Day " + completedDay + " closed. Rent " + rent + " paid. New trend revealed.");
+                ? completedDay + "일 차 마감. 임대료 " + rent + "원 · 알바 급여 " + wages +
+                  "원을 지불했고 새 유행이 공개되었습니다."
+                : "Day " + completedDay + " closed. Rent " + rent + " and wages " + wages +
+                  " paid. New trend revealed.");
+            ShopProgressionManager.Instance?.SaveNow();
         }
 
         private void ResetCampaign()
@@ -666,6 +738,8 @@ namespace PickAndPlaceShop
             ClawUpgradeLevel.Value = 0;
             GachaUpgradeLevel.Value = 0;
             KujiUpgradeLevel.Value = 0;
+            StaffHiredMask.Value = 0;
+            StaffAttendanceMask.Value = 0;
             TrendPercent.Value = 15;
             FailStreak.Value = 0;
             Phase.Value = ShopPhase.PrizeHunt;
@@ -815,11 +889,19 @@ namespace PickAndPlaceShop
         }
 
         public bool ServerTryMoveItem(ulong sourceOwner, ShopContainerKind source,
-            ShopContainerKind destination, out ShopContainerItem moved)
+            ShopContainerKind destination, out ShopContainerItem moved, int requiredProductId = -1)
         {
             moved = default;
             if (!IsServer || source == destination) return false;
-            int sourceIndex = ShopContainerRules.FindFirst(ItemContainers, sourceOwner, source);
+            int sourceIndex = -1;
+            for (int i = 0; i < ItemContainers.Count; i++)
+            {
+                ShopContainerItem candidate = ItemContainers[i];
+                if (!ShopContainerRules.BelongsTo(candidate, sourceOwner, source) ||
+                    (requiredProductId >= 0 && candidate.ProductId != requiredProductId)) continue;
+                sourceIndex = i;
+                break;
+            }
             if (sourceIndex < 0) return false;
             ShopContainerItem sourceItem = ItemContainers[sourceIndex];
             ulong destinationOwner = destination == ShopContainerKind.PersonalInventory
@@ -1176,6 +1258,73 @@ namespace PickAndPlaceShop
         private void SetEvent(string message)
         {
             LastEvent.Value = new FixedString128Bytes(message);
+        }
+
+        public bool IsStaffHired(ShopStaffRole role) => (StaffHiredMask.Value & (1 << (int)role)) != 0;
+        public bool IsStaffAttending(ShopStaffRole role) => (StaffAttendanceMask.Value & (1 << (int)role)) != 0;
+
+        public void ServerSetStaffAttendance(ShopStaffRole role, bool attending)
+        {
+            if (!IsServer || !IsStaffHired(role)) return;
+            int bit = 1 << (int)role;
+            StaffAttendanceMask.Value = attending ? StaffAttendanceMask.Value | bit : StaffAttendanceMask.Value & ~bit;
+        }
+
+        public int ServerPayStaffWages()
+        {
+            if (!IsServer) return 0;
+            ShopWorkforceConfig workforce = ShopWorkforceConfig.Load();
+            if (workforce == null) return 0;
+            int paid = 0;
+            int attendance = 0;
+            for (int i = 0; i < 3; i++)
+            {
+                int bit = 1 << i;
+                if ((StaffHiredMask.Value & bit) == 0) continue;
+                int wage = workforce.DailyWage((ShopStaffRole)i);
+                if (Coins.Value < wage) continue;
+                Coins.Value -= wage;
+                paid += wage;
+                attendance |= bit;
+            }
+            StaffAttendanceMask.Value = attendance;
+            return paid;
+        }
+
+        public string StaffStatusSummary()
+        {
+            string[] names = { "계산", "진열", "수거" };
+            string result = "알바 ";
+            for (int i = 0; i < names.Length; i++)
+            {
+                int bit = 1 << i;
+                string state = (StaffHiredMask.Value & bit) == 0 ? "미고용" :
+                    (StaffAttendanceMask.Value & bit) != 0 ? "근무" : "급여 대기";
+                result += names[i] + " " + state + (i + 1 < names.Length ? " · " : string.Empty);
+            }
+            return result;
+        }
+
+        public void ServerRestoreUpgradeState(int player, int operations, int facility, int claw,
+            int gacha, int kuji, int hiredMask, int attendanceMask)
+        {
+            if (!IsServer) return;
+            PlayerUpgradeLevel.Value = Mathf.Clamp(player, 0, 2);
+            ShopUpgradeLevel.Value = Mathf.Clamp(operations, 0, 3);
+            FacilityUpgradeLevel.Value = Mathf.Clamp(facility, 0, 2);
+            ClawUpgradeLevel.Value = Mathf.Clamp(claw, 0, 2);
+            GachaUpgradeLevel.Value = Mathf.Clamp(gacha, 0, 1);
+            KujiUpgradeLevel.Value = Mathf.Clamp(kuji, 0, 2);
+            StaffHiredMask.Value = hiredMask & 7;
+            StaffAttendanceMask.Value = attendanceMask & StaffHiredMask.Value;
+        }
+
+        private static int CountBits(int value)
+        {
+            value &= 7;
+            int count = 0;
+            while (value != 0) { count += value & 1; value >>= 1; }
+            return count;
         }
     }
 }

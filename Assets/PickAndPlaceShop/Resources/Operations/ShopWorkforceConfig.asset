@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ce745d355862ec4b8136dc5f9180a79, type: 3}
+  m_Name: ShopWorkforceConfig
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopWorkforceConfig
+  hireCosts: 5802000020030000e8030000
+  dailyWages: 500000006400000078000000
+  cashierDurationMultiplier: 1.5
+  stockerWorkInterval: 4
+  collectorWorkInterval: 5
+  walkSpeed: 1.45
+  workReachDistance: 0.8
+  appearancePrefabs:
+  - {fileID: 321591366909717886, guid: a044d7d23e587494fa9a5882a6f2b80c, type: 3}
+  - {fileID: 8716229691212139279, guid: 10962d0f2f136074eb84f12fe477737f, type: 3}
+  - {fileID: 8786606968791556106, guid: a441917d654b46040846787d53f4d653, type: 3}
+  - {fileID: 33621699118681936, guid: 816ddc51d72fef14aab1f27e956634ce, type: 3}
+  - {fileID: 1498839645194894971, guid: 093735926221f4d44b87b7ebfa33ef63, type: 3}
+  - {fileID: 4304917915462873115, guid: 4e0a55fb8b16e8543b1b56979360648d, type: 3}

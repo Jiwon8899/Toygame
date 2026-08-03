@@ -65,6 +65,12 @@ namespace PickAndPlaceShop
         private bool checkoutBusy;
 
         public Vector3 ExitPosition => exitPoint != null ? exitPoint.position : transform.position;
+        public Vector3 EntrancePosition => entrancePoint != null ? entrancePoint.position : transform.position;
+        public Vector3 RoadsidePosition => roadsideEntryPoint != null ? roadsideEntryPoint.position : EntrancePosition;
+        public Vector3 CheckoutPosition => checkoutPoint != null ? checkoutPoint.position : transform.position;
+        public Vector3 DisplayWorkPosition => browsePoints != null && browsePoints.Length > 0 && browsePoints[0] != null
+            ? browsePoints[0].position : transform.position;
+        public bool CheckoutBusy => checkoutBusy;
         public int AverageSatisfaction => SatisfactionSamples.Value <= 0 ? 0 :
             Mathf.RoundToInt(SatisfactionTotal.Value / (float)SatisfactionSamples.Value);
         public int CurrentMaximumCustomers => GetScaledMaximumCustomers();
@@ -208,7 +214,59 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            StartCoroutine(ServerCheckoutRoutine(queue[0]));
+            StartCoroutine(ServerCheckoutRoutine(queue[0], 1f));
+        }
+
+        public bool ServerTryStaffCheckout(float durationMultiplier)
+        {
+            if (!IsServer || checkoutBusy || ShopNetworkGame.Instance == null ||
+                ShopNetworkGame.Instance.Phase.Value != ShopPhase.Open) return false;
+            while (queue.Count > 0 && (queue[0] == null || !queue[0].IsSpawned)) queue.RemoveAt(0);
+            if (queue.Count == 0) return false;
+            if (NetworkManager != null)
+            {
+                float range = ShopOperationsConfig.Load()?.InteractionDistance ?? 2.5f;
+                foreach (NetworkClient client in NetworkManager.ConnectedClientsList)
+                    if (client.PlayerObject != null &&
+                        Vector3.Distance(client.PlayerObject.transform.position, CheckoutPosition) <= range)
+                        return false;
+            }
+            StartCoroutine(ServerCheckoutRoutine(queue[0], Mathf.Max(1f, durationMultiplier)));
+            return true;
+        }
+
+        public bool ServerTryStaffRestockDisplay()
+        {
+            if (!IsServer || ShopNetworkGame.Instance == null ||
+                (ShopNetworkGame.Instance.Phase.Value != ShopPhase.Setup &&
+                 ShopNetworkGame.Instance.Phase.Value != ShopPhase.Open) ||
+                ledger.TotalStock() >= ShopNetworkGame.Instance.SharedDisplayCapacity) return false;
+
+            ShopProductDefinition selected = null;
+            int selectedQuantity = -1;
+            ShopProductCategory trend = ShopLiveOperationsNetwork.Instance != null
+                ? ShopLiveOperationsNetwork.Instance.CurrentTrendCategory : ShopProductCategory.CatPlush;
+            foreach (ShopProductDefinition product in products)
+            {
+                if (product == null) continue;
+                int quantity = ShopNetworkGame.Instance.GetSharedProductQuantity(product.ProductId, false);
+                if (quantity <= 0) continue;
+                bool trendPreferred = product.Category == trend;
+                bool currentTrend = selected != null && selected.Category == trend;
+                if (selected == null || (trendPreferred && !currentTrend) ||
+                    trendPreferred == currentTrend && quantity > selectedQuantity)
+                {
+                    selected = product;
+                    selectedQuantity = quantity;
+                }
+            }
+            if (selected == null || !ShopNetworkGame.Instance.ServerTryMoveItem(
+                    ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
+                    ShopContainerKind.SharedDisplay, out ShopContainerItem moved, selected.ProductId)) return false;
+            ledger.AddStock(moved.ProductId, 1);
+            SyncStockVariables();
+            ShopNetworkGame.Instance.ServerSetEvent("진열 알바가 " + moved.DisplayName + " 1개를 진열했습니다.");
+            return true;
         }
 
         public void ServerTryRestockDisplay(ulong ownerClientId)
@@ -430,14 +488,14 @@ namespace PickAndPlaceShop
             CustomersInStore.Value = activeCustomers.Count;
         }
 
-        private IEnumerator ServerCheckoutRoutine(ShopCustomerNetwork customer)
+        private IEnumerator ServerCheckoutRoutine(ShopCustomerNetwork customer, float durationMultiplier)
         {
             checkoutBusy = true;
             queue.Remove(customer);
             QueueCount.Value = queue.Count;
             customer.ServerBeginCheckout(checkoutPoint != null ? checkoutPoint.position : transform.position);
             ShopNetworkGame.Instance.ServerSetEvent("계산 중입니다...");
-            yield return new WaitForSeconds(GetScaledCheckoutDuration());
+            yield return new WaitForSeconds(GetScaledCheckoutDuration() * Mathf.Max(1f, durationMultiplier));
 
             if (customer == null || !customer.IsSpawned)
             {

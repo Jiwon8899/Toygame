@@ -21,7 +21,7 @@ namespace PickAndPlaceShop.Tests
         public void Catalog_HasRequiredDataDrivenAxes()
         {
             Assert.That(catalog.Stages.Count, Is.EqualTo(7));
-            Assert.That(catalog.ExpansionTiers.Count, Is.EqualTo(5));
+            Assert.That(catalog.ExpansionTiers.Count, Is.EqualTo(6));
             Assert.That(catalog.CollectionItems.Count, Is.GreaterThan(0));
             Assert.That(catalog.CollectionItems.Count, Is.Not.EqualTo(350),
                 "컬렉션 총량은 실제 등록 에셋 수를 사용해야 합니다.");
@@ -73,11 +73,11 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void ExpansionLevelFour_IsSeparateFromDistrictUnlock()
+        public void StoreExpansion_IsSeparateFromDistrictUnlock()
         {
-            ShopExpansionTier levelFour = catalog.ExpansionTiers.Single(tier => tier.Level == 4);
-            Assert.That(levelFour.RequiredReputation, Is.EqualTo(40));
-            Assert.That(levelFour.Features.HasFlag(ShopExpansionFeature.SecondFloor), Is.True);
+            ShopExpansionTier levelFive = catalog.ExpansionTiers.Single(tier => tier.Level == 5);
+            Assert.That(levelFive.RequiredFunds, Is.EqualTo(1200));
+            Assert.That(levelFive.Features.HasFlag(ShopExpansionFeature.PackingTable), Is.True);
             Assert.That(catalog.DistrictUnlocks.Any(district =>
                 district.RequiredReputation == 40 && !district.Placeholder), Is.True);
         }

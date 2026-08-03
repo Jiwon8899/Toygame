@@ -26,6 +26,16 @@ namespace PickAndPlaceShop
 
         public int MachineId => machine != null && machine.Config != null ? machine.Config.MachineId : 0;
         public ulong BufferOwner => unchecked((ulong)(100000 + Mathf.Max(0, MachineId)));
+        public int BufferedItemCount => ShopNetworkGame.Instance != null
+            ? ShopNetworkGame.Instance.GetContainerSnapshot(BufferOwner, ShopContainerKind.AutomationBuffer).Used
+            : 0;
+
+        public int ServerStaffCollectToStorage()
+        {
+            if (!IsServer || ShopNetworkGame.Instance == null) return 0;
+            return ShopNetworkGame.Instance.ServerMoveAutomationBuffer(BufferOwner,
+                ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage);
+        }
 
         private ShopOperationsConfig Operations => ShopLiveOperationsNetwork.Instance != null
             ? ShopLiveOperationsNetwork.Instance.Config

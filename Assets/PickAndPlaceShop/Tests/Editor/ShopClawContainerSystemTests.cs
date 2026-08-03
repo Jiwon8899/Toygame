@@ -80,10 +80,16 @@ namespace PickAndPlaceShop.Tests
             Assert.NotNull(catalog);
             Assert.AreEqual((4, 30), (catalog.ExpansionTiers[0].DisplaySlots,
                 catalog.ExpansionTiers[0].StorageSlots));
-            Assert.AreEqual((6, 50), (catalog.ExpansionTiers[1].DisplaySlots,
+            Assert.AreEqual((6, 30), (catalog.ExpansionTiers[1].DisplaySlots,
                 catalog.ExpansionTiers[1].StorageSlots));
-            Assert.AreEqual((10, 80), (catalog.ExpansionTiers[2].DisplaySlots,
+            Assert.AreEqual((8, 30), (catalog.ExpansionTiers[2].DisplaySlots,
                 catalog.ExpansionTiers[2].StorageSlots));
+            Assert.AreEqual((10, 30), (catalog.ExpansionTiers[3].DisplaySlots,
+                catalog.ExpansionTiers[3].StorageSlots));
+            Assert.AreEqual((10, 50), (catalog.ExpansionTiers[4].DisplaySlots,
+                catalog.ExpansionTiers[4].StorageSlots));
+            Assert.AreEqual((10, 70), (catalog.ExpansionTiers[5].DisplaySlots,
+                catalog.ExpansionTiers[5].StorageSlots));
         }
 
         [Test]

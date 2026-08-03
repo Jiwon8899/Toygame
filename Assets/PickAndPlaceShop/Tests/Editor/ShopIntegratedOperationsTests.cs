@@ -130,7 +130,7 @@ namespace PickAndPlaceShop.Tests
             });
             string json = JsonUtility.ToJson(source);
             ShopProgressionSaveData restored = JsonUtility.FromJson<ShopProgressionSaveData>(json);
-            Assert.AreEqual(5, restored.version);
+            Assert.AreEqual(6, restored.version);
             Assert.AreEqual(155f, restored.livePhaseSecondsRemaining);
             Assert.IsTrue(restored.customerProfiles.Single().regular);
             Assert.IsTrue(restored.automationMachines.Single().installed);

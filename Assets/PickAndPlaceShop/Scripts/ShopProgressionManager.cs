@@ -337,7 +337,11 @@ namespace PickAndPlaceShop
             ShopProgressionSaveData data = CreateSaveData();
             ShopLiveOperationsNetwork.Instance?.WriteSave(data);
             bool saved = ShopProgressionSaveStore.Save(data);
-            if (saved) dirty = false;
+            if (saved)
+            {
+                dirty = false;
+                loadedSaveData = data;
+            }
             return saved;
         }
 
@@ -385,6 +389,7 @@ namespace PickAndPlaceShop
             dailyGoals.Clear();
             weeklyGoals.Clear();
             loadedFromSave = false;
+            loadedSaveData = null;
             EnsureGoalCycles();
             EvaluateProgress();
             ApplyStateToBoundGame();
@@ -410,7 +415,7 @@ namespace PickAndPlaceShop
             {
                 if (Time.unscaledTime < bindAt) return;
                 bindAt = 0f;
-                if (loadedFromSave) ApplyStateToBoundGame();
+                if (loadedFromSave || loadedSaveData != null) ApplyStateToBoundGame();
                 else
                 {
                     teamFunds = game.Coins.Value;
@@ -455,6 +460,12 @@ namespace PickAndPlaceShop
             boundGame.CampaignSold.Value = unitsSold;
             boundGame.CampaignClawSuccesses.Value = clawSuccesses;
             boundGame.Day.Value = Mathf.Max(1, currentDay);
+            if (loadedSaveData != null)
+                boundGame.ServerRestoreUpgradeState(loadedSaveData.playerUpgradeLevel,
+                    loadedSaveData.operationsUpgradeLevel, loadedSaveData.facilityUpgradeLevel,
+                    loadedSaveData.clawUpgradeLevel, loadedSaveData.gachaUpgradeLevel,
+                    loadedSaveData.kujiUpgradeLevel, loadedSaveData.staffHiredMask,
+                    loadedSaveData.staffAttendanceMask);
             observedGameFunds = teamFunds;
             observedGameReputation = reputation;
             observedGameDay = boundGame.Day.Value;
@@ -675,7 +686,15 @@ namespace PickAndPlaceShop
                 dailyGoals = CloneGoals(dailyGoals),
                 weeklyGoals = CloneGoals(weeklyGoals),
                 containerItems = CaptureContainerItems(),
-                clawMachines = CaptureClawMachines()
+                clawMachines = CaptureClawMachines(),
+                playerUpgradeLevel = boundGame != null ? boundGame.PlayerUpgradeLevel.Value : 0,
+                operationsUpgradeLevel = boundGame != null ? boundGame.ShopUpgradeLevel.Value : 0,
+                facilityUpgradeLevel = boundGame != null ? boundGame.FacilityUpgradeLevel.Value : 0,
+                clawUpgradeLevel = boundGame != null ? boundGame.ClawUpgradeLevel.Value : 0,
+                gachaUpgradeLevel = boundGame != null ? boundGame.GachaUpgradeLevel.Value : 0,
+                kujiUpgradeLevel = boundGame != null ? boundGame.KujiUpgradeLevel.Value : 0,
+                staffHiredMask = boundGame != null ? boundGame.StaffHiredMask.Value : 0,
+                staffAttendanceMask = boundGame != null ? boundGame.StaffAttendanceMask.Value : 0
             };
         }
 
@@ -695,7 +714,7 @@ namespace PickAndPlaceShop
             currentStageIndex = catalog != null
                 ? Mathf.Clamp(save.currentStageIndex, 0, Mathf.Max(0, catalog.Stages.Count - 1))
                 : 0;
-            expansionLevel = Mathf.Clamp(save.expansionLevel, 1, 5);
+            expansionLevel = Mathf.Clamp(save.expansionLevel, 1, 6);
             expansionVouchers = Mathf.Max(0, save.expansionVouchers);
             randomBoxes = Mathf.Max(0, save.randomBoxes);
             dailyGoalCycle = Mathf.Max(0, save.dailyGoalCycle);

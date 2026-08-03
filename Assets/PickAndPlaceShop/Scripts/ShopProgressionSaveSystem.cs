@@ -89,11 +89,19 @@ namespace PickAndPlaceShop
         public List<ShopCustomerProfileSave> customerProfiles = new();
         public List<ShopOnlineOrderSave> onlineOrders = new();
         public List<ShopAutomationMachineSave> automationMachines = new();
+        public int playerUpgradeLevel;
+        public int operationsUpgradeLevel;
+        public int facilityUpgradeLevel;
+        public int clawUpgradeLevel;
+        public int gachaUpgradeLevel;
+        public int kujiUpgradeLevel;
+        public int staffHiredMask;
+        public int staffAttendanceMask;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
         private const string FileName = "ShopProgressionSave.json";
 
         public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);

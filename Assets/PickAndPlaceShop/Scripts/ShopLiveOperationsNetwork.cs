@@ -513,6 +513,8 @@ namespace PickAndPlaceShop
             text.AppendLine("온라인 주문: " + OnlineOrders.Count + "건");
             text.AppendLine("자동화: 오늘 획득 " + AutomatedAcquiredToday.Value + "개 · 소모 " +
                             AutomatedCostToday.Value + "원");
+            if (ShopNetworkGame.Instance != null)
+                text.AppendLine(ShopNetworkGame.Instance.StaffStatusSummary());
         }
 
         public void WriteSave(ShopProgressionSaveData save)

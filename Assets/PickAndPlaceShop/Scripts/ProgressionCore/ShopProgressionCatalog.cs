@@ -120,7 +120,7 @@ namespace PickAndPlaceShop
     [Serializable]
     public sealed class ShopExpansionTier
     {
-        [SerializeField, Range(1, 5)] private int level = 1;
+        [SerializeField, Range(1, 6)] private int level = 1;
         [SerializeField, Min(0)] private int requiredReputation;
         [SerializeField, Min(0)] private int requiredFunds;
         [SerializeField, Min(1)] private int displaySlots = 4;
@@ -139,7 +139,7 @@ namespace PickAndPlaceShop
         public ShopExpansionTier(int tier, int reputation, int funds, int displays, int storage,
             int checkouts, ShopExpansionFeature unlockedFeatures)
         {
-            level = Mathf.Clamp(tier, 1, 5);
+            level = Mathf.Clamp(tier, 1, 6);
             requiredReputation = Mathf.Max(0, reputation);
             requiredFunds = Mathf.Max(0, funds);
             displaySlots = Mathf.Max(1, displays);
