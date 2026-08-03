@@ -96,6 +96,32 @@ namespace PickAndPlaceShop
             Debug.Log("[BuildSmoke] FLOOR_OK contacts=" + machine.FloorContactSamples +
                       " penetrationMm=" + machine.LastFloorPenetrationMillimeters.ToString("F3"));
 
+            pause.SendMessage("Open", SendMessageOptions.DontRequireReceiver);
+            yield return new WaitForSecondsRealtime(0.15f);
+            if (!InvokeButton("BtnPauseMainMenu")) yield return Fail("main menu button missing");
+            yield return null;
+            if (!InvokeButton("BtnPauseConfirmYes")) yield return Fail("main menu confirm missing");
+            deadline = Time.realtimeSinceStartup + 20f;
+            while (SceneManager.GetActiveScene().name != ShopLaunchContext.MainMenuScene &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            if (SceneManager.GetActiveScene().name != ShopLaunchContext.MainMenuScene)
+                yield return Fail("return to title timeout");
+            Debug.Log("[BuildSmoke] RETURN_TO_TITLE_OK cursor=" + Cursor.lockState + "/" + Cursor.visible);
+            if (!InvokeButton("BtnMainStart")) yield return Fail("restart main start missing");
+            yield return null;
+            if (!InvokeButton("BtnSolo")) yield return Fail("restart solo missing");
+            deadline = Time.realtimeSinceStartup + 20f;
+            while (SceneManager.GetActiveScene().name == ShopLaunchContext.MainMenuScene &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            if (SceneManager.GetActiveScene().name == ShopLaunchContext.MainMenuScene)
+                yield return Fail("restart gameplay timeout");
+            deadline = Time.realtimeSinceStartup + 20f;
+            while ((ShopNetworkGame.Instance == null || !ShopNetworkGame.Instance.IsSpawned) &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            if (ShopNetworkGame.Instance == null || !ShopNetworkGame.Instance.IsSpawned)
+                yield return Fail("restart network host timeout");
+            Debug.Log("[BuildSmoke] RESTART_OK scene=" + SceneManager.GetActiveScene().name);
+
             Debug.Log("[BuildSmoke] COMPLETE");
             Application.Quit(0);
         }
