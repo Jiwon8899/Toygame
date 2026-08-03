@@ -66,11 +66,11 @@ namespace PickAndPlaceShop.Tests
         public void Collection_HasExactCategoryAndRarityDistribution()
         {
             Assert.AreEqual(200, catalog.CollectionItems.Count);
-            Assert.AreEqual(50, catalog.CollectionItems.Count(item => item.CategoryId == "animal"));
-            Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.CategoryId == "space"));
-            Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.CategoryId == "retro"));
-            Assert.AreEqual(30, catalog.CollectionItems.Count(item => item.CategoryId == "seasonal"));
-            Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.CategoryId == "other"));
+            Assert.AreEqual(50, catalog.CollectionItems.Count(item => item.CategoryId == "cat_plush"));
+            Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.CategoryId == "cat_figure"));
+            Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.CategoryId == "cat_goods"));
+            Assert.AreEqual(30, catalog.CollectionItems.Count(item => item.CategoryId == "cat_seasonal"));
+            Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.CategoryId == "cat_retro"));
             Assert.AreEqual(110, catalog.CollectionItems.Count(item => item.Rarity == ShopProgressRarity.Common));
             Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.Rarity == ShopProgressRarity.Uncommon));
             Assert.AreEqual(40, catalog.CollectionItems.Count(item => item.Rarity == ShopProgressRarity.Rare));
@@ -109,19 +109,19 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void SavePayload_RoundTripsLiveOperationsVersionFour()
+        public void SavePayload_RoundTripsLiveOperationsVersionFive()
         {
             ShopProgressionSaveData source = new()
             {
                 livePhase = (int)ShopPhase.Open,
                 livePhaseSecondsRemaining = 155f,
-                trendCategory = (int)ShopProductCategory.Retro,
+                trendCategory = (int)ShopProductCategory.CatRetro,
                 dailySalesGoal = 12,
                 dailySalesProgress = 5
             };
             source.customerProfiles.Add(new ShopCustomerProfileSave
             {
-                customerId = "customer:007", preferredCategory = (int)ShopProductCategory.Animal,
+                customerId = "customer:007", preferredCategory = (int)ShopProductCategory.CatPlush,
                 purchaseCount = 3, regular = true, lastSatisfaction = 88
             });
             source.automationMachines.Add(new ShopAutomationMachineSave
@@ -130,7 +130,7 @@ namespace PickAndPlaceShop.Tests
             });
             string json = JsonUtility.ToJson(source);
             ShopProgressionSaveData restored = JsonUtility.FromJson<ShopProgressionSaveData>(json);
-            Assert.AreEqual(4, restored.version);
+            Assert.AreEqual(5, restored.version);
             Assert.AreEqual(155f, restored.livePhaseSecondsRemaining);
             Assert.IsTrue(restored.customerProfiles.Single().regular);
             Assert.IsTrue(restored.automationMachines.Single().installed);
