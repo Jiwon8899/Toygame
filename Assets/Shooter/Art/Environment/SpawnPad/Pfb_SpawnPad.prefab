@@ -41,7 +41,7 @@ Light:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4565939593629737554}
   m_Enabled: 1
-  serializedVersion: 12
+  serializedVersion: 13
   m_Type: 0
   m_Color: {r: 0.29125133, g: 0.59643114, b: 0.7264151, a: 1}
   m_Intensity: 2.22
@@ -93,7 +93,7 @@ Light:
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
-  m_ShadowRadius: 0
+  m_ShapeRadius: 0
   m_ShadowAngle: 0
   m_LightUnit: 1
   m_LuxAtDistance: 1
@@ -189,6 +189,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c507bd0951d8a9b4bab00240468b102f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3826526213150633205}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c507bd0951d8a9b4bab00240468b102f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5217271235784986753}
   m_SourcePrefab: {fileID: 100100000, guid: c507bd0951d8a9b4bab00240468b102f, type: 3}
 --- !u!4 &6210442453835750401 stripped
 Transform:
@@ -222,3 +225,15 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 2318319860147940262, guid: f003daee346e3f242ad2f40c65341bb2, type: 3}
+--- !u!114 &5217271235784986753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6729569909255358139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8e33675e0c72fc4ca3cedbcd30b2900, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopSpawnPadMarker

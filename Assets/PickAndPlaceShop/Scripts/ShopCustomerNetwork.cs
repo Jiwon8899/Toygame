@@ -222,6 +222,22 @@ namespace PickAndPlaceShop
             SetState(ShopCustomerState.GiveUp);
         }
 
+        public void ServerRecoverTo(Vector3 safePosition)
+        {
+            if (!IsServer) return;
+            if (characterController != null) characterController.enabled = false;
+            transform.position = safePosition;
+            if (characterController != null) characterController.enabled = true;
+            avoidanceTimer = 0f;
+            lastVisualPosition = safePosition;
+            Rigidbody body = GetComponent<Rigidbody>();
+            if (body != null)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+        }
+
         private void SetState(ShopCustomerState next)
         {
             State.Value = next;
