@@ -4,6 +4,7 @@ using Blocks.Gameplay.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace PickAndPlaceShop
@@ -33,6 +34,8 @@ namespace PickAndPlaceShop
         private GameObject notificationPanel;
         private Text notificationText;
         private InputAction toggleStatusAction;
+        private GameObject canvasRoot;
+        private string visibleSceneName = string.Empty;
         private string objectiveKey = string.Empty;
         private float nextRefresh;
         private float hideNotificationAt;
@@ -65,6 +68,7 @@ namespace PickAndPlaceShop
             DontDestroyOnLoad(gameObject);
             BuildUi();
             SetOpen(false);
+            RefreshSceneVisibility();
             toggleStatusAction = new InputAction(
                 "가게 현황", InputActionType.PassThrough, "<Keyboard>/tab");
             toggleStatusAction.performed += OnStatusTogglePerformed;
@@ -86,6 +90,8 @@ namespace PickAndPlaceShop
 
         private void Update()
         {
+            RefreshSceneVisibility();
+            if (canvasRoot != null && !canvasRoot.activeSelf) return;
             if (manager == null && ShopProgressionManager.Instance != null)
                 Attach(ShopProgressionManager.Instance);
 
@@ -172,6 +178,7 @@ namespace PickAndPlaceShop
         {
             GameObject canvasObject = new("Canvas", typeof(Canvas), typeof(CanvasScaler),
                 typeof(GraphicRaycaster));
+            canvasRoot = canvasObject;
             canvasObject.transform.SetParent(transform, false);
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -192,6 +199,17 @@ namespace PickAndPlaceShop
             SetRect(tabHint.rectTransform, new Vector2(0f, 12f), new Vector2(680f, 34f),
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             GlobalGameFontApplier.ApplyTo(gameObject);
+        }
+
+        private void RefreshSceneVisibility()
+        {
+            string sceneName = SceneManager.GetActiveScene().name;
+            if (sceneName == visibleSceneName) return;
+            visibleSceneName = sceneName;
+            bool visible = !string.Equals(sceneName, ShopLaunchContext.MainMenuScene,
+                System.StringComparison.Ordinal);
+            if (canvasRoot != null) canvasRoot.SetActive(visible);
+            if (!visible && open) SetOpen(false);
         }
 
         private void BuildObjective(Transform parent)
