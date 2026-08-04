@@ -12,6 +12,7 @@ namespace PickAndPlaceShop
         private CanvasGroup group;
         private RectTransform capsule;
         private Image capsuleImage;
+        private Image productIcon;
         private Image resultGlow;
         private Text sourceText;
         private Text rarityText;
@@ -96,6 +97,9 @@ namespace PickAndPlaceShop
             resultGlow.color = new Color(rarityText.color.r, rarityText.color.g, rarityText.color.b,
                 rarity >= ShopProductRarity.Rare ? 0.34f : 0.16f);
             capsuleImage.color = color;
+            ShopProductDefinition product = ShopProductVisuals.FindByName(productName);
+            productIcon.sprite = product != null ? product.Icon : null;
+            productIcon.color = productIcon.sprite != null ? Color.white : Color.clear;
             sequence = StartCoroutine(PlaySequence());
         }
 
@@ -108,6 +112,7 @@ namespace PickAndPlaceShop
             rarityText.canvasRenderer.SetAlpha(0f);
             categoryText.canvasRenderer.SetAlpha(0f);
             storageText.canvasRenderer.SetAlpha(0f);
+            productIcon.canvasRenderer.SetAlpha(0f);
 
             float elapsed = 0f;
             const float revealDuration = 1.15f;
@@ -128,6 +133,7 @@ namespace PickAndPlaceShop
                 rarityText.canvasRenderer.SetAlpha(open);
                 categoryText.canvasRenderer.SetAlpha(open);
                 storageText.canvasRenderer.SetAlpha(open);
+                productIcon.canvasRenderer.SetAlpha(open);
                 yield return null;
             }
 
@@ -187,6 +193,14 @@ namespace PickAndPlaceShop
             capsule.anchorMin = capsule.anchorMax = capsule.pivot = new Vector2(0.5f, 0.5f);
             capsule.anchoredPosition = new Vector2(0f, 70f);
             capsuleImage = capsuleObject.GetComponent<Image>();
+
+            GameObject iconObject = CreateImage("Product Icon", shade.transform, null,
+                Color.clear, new Vector2(250f, 250f));
+            productIcon = iconObject.GetComponent<Image>();
+            productIcon.preserveAspect = true;
+            productIcon.rectTransform.anchorMin = productIcon.rectTransform.anchorMax =
+                productIcon.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            productIcon.rectTransform.anchoredPosition = new Vector2(0f, 70f);
 
             sourceText = CreateText("결과 제목", shade.transform, "뽑기 결과", 34,
                 new Vector2(700f, 52f), new Vector2(0f, 300f));

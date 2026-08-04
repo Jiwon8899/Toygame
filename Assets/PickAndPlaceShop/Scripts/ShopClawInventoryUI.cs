@@ -9,13 +9,10 @@ namespace PickAndPlaceShop
     [DefaultExecutionOrder(200)]
     public sealed class ShopClawInventoryUI : MonoBehaviour
     {
-        private const int PreviewLayer = 31;
         private static ShopClawInventoryUI instance;
 
         private readonly List<RawImage> previewImages = new();
         private readonly List<Text> slotLabels = new();
-        private readonly List<RenderTexture> renderTextures = new();
-        private readonly List<GameObject> previewObjects = new();
 
         private Canvas canvas;
         private GameObject panel;
@@ -238,11 +235,15 @@ namespace PickAndPlaceShop
                 }
 
                 ShopContainerItem current = slotItem.Value;
-                int visualIndex = current.VisualPrefabIndex;
-                GameObject prefab = ShopClawPrizeNetwork.GetCatalogPrefab(visualIndex);
+                ShopProductDefinition product = ShopProductVisuals.Find(current.ProductId);
                 slotLabels[i].text = (i + 1) + ". " + current.DisplayName +
                                      (current.Quantity > 1 ? " x" + current.Quantity : "");
-                if (prefab != null) CreatePreview(i, prefab);
+                previewImages[i].texture = product != null && product.Icon != null
+                    ? product.Icon.texture
+                    : null;
+                previewImages[i].color = previewImages[i].texture != null
+                    ? Color.white
+                    : new Color(0.12f, 0.15f, 0.21f, 1f);
             }
         }
 
@@ -261,88 +262,12 @@ namespace PickAndPlaceShop
             return builder.ToString();
         }
 
-        private void CreatePreview(int slotIndex, GameObject prefab)
-        {
-            Vector3 stage = new(slotIndex * 6f, -1000f, -1000f);
-            GameObject previewRoot = new("InventoryPreview_" + slotIndex);
-            previewRoot.transform.position = stage;
-            previewObjects.Add(previewRoot);
-
-            GameObject model = Instantiate(prefab, previewRoot.transform);
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.Euler(0f, 28f, 0f);
-            SetLayerRecursively(model, PreviewLayer);
-            foreach (Collider targetCollider in model.GetComponentsInChildren<Collider>(true))
-                targetCollider.enabled = false;
-            foreach (Rigidbody targetBody in model.GetComponentsInChildren<Rigidbody>(true))
-            {
-                targetBody.isKinematic = true;
-                targetBody.detectCollisions = false;
-            }
-            foreach (MonoBehaviour behaviour in model.GetComponentsInChildren<MonoBehaviour>(true))
-                behaviour.enabled = false;
-
-            Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length == 0) return;
-            Bounds bounds = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
-            model.transform.position += stage - bounds.center;
-            bounds.center = stage;
-
-            GameObject lightObject = new("PreviewLight", typeof(Light));
-            lightObject.transform.SetParent(previewRoot.transform, false);
-            lightObject.transform.rotation = Quaternion.Euler(36f, -32f, 0f);
-            Light previewLight = lightObject.GetComponent<Light>();
-            previewLight.type = LightType.Directional;
-            previewLight.intensity = 1.35f;
-            previewLight.color = new Color(1f, 0.94f, 0.82f);
-            previewLight.cullingMask = 1 << PreviewLayer;
-
-            GameObject cameraObject = new("PreviewCamera", typeof(Camera));
-            cameraObject.transform.SetParent(previewRoot.transform, false);
-            Camera previewCamera = cameraObject.GetComponent<Camera>();
-            previewCamera.clearFlags = CameraClearFlags.SolidColor;
-            previewCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
-            previewCamera.orthographic = true;
-            previewCamera.orthographicSize = Mathf.Max(bounds.extents.x, bounds.extents.y) * 1.28f;
-            previewCamera.cullingMask = 1 << PreviewLayer;
-            previewCamera.nearClipPlane = 0.01f;
-            previewCamera.farClipPlane = 50f;
-            previewCamera.transform.position = stage + new Vector3(1.8f, 1.25f, -3.6f);
-            previewCamera.transform.LookAt(stage + Vector3.up * bounds.extents.y * 0.05f);
-
-            RenderTexture texture = new(256, 256, 24, RenderTextureFormat.ARGB32)
-            {
-                name = "InventorySlot_" + slotIndex,
-                antiAliasing = 4
-            };
-            texture.Create();
-            renderTextures.Add(texture);
-            previewCamera.targetTexture = texture;
-            RenderTexture previousActive = RenderTexture.active;
-            previewCamera.Render();
-            RenderTexture.active = previousActive;
-            previewCamera.enabled = false;
-            previewImages[slotIndex].texture = texture;
-            previewImages[slotIndex].color = Color.white;
-        }
-
         private void ClearPreviews()
         {
             foreach (RawImage image in previewImages)
             {
                 if (image != null) image.texture = null;
             }
-            foreach (RenderTexture texture in renderTextures)
-            {
-                if (texture == null) continue;
-                texture.Release();
-                Destroy(texture);
-            }
-            renderTextures.Clear();
-            foreach (GameObject previewObject in previewObjects)
-                if (previewObject != null) Destroy(previewObject);
-            previewObjects.Clear();
         }
 
         private GameObject CreatePanel(string objectName, Transform parent, Vector2 size, Color color)
@@ -382,11 +307,5 @@ namespace PickAndPlaceShop
             rect.sizeDelta = size;
         }
 
-        private static void SetLayerRecursively(GameObject target, int layer)
-        {
-            target.layer = layer;
-            foreach (Transform child in target.transform)
-                SetLayerRecursively(child.gameObject, layer);
-        }
     }
 }
