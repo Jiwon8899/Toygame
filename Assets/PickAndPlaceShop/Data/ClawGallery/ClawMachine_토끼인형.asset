@@ -22,8 +22,8 @@ MonoBehaviour:
   zBounds: {x: -1.18, y: 1.18}
   topHeight: 3.2
   dropHeight: 0.95
-  descendSpeed: 0.42
-  liftSpeed: 1
+  descendSpeed: 0.525
+  liftSpeed: 1.25
   returnSpeed: 1.2
   closeDuration: 1.625
   releaseDuration: 1.4
@@ -37,9 +37,9 @@ MonoBehaviour:
     rare: 40
     ultraRare: 10
   multiPrizePolicy: 1
-  scoopDiameter: 1.3
+  scoopDiameter: 1.52
   scoopBottomThickness: 0.065
-  scoopRimHeight: 0.5
+  scoopRimHeight: 0.56
   scoopOpenRimHeight: 0.04
   scoopLipCloseDuration: 0.55
   scrapeDistance: 0.78
@@ -48,13 +48,14 @@ MonoBehaviour:
   scoopPivotHeight: 0.55
   scoopDigAngle: 28
   scoopCarryAngle: -10
-  scoopMaxAngularSpeed: 34
-  scoopAngularAcceleration: 90
+  scoopMaxAngularSpeed: 42.5
+  scoopAngularAcceleration: 112.5
   scoopRotationSweepStep: 3
-  pourAngle: 85
+  pourAngle: 52
   sweepSkin: 0.006
   floorClearance: 0.004
   chuteHorizontalInset: 0
+  scoopReturnInset: 0.38
   scoopVerticalAcceleration: 4.5
   loadedLiftSpeedMultiplier: 0.76
   capsuleMaxDepenetrationVelocity: 1.4
@@ -75,16 +76,16 @@ MonoBehaviour:
   operatorCameraPitch: 22
   operatorCameraFieldOfView: 62
   operatorCameraFocusHeight: 2.05
-  chuteSettleDuration: 0.45
+  chuteSettleDuration: 0.2
   chuteSettleLinearSpeed: 0.18
   antiStuckDelay: 3.5
   reservedTimeout: 1
-  descendTimeout: 8.190476
+  descendTimeout: 6.2857146
   closeTimeout: 4.5
-  ascendTimeout: 6
+  ascendTimeout: 5
   returnTimeout: 6
   releaseTimeout: 2
-  judgeTimeout: 3.25
+  judgeTimeout: 3
   scoopPhysicsMaterial: {fileID: 13400000, guid: 5a17b886b4ed639418f5c65d2ba1ce4a, type: 2}
   scoopOuterPhysicsMaterial: {fileID: 13400000, guid: afa695e3b7a3a8947b8a60fef469c76a, type: 2}
   machineFloorMaterial: {fileID: 13400000, guid: b4b09659acf44754eba2dd5257ea0516, type: 2}

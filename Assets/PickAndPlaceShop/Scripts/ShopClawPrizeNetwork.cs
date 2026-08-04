@@ -64,6 +64,11 @@ namespace PickAndPlaceShop
 
         public override void OnNetworkSpawn()
         {
+            int prizeLayer = LayerMask.NameToLayer("ClawPrize");
+            int handleLayer = LayerMask.NameToLayer("ScoopHandle");
+            AssignLayerRecursively(transform, prizeLayer);
+            if (prizeLayer >= 0 && handleLayer >= 0)
+                Physics.IgnoreLayerCollision(prizeLayer, handleLayer, true);
             body = GetComponent<Rigidbody>();
             body.isKinematic = !IsServer;
             EnsureSingleCapsuleCollider();
@@ -77,6 +82,14 @@ namespace PickAndPlaceShop
             VisualSize.OnValueChanged += OnSizeChanged;
             VisualColor.OnValueChanged += OnColorChanged;
             VisualPrefabIndex.OnValueChanged += OnVisualPrefabChanged;
+        }
+
+        private static void AssignLayerRecursively(Transform root, int layer)
+        {
+            if (root == null || layer < 0) return;
+            root.gameObject.layer = layer;
+            for (int index = 0; index < root.childCount; index++)
+                AssignLayerRecursively(root.GetChild(index), layer);
         }
 
         public override void OnNetworkDespawn()

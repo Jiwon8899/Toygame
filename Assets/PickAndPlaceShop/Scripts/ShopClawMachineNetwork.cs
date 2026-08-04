@@ -445,9 +445,11 @@ namespace PickAndPlaceShop
                     // Stop one pan radius before the chute.  Driving the pan centre all
                     // the way to the drop point makes its outer rim collide with the
                     // cabinet corner post, preventing the pour rotation entirely.
+                    float stopDistance = Mathf.Max(config.SweepSkin,
+                        config.ScoopDiameter * 0.5f + config.SweepSkin -
+                        config.ScoopReturnInset);
                     Vector2 chute = new Vector2(chuteLocal.x, chuteLocal.z) -
-                                    chuteDirection * (config.ScoopDiameter * 0.5f +
-                                                      config.SweepSkin);
+                                    chuteDirection * stopDistance;
                     RailPosition.Value = Vector2.MoveTowards(RailPosition.Value, chute, config.ReturnSpeed * dt);
                     if ((RailPosition.Value - chute).sqrMagnitude < 0.0025f ||
                         stateElapsed >= config.ReturnTimeout)
@@ -1856,11 +1858,11 @@ namespace PickAndPlaceShop
                              State.Value == ShopClawMachineState.Return;
             if (pivotCurl)
             {
-                Vector3 pivotWorld = targetWorld + transform.up * config.ScoopPivotHeight;
-                targetWorld = pivotWorld - scoopTargetRotation *
-                              (Vector3.up * config.ScoopPivotHeight);
+                Vector3 pivotLocal = scoopRig.CurlPivotLocalPosition;
+                Vector3 pivotWorld = targetWorld + transform.rotation * pivotLocal;
+                targetWorld = pivotWorld - scoopTargetRotation * pivotLocal;
             }
-            if (tilt > 0.01f)
+            if (tilt > 0.01f && !pivotCurl)
                 targetWorld += transform.up * (config.ScoopDiameter * 0.5f *
                                                Mathf.Sin(tilt * Mathf.Deg2Rad));
             bool wasBlocked = scoopBlockedDuringDescent;

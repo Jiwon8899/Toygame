@@ -54,6 +54,7 @@ namespace PickAndPlaceShop
         [Range(0.001f, 0.025f)] [SerializeField] private float sweepSkin = 0.006f;
         [Range(0.001f, 0.03f)] [SerializeField] private float floorClearance = 0.004f;
         [Range(0f, 0.1f)] [SerializeField] private float chuteHorizontalInset = 0f;
+        [Range(0f, 0.8f)] [SerializeField] private float scoopReturnInset = 0f;
         [Min(0.1f)] [SerializeField] private float scoopVerticalAcceleration = 4.5f;
         [Range(0.5f, 1f)] [SerializeField] private float loadedLiftSpeedMultiplier = 0.82f;
         [Range(0.4f, 4f)] [SerializeField] private float capsuleMaxDepenetrationVelocity = 1.4f;
@@ -142,6 +143,7 @@ namespace PickAndPlaceShop
         public float SweepSkin => sweepSkin;
         public float FloorClearance => floorClearance;
         public float ChuteHorizontalInset => chuteHorizontalInset;
+        public float ScoopReturnInset => scoopReturnInset;
         public float ScoopVerticalAcceleration => scoopVerticalAcceleration;
         public float OperatorCameraDistance => operatorCameraDistance;
         public float OperatorCameraPitch => operatorCameraPitch;
@@ -301,6 +303,29 @@ namespace PickAndPlaceShop
             capsuleMaxDepenetrationVelocity = Mathf.Clamp(maximumDepenetrationVelocity, 0.4f, 4f);
             scoopOuterPhysicsMaterial = outerMaterial;
             closeTimeout = Mathf.Max(closeTimeout, 3.2f);
+        }
+
+        public void EditorConfigureScoopMotion(float downwardSpeed, float upwardSpeed,
+            float maximumAngularSpeed, float angularAcceleration)
+        {
+            descendSpeed = Mathf.Clamp(downwardSpeed, 0.3f, 5f);
+            liftSpeed = Mathf.Clamp(upwardSpeed, 0.3f, 5f);
+            scoopMaxAngularSpeed = Mathf.Clamp(maximumAngularSpeed, 12f, 60f);
+            scoopAngularAcceleration = Mathf.Clamp(angularAcceleration, 20f, 180f);
+            descendTimeout = Mathf.Max(5f, (topHeight - dropHeight) / descendSpeed + 2f);
+            ascendTimeout = Mathf.Max(5f, (topHeight - dropHeight) / liftSpeed + 2f);
+        }
+
+        public void EditorConfigureScoopDischarge(float horizontalInset)
+        {
+            chuteHorizontalInset = 0f;
+            scoopReturnInset = Mathf.Clamp(horizontalInset, 0f, 0.8f);
+        }
+
+        public void EditorConfigureScoopAwardTiming(float settleSeconds, float judgeSeconds)
+        {
+            chuteSettleDuration = Mathf.Clamp(settleSeconds, 0.1f, 8f);
+            judgeTimeout = Mathf.Max(0.5f, judgeSeconds);
         }
 
         public void EditorConfigureSpawnGuard(bool enabled, float centerZ, float width, float depth,

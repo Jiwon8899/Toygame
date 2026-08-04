@@ -24,10 +24,11 @@ namespace PickAndPlaceShop.Editor
 
             EnsureFolder(MaterialFolder);
             EnsureFolder(DeprecatedFolder);
-            Material panMaterial = CreateMaterial(MaterialFolder + "/ScoopPan.mat",
-                new Color(0.16f, 0.42f, 0.68f), 0.78f, 0.62f);
-            Material edgeMaterial = CreateMaterial(MaterialFolder + "/ScoopEdge.mat",
-                new Color(0.82f, 0.9f, 0.98f), 0.9f, 0.48f);
+            EnsurePhysicsLayers(out int prizeLayer, out int handleLayer);
+            Material panMaterial = CreateMaterial(MaterialFolder + "/FryingPanBody.mat",
+                new Color(0.055f, 0.062f, 0.07f), 0.08f, 0.22f);
+            Material edgeMaterial = CreateMaterial(MaterialFolder + "/FryingPanEdge.mat",
+                new Color(0.085f, 0.092f, 0.1f), 0.1f, 0.26f);
 
             string[] prefabPaths = AssetDatabase.FindAssets("t:Prefab", new[] { PrefabFolder })
                 .Select(AssetDatabase.GUIDToAssetPath)
@@ -35,7 +36,10 @@ namespace PickAndPlaceShop.Editor
                     .StartsWith("ClawMachine_", StringComparison.Ordinal))
                 .OrderBy(path => path)
                 .ToArray();
-            foreach (string path in prefabPaths) UpgradePrefab(path, panMaterial, edgeMaterial);
+            foreach (string path in prefabPaths)
+                UpgradePrefab(path, panMaterial, edgeMaterial, handleLayer);
+            if (prizeLayer >= 0 && handleLayer >= 0)
+                Physics.IgnoreLayerCollision(prizeLayer, handleLayer, true);
 
             ConfigurePresets();
             MoveLegacyAsset(PrefabFolder + "/SharedPhysicalClawRig.prefab",
@@ -64,7 +68,8 @@ namespace PickAndPlaceShop.Editor
                       " policy=AwardAll compoundColliders=9");
         }
 
-        private static void UpgradePrefab(string path, Material panMaterial, Material edgeMaterial)
+        private static void UpgradePrefab(string path, Material panMaterial, Material edgeMaterial,
+            int handleLayer)
         {
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             try
@@ -87,7 +92,9 @@ namespace PickAndPlaceShop.Editor
                 float diameter = config != null ? config.ScoopDiameter : 1.24f;
                 float thickness = config != null ? config.ScoopBottomThickness : 0.065f;
                 float rimHeight = config != null ? config.ScoopRimHeight : 0.19f;
-                BuildScoop(head, diameter, thickness, rimHeight, panMaterial, edgeMaterial,
+                float pivotHeight = config != null ? config.ScoopPivotHeight : 0.55f;
+                BuildScoop(head, diameter, thickness, rimHeight, pivotHeight,
+                    panMaterial, edgeMaterial, handleLayer,
                     out ShopClawScoopRig scoopRig);
 
                 Rigidbody headBody = head.GetComponent<Rigidbody>();
@@ -115,7 +122,8 @@ namespace PickAndPlaceShop.Editor
                 scoopRig.EditorConfigure(headBody,
                     head.Find("ScoopRig/ScoopBottomCollider").GetComponent<BoxCollider>(),
                     head.Find("ScoopRig/Rims").GetComponentsInChildren<BoxCollider>(true),
-                    head.Find("ScoopRig/Visuals"));
+                    head.Find("ScoopRig/Visuals"), head.Find("ScoopRig/CurlPivot"),
+                    head.Find("ScoopRig/ScoopHandleCollider").GetComponent<CapsuleCollider>());
                 foreach (Collider collider in scoopRig.GetComponentsInChildren<Collider>(true))
                     if (config != null && config.ScoopPhysicsMaterial != null)
                         collider.material = config.ScoopPhysicsMaterial;
@@ -124,6 +132,7 @@ namespace PickAndPlaceShop.Editor
                     foreach (Collider collider in floorRoot.GetComponentsInChildren<Collider>(true))
                         collider.material = config.MachineFloorMaterial;
                 machine.EditorConfigureScoopRig(carriageBody, scoopRig);
+                EnsureChuteTriggerClearance(root.transform, diameter);
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally
@@ -132,8 +141,9 @@ namespace PickAndPlaceShop.Editor
             }
         }
 
-        private static void BuildScoop(Transform head, float diameter, float thickness, float rimHeight,
-            Material panMaterial, Material edgeMaterial, out ShopClawScoopRig rig)
+        private static void BuildScoop(Transform head, float diameter, float thickness,
+            float rimHeight, float pivotHeight, Material panMaterial, Material edgeMaterial,
+            int handleLayer, out ShopClawScoopRig rig)
         {
             GameObject rigObject = new("ScoopRig");
             rigObject.transform.SetParent(head, false);
@@ -144,6 +154,7 @@ namespace PickAndPlaceShop.Editor
             GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "ScoopPanVisual";
             disc.transform.SetParent(visuals, false);
+            disc.transform.localPosition = Vector3.up * (thickness * 0.14f);
             disc.transform.localScale = new Vector3(diameter * 0.5f, thickness * 0.5f, diameter * 0.5f);
             UnityEngine.Object.DestroyImmediate(disc.GetComponent<Collider>());
             disc.GetComponent<Renderer>().sharedMaterial = panMaterial;
@@ -175,23 +186,73 @@ namespace PickAndPlaceShop.Editor
                 GameObject rimVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 rimVisual.name = "RimVisual";
                 rimVisual.transform.SetParent(rim.transform, false);
-                rimVisual.transform.localScale = collider.size;
+                rimVisual.transform.localPosition = new Vector3(0f, height * 0.04f, 0.012f);
+                rimVisual.transform.localRotation = Quaternion.Euler(-7f, 0f, 0f);
+                rimVisual.transform.localScale = new Vector3(collider.size.x * 1.04f,
+                    collider.size.y, collider.size.z * 1.35f);
                 UnityEngine.Object.DestroyImmediate(rimVisual.GetComponent<Collider>());
                 rimVisual.GetComponent<Renderer>().sharedMaterial = edgeMaterial;
             }
 
-            GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            handle.name = "ScoopHandle";
-            handle.transform.SetParent(visuals, false);
-            handle.transform.localPosition = new Vector3(0f, 0.55f, 0f);
-            handle.transform.localScale = new Vector3(0.07f, 0.55f, 0.07f);
+            float handleLength = Mathf.Max(0.62f, diameter * 0.62f);
+            Vector3 handleStart = new(0f, thickness + rimHeight * 0.62f,
+                -diameter * 0.43f);
+            Vector3 handleEnd = new(0f, Mathf.Max(pivotHeight, handleStart.y + 0.14f),
+                -diameter * 0.43f - handleLength);
+            GameObject handle = CreateCylinderBetween("ScoopHandle", visuals,
+                handleStart, handleEnd, 0.075f, edgeMaterial);
             UnityEngine.Object.DestroyImmediate(handle.GetComponent<Collider>());
-            handle.GetComponent<Renderer>().sharedMaterial = edgeMaterial;
+
+            Transform curlPivot = new GameObject("CurlPivot").transform;
+            curlPivot.SetParent(rigObject.transform, false);
+            curlPivot.localPosition = handleEnd;
+
+            GameObject handleColliderObject = new("ScoopHandleCollider");
+            handleColliderObject.transform.SetParent(rigObject.transform, false);
+            ConfigureBetween(handleColliderObject.transform, handleStart, handleEnd);
+            if (handleLayer >= 0) handleColliderObject.layer = handleLayer;
+            CapsuleCollider handleCollider = handleColliderObject.AddComponent<CapsuleCollider>();
+            handleCollider.direction = 1;
+            handleCollider.radius = 0.082f;
+            handleCollider.height = Vector3.Distance(handleStart, handleEnd);
 
             rig = head.GetComponent<ShopClawScoopRig>();
             if (rig == null) rig = head.gameObject.AddComponent<ShopClawScoopRig>();
             rig.EditorConfigure(head.GetComponent<Rigidbody>(), bottomCollider,
-                rimColliders.ToArray(), visuals);
+                rimColliders.ToArray(), visuals, curlPivot, handleCollider);
+        }
+
+        private static GameObject CreateCylinderBetween(string name, Transform parent,
+            Vector3 start, Vector3 end, float radius, Material material)
+        {
+            GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            cylinder.name = name;
+            cylinder.transform.SetParent(parent, false);
+            ConfigureBetween(cylinder.transform, start, end);
+            cylinder.transform.localScale = new Vector3(radius,
+                Vector3.Distance(start, end) * 0.5f, radius);
+            cylinder.GetComponent<Renderer>().sharedMaterial = material;
+            return cylinder;
+        }
+
+        private static void EnsureChuteTriggerClearance(Transform root, float scoopDiameter)
+        {
+            BoxCollider trigger = root.GetComponentsInChildren<BoxCollider>(true)
+                .FirstOrDefault(item => item.name == "PrizeAwardTrigger" && item.isTrigger);
+            if (trigger == null) return;
+            float horizontalSize = Mathf.Max(1.34f, scoopDiameter * 0.9f);
+            Vector3 size = trigger.size;
+            size.x = Mathf.Max(size.x, horizontalSize);
+            size.y = Mathf.Max(size.y, 1.3f);
+            size.z = Mathf.Max(size.z, horizontalSize);
+            trigger.size = size;
+        }
+
+        private static void ConfigureBetween(Transform target, Vector3 start, Vector3 end)
+        {
+            Vector3 direction = end - start;
+            target.localPosition = (start + end) * 0.5f;
+            target.localRotation = Quaternion.FromToRotation(Vector3.up, direction.normalized);
         }
 
         private static void ConfigurePresets()
@@ -206,15 +267,20 @@ namespace PickAndPlaceShop.Editor
             for (int index = 0; index < configs.Length; index++)
             {
                 ShopClawMachineConfig config = configs[index];
-                float diameter = 1.30f + index * 0.02f;
-                float rim = 0.50f + index * 0.01f;
+                float diameter = 1.52f + index * 0.015f;
+                float rim = 0.56f + index * 0.008f;
                 float scrape = 0.78f + index * 0.02f;
-                float lift = Mathf.Clamp(config.LiftSpeed, 0.82f, 1.0f);
+                float lift = 1.25f;
                 config.EditorConfigureScoop(diameter, 0.065f, rim, scrape, 0.48f,
                     8f, 52f, 0.006f, 0.004f, 0.76f,
                     new Vector4(0.34f, 0.40f, 0.48f, 0.58f));
                 config.EditorConfigureRarity(config.RarityWeights, ShopMultiPrizePolicy.AwardAll);
-                config.EditorConfigureCaptureMotion(config.DropHeight, lift, config.DescendSpeed);
+                float tunedDescend = config.MachineId == 101 ? 0.525f :
+                    config.MachineId == 102 ? 0.60f : 0.6875f;
+                config.EditorConfigureCaptureMotion(config.DropHeight, lift, tunedDescend);
+                config.EditorConfigureScoopMotion(tunedDescend, lift, 42.5f, 112.5f);
+                config.EditorConfigureScoopDischarge(0.38f);
+                config.EditorConfigureScoopAwardTiming(0.2f, 3f);
                 config.EditorConfigureReturnSpeed(1.2f);
                 EditorUtility.SetDirty(config);
             }
@@ -235,6 +301,32 @@ namespace PickAndPlaceShop.Editor
             material.SetFloat("_Smoothness", smoothness);
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        private static void EnsurePhysicsLayers(out int prizeLayer, out int handleLayer)
+        {
+            prizeLayer = EnsureLayer("ClawPrize");
+            handleLayer = EnsureLayer("ScoopHandle");
+            if (prizeLayer >= 0 && handleLayer >= 0)
+                Physics.IgnoreLayerCollision(prizeLayer, handleLayer, true);
+        }
+
+        private static int EnsureLayer(string layerName)
+        {
+            int existing = LayerMask.NameToLayer(layerName);
+            if (existing >= 0) return existing;
+            SerializedObject tagManager = new(AssetDatabase.LoadAllAssetsAtPath(
+                "ProjectSettings/TagManager.asset")[0]);
+            SerializedProperty layers = tagManager.FindProperty("layers");
+            for (int index = 8; index < 32; index++)
+            {
+                SerializedProperty layer = layers.GetArrayElementAtIndex(index);
+                if (!string.IsNullOrEmpty(layer.stringValue)) continue;
+                layer.stringValue = layerName;
+                tagManager.ApplyModifiedProperties();
+                return index;
+            }
+            return -1;
         }
 
         private static void MoveLegacyAsset(string source, string destination)

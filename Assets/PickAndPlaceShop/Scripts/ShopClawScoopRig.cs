@@ -11,6 +11,8 @@ namespace PickAndPlaceShop
         [SerializeField] private BoxCollider bottomCollider;
         [SerializeField] private BoxCollider[] rimColliders;
         [SerializeField] private Transform visualRoot;
+        [SerializeField] private Transform curlPivot;
+        [SerializeField] private CapsuleCollider handleCollider;
 
         private readonly List<Collider> ownColliders = new();
         private readonly List<BoxCollider> ownBoxColliders = new();
@@ -23,6 +25,11 @@ namespace PickAndPlaceShop
         public BoxCollider BottomCollider => bottomCollider;
         public IReadOnlyList<BoxCollider> RimColliders => rimColliders;
         public Transform VisualRoot => visualRoot;
+        public Transform CurlPivot => curlPivot;
+        public Vector3 CurlPivotLocalPosition => curlPivot != null
+            ? transform.InverseTransformPoint(curlPivot.position)
+            : Vector3.up * 0.55f;
+        public CapsuleCollider HandleCollider => handleCollider;
         public int CompoundColliderCount => (bottomCollider != null ? 1 : 0) +
                                             (rimColliders != null ? rimColliders.Length : 0);
         public float BottomWorldY => bottomCollider != null
@@ -32,12 +39,15 @@ namespace PickAndPlaceShop
 
 #if UNITY_EDITOR
         public void EditorConfigure(Rigidbody scoopBody, BoxCollider bottom,
-            BoxCollider[] rims, Transform visuals)
+            BoxCollider[] rims, Transform visuals, Transform authoredCurlPivot = null,
+            CapsuleCollider authoredHandleCollider = null)
         {
             body = scoopBody;
             bottomCollider = bottom;
             rimColliders = rims;
             visualRoot = visuals;
+            curlPivot = authoredCurlPivot;
+            handleCollider = authoredHandleCollider;
             CacheColliders();
         }
 #endif
