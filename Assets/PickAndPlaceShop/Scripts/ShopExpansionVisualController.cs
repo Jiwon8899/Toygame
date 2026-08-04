@@ -9,6 +9,8 @@ namespace PickAndPlaceShop
     {
         private static ShopExpansionVisualController instance;
         private readonly List<GameObject> generated = new();
+        private readonly Dictionary<GameObject, bool> sceneDefaults = new();
+        private ShopExpansionVisualConfig config;
         private int appliedLevel;
         private float nextPoll;
 
@@ -24,7 +26,11 @@ namespace PickAndPlaceShop
             instance = host.AddComponent<ShopExpansionVisualController>();
         }
 
-        private void Awake() => SceneManager.sceneLoaded += HandleSceneLoaded;
+        private void Awake()
+        {
+            config = Resources.Load<ShopExpansionVisualConfig>("Progression/ShopExpansionVisualConfig");
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+        }
         private void OnDestroy()
         {
             SceneManager.sceneLoaded -= HandleSceneLoaded;
@@ -35,6 +41,7 @@ namespace PickAndPlaceShop
         {
             appliedLevel = 0;
             ClearGenerated();
+            sceneDefaults.Clear();
         }
 
         private void Update()
@@ -56,11 +63,63 @@ namespace PickAndPlaceShop
         private void Rebuild(int level)
         {
             ClearGenerated();
+            CaptureSceneDefaults();
+            RestoreSceneDefaults();
+            ApplyStageObjectRules(level);
             Vector3 origin = ShopNightSalesSystem.Instance.DisplayWorkPosition;
             for (int tier = 2; tier <= Mathf.Min(4, level); tier++)
                 CreateShelf(origin + new Vector3((tier - 3) * 2.1f, 0f, 2.1f), tier);
             if (level >= 5) CreateRoomExtension(origin, 1);
             if (level >= 6) CreateRoomExtension(origin + Vector3.right * 5f, 2);
+        }
+
+        private void CaptureSceneDefaults()
+        {
+            if (sceneDefaults.Count > 0) return;
+            Scene activeScene = SceneManager.GetActiveScene();
+            Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                GameObject target = transforms[i].gameObject;
+                if (target.scene == activeScene && !sceneDefaults.ContainsKey(target))
+                    sceneDefaults.Add(target, target.activeSelf);
+            }
+        }
+
+        private void RestoreSceneDefaults()
+        {
+            foreach (KeyValuePair<GameObject, bool> pair in sceneDefaults)
+                if (pair.Key != null) pair.Key.SetActive(pair.Value);
+        }
+
+        private void ApplyStageObjectRules(int level)
+        {
+            if (config == null) return;
+            ShopExpansionVisualConfig.StageRule[] rules = config.StageRules;
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ShopExpansionVisualConfig.StageRule rule = rules[i];
+                if (rule == null || level < rule.minimumLevel) continue;
+                SetNamedObjectsActive(rule.activateObjectNames, true);
+                SetNamedObjectsActive(rule.deactivateObjectNames, false);
+            }
+        }
+
+        private void SetNamedObjectsActive(string[] objectNames, bool active)
+        {
+            if (objectNames == null || objectNames.Length == 0) return;
+            foreach (GameObject target in sceneDefaults.Keys)
+            {
+                if (target == null) continue;
+                for (int i = 0; i < objectNames.Length; i++)
+                {
+                    if (!string.IsNullOrWhiteSpace(objectNames[i]) && target.name == objectNames[i])
+                    {
+                        target.SetActive(active);
+                        break;
+                    }
+                }
+            }
         }
 
         private void CreateShelf(Vector3 position, int tier)
