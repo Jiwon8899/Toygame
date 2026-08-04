@@ -32,8 +32,16 @@ namespace PickAndPlaceShop
             yield return null;
             Debug.Log("[BuildSmoke] TITLE_READY scene=" + SceneManager.GetActiveScene().name);
             Text title = FindComponent<Text>("TitleText");
-            if (title == null || !title.text.Contains("냥냥"))
-                yield return Fail("cat theme title missing");
+            Text subtitle = FindComponent<Text>("TitleSubtitle");
+            if (title == null || !title.text.Contains(ShopGameIdentity.KoreanShortName) ||
+                !title.text.Contains("소품샵 뽑기 시뮬레이터") ||
+                subtitle == null || subtitle.text != ShopGameIdentity.Subtitle ||
+                Application.productName != ShopGameIdentity.KoreanFormalName)
+                yield return Fail("final game identity missing");
+            if (VisibleTextContains("냥냥 뽑아온" + " 가게") ||
+                VisibleTextContains("소품샵 협동" + " 시뮬레이터") ||
+                VisibleTextContains("Toy" + "Game"))
+                yield return Fail("legacy game name still visible");
             yield return Capture("CatTheme_Title.png");
 
             if (!InvokeButton("BtnMainStart")) yield return Fail("main start button missing");
@@ -54,6 +62,16 @@ namespace PickAndPlaceShop
             if (ShopNetworkGame.Instance == null || !ShopNetworkGame.Instance.IsSpawned)
                 yield return Fail("network host startup timeout");
             Debug.Log("[BuildSmoke] MAIN_SCENE_READY scene=" + SceneManager.GetActiveScene().name);
+            ShopLiveOperationsNetwork liveOperations = ShopLiveOperationsNetwork.Instance;
+            if (liveOperations == null || liveOperations.TrendNews.Value.Length == 0)
+                yield return Fail("trend news missing");
+            if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")) &&
+                (liveOperations.NarrativeFallbacksToday.Value < 1 ||
+                 liveOperations.NarrativeApiCallsToday.Value != 0))
+                yield return Fail("no-key narrative fallback invalid");
+            Debug.Log("[BuildSmoke] NARRATIVE_OK api=" + liveOperations.NarrativeApiCallsToday.Value +
+                      " fallback=" + liveOperations.NarrativeFallbacksToday.Value +
+                      " news=" + liveOperations.TrendNews.Value);
             if (!ValidateCatTheme(out string catThemeResult))
                 yield return Fail(catThemeResult);
             Debug.Log("[BuildSmoke] CAT_THEME_OK " + catThemeResult);
@@ -71,6 +89,9 @@ namespace PickAndPlaceShop
                       " eventSystems=" + eventSystems);
             if (!ShopLocalPauseState.IsPaused || Time.timeScale != 0f || eventSystems != 1)
                 yield return Fail("pause state invalid");
+            Text pauseTitle = FindComponent<Text>("PauseTitle");
+            if (pauseTitle == null || pauseTitle.text != ShopGameIdentity.KoreanShortName)
+                yield return Fail("pause title identity missing");
             if (!InvokeButton("BtnPauseSettings")) yield return Fail("settings button missing");
             yield return null;
             GameObject settings = FindObject("PauseSettingsPanel");
@@ -201,6 +222,14 @@ namespace PickAndPlaceShop
         {
             return Resources.FindObjectsOfTypeAll<T>()
                 .FirstOrDefault(value => value.name == name && value.gameObject.scene.IsValid());
+        }
+
+        private static bool VisibleTextContains(string value)
+        {
+            return FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                       .Any(text => text != null && !string.IsNullOrEmpty(text.text) && text.text.Contains(value)) ||
+                   FindObjectsByType<TextMesh>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                       .Any(text => text != null && !string.IsNullOrEmpty(text.text) && text.text.Contains(value));
         }
     }
 }
