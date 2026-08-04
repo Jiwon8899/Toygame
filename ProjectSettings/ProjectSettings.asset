@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: ToyGame
+  productName: "미야옹 츄르 부자가 될거야 : 소품샵 뽑기 시뮬레이터"
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -866,14 +866,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: ToyGame
+  metroPackageName: MeowChuruTycoon
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: ToyGame
+  metroApplicationDescription: "Meow Churu Tycoon : Prop Shop Simulator"
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -948,7 +948,7 @@ PlayerSettings:
   cloudProjectId: eb0e9d73-1d07-4e62-825f-73bfb865eafb
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: ToyGame
+  projectName: MeowChuruTycoon
   organizationId: tommy801077
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

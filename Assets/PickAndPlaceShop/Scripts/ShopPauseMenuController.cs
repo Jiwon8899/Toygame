@@ -25,6 +25,8 @@ namespace PickAndPlaceShop
         {
             root = FindObject("PauseRoot");
             if (root != null) root.SetActive(false);
+            Text title = Find<Text>("PauseTitle");
+            if (title != null) title.text = ShopGameIdentity.KoreanShortName;
             RegisterButtons();
         }
 

@@ -11,8 +11,7 @@ namespace PickAndPlaceShop
 {
     public sealed class ShopMainMenuController : MonoBehaviour
     {
-        [SerializeField] private string gameTitle = "냥냥 뽑아온 가게";
-        private const string versionLabel = "버전 0.1.0 · 싱글플레이";
+        [SerializeField] private string gameTitle = ShopGameIdentity.KoreanFormalName;
 
         private readonly string[] panelNames =
         {
@@ -45,9 +44,21 @@ namespace PickAndPlaceShop
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             Text title = Find<Text>("TitleText");
+            Text subtitle = Find<Text>("TitleSubtitle");
             Text version = Find<Text>("VersionText");
-            if (title != null) title.text = gameTitle;
-            if (version != null) version.text = versionLabel;
+            if (title != null)
+            {
+                string formalTitle = string.IsNullOrWhiteSpace(gameTitle)
+                    ? ShopGameIdentity.KoreanFormalName
+                    : gameTitle;
+                title.text = formalTitle.Replace(" : ", " : \n");
+                title.resizeTextForBestFit = true;
+                title.resizeTextMinSize = 28;
+                title.resizeTextMaxSize = 44;
+                title.lineSpacing = 0.9f;
+            }
+            if (subtitle != null) subtitle.text = ShopGameIdentity.Subtitle;
+            if (version != null) version.text = ShopGameIdentity.VersionLabel;
             RegisterButtons();
             PopulateResolutionDropdown();
             Show("MainPanel", "BtnMainStart");
