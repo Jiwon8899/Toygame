@@ -27,6 +27,13 @@ namespace PickAndPlaceShop
         Automation
     }
 
+    public enum ShopCustomerDialogueEvent
+    {
+        ExitWithoutPurchase,
+        HighSatisfactionPurchase,
+        LongWaitComplaint
+    }
+
     [Serializable]
     public struct ShopRarityWeights
     {
@@ -104,6 +111,63 @@ namespace PickAndPlaceShop
         [Range(1, 30)] [SerializeField] private int automationNearFullSlots = 8;
         [SerializeField] private bool automatedSuccessCountsForDailyGoal;
 
+        [Header("Narrative AI")]
+        [SerializeField] private bool narrativeAIEnabled = true;
+        [SerializeField] private string narrativeEndpoint = "https://api.anthropic.com/v1/messages";
+        [SerializeField] private string narrativeModel = "claude-haiku-4-5-20251001";
+        [SerializeField] private string narrativeApiKeyEnvironmentVariable = "ANTHROPIC_API_KEY";
+        [TextArea(1, 2)] [SerializeField] private string narrativeSystemPrompt =
+            "게임 상태만 근거로 이모지 없이 자연스러운 한국어 한 문장을 작성하세요.";
+        [Range(1, 100)] [SerializeField] private int narrativeMaxTokens = 96;
+        [Range(1f, 10f)] [SerializeField] private float narrativeTimeoutSeconds = 3f;
+        [Range(1, 10)] [SerializeField] private int narrativeRequestsPerSecond = 1;
+        [Range(1, 60)] [SerializeField] private int narrativeRequestsPerMinute = 10;
+        [Range(1f, 10f)] [SerializeField] private float dialogueBubbleSeconds = 3f;
+        [Range(1, 5)] [SerializeField] private int maximumDialogueBubbles = 2;
+        [Range(50, 100)] [SerializeField] private int highSatisfactionDialogueThreshold = 85;
+        [SerializeField] private string[] exitWithoutPurchaseFallbacks =
+        {
+            "{선호카테고리} 상품이 진열되면 다음에는 꼭 들를게요.",
+            "오늘은 제가 찾던 {선호카테고리} 상품이 없어서 아쉬워요.",
+            "{오늘뉴스} 소식을 듣고 왔는데 원하는 상품을 못 찾았어요.",
+            "제 취향인 {선호카테고리} 진열을 다음에는 기대할게요.",
+            "오늘은 빈손이지만 {선호카테고리} 상품이 들어오면 다시 올게요."
+        };
+        [SerializeField] private string[] highSatisfactionPurchaseFallbacks =
+        {
+            "{상품명}을 찾아서 정말 만족스러워요.",
+            "제 취향인 {선호카테고리} 상품을 잘 골랐어요.",
+            "{오늘뉴스} 소문처럼 {상품명}이 마음에 쏙 들어요.",
+            "기다린 보람이 있을 만큼 {상품명}이 마음에 들어요.",
+            "다음 방문에도 이런 {선호카테고리} 상품을 만나고 싶어요."
+        };
+        [SerializeField] private string[] longWaitComplaintFallbacks =
+        {
+            "{대기시간}초나 기다려서 조금 지쳤어요.",
+            "{상품명}을 사고 싶었지만 줄이 너무 오래 걸렸어요.",
+            "{오늘뉴스} 소문 때문에 붐비는 건 알지만 계산은 더 빨랐으면 해요.",
+            "{선호카테고리} 상품은 좋았지만 대기 시간이 아쉬워요.",
+            "다음에는 {대기시간}초보다 빨리 계산할 수 있으면 좋겠어요."
+        };
+        [SerializeField] private string[] trendNewsFallbacks =
+        {
+            "포근한 고양이 인형 인증 사진이 퍼지며 봉제 인형이 오늘의 화제가 됐어요.",
+            "새로운 고양이 인형 수집 영상이 인기를 끌며 봉제 인형을 찾는 손님이 늘었어요.",
+            "동네 축제의 고양이 인형 전시가 입소문을 타며 봉제 인형 유행이 시작됐어요.",
+            "정교한 고양이 피규어 사진이 화제가 되어 피규어 수집 열기가 높아졌어요.",
+            "한정 고양이 피규어 개봉 영상이 인기라 오늘은 피규어를 찾는 손님이 많아요.",
+            "수집가 모임의 고양이 피규어 전시 소식이 퍼지며 피규어가 유행이에요.",
+            "책상 꾸미기 사진에 나온 고양이 소품이 화제가 되어 굿즈 수요가 늘었어요.",
+            "고양이 굿즈 선물 추천이 입소문을 타며 작은 소품이 오늘의 인기 상품이에요.",
+            "수집가의 거리에서 고양이 굿즈 교환 행사가 열려 소품을 찾는 손님이 늘었어요.",
+            "계절 한정 고양이 장식 사진이 퍼지며 시즌 상품이 오늘의 유행이 됐어요.",
+            "벚꽃길의 계절 장식 소식이 화제가 되어 고양이 시즌 상품이 인기예요.",
+            "날씨에 맞춘 고양이 소품 추천이 유행하며 계절 상품을 찾는 손님이 많아요.",
+            "옛 문구점 감성의 고양이 소품이 다시 주목받으며 레트로 상품이 인기예요.",
+            "복고풍 고양이 굿즈 사진이 입소문을 타며 레트로 수집 열기가 높아졌어요.",
+            "추억의 고양이 문구 전시 소식이 퍼져 오늘은 레트로 상품이 유행이에요."
+        };
+
         [Header("Collection rarity: 110 / 40 / 40 / 10")]
         [SerializeField] private ShopRarityWeights standardRarityWeights = new()
         {
@@ -147,7 +211,48 @@ namespace PickAndPlaceShop
         public int AutomationBufferSlots => automationBufferSlots;
         public int AutomationNearFullSlots => Mathf.Min(automationBufferSlots, automationNearFullSlots);
         public bool AutomatedSuccessCountsForDailyGoal => automatedSuccessCountsForDailyGoal;
+        public bool NarrativeAIEnabled => narrativeAIEnabled;
+        public string NarrativeEndpoint => narrativeEndpoint;
+        public string NarrativeModel => narrativeModel;
+        public string NarrativeApiKeyEnvironmentVariable => narrativeApiKeyEnvironmentVariable;
+        public string NarrativeSystemPrompt => narrativeSystemPrompt;
+        public int NarrativeMaxTokens => Mathf.Clamp(narrativeMaxTokens, 1, 100);
+        public float NarrativeTimeoutSeconds => Mathf.Max(1f, narrativeTimeoutSeconds);
+        public int NarrativeRequestsPerSecond => Mathf.Max(1, narrativeRequestsPerSecond);
+        public int NarrativeRequestsPerMinute => Mathf.Max(1, narrativeRequestsPerMinute);
+        public float DialogueBubbleSeconds => Mathf.Max(1f, dialogueBubbleSeconds);
+        public int MaximumDialogueBubbles => Mathf.Max(1, maximumDialogueBubbles);
+        public int HighSatisfactionDialogueThreshold => Mathf.Clamp(highSatisfactionDialogueThreshold, 50, 100);
         public ShopRarityWeights StandardRarityWeights => standardRarityWeights;
+
+        public string CustomerDialogueFallback(ShopCustomerDialogueEvent eventType, int seed)
+        {
+            string[] source = eventType switch
+            {
+                ShopCustomerDialogueEvent.HighSatisfactionPurchase => highSatisfactionPurchaseFallbacks,
+                ShopCustomerDialogueEvent.LongWaitComplaint => longWaitComplaintFallbacks,
+                _ => exitWithoutPurchaseFallbacks
+            };
+            if (source == null || source.Length == 0) return "오늘 가게 경험을 다음 방문에도 기억할게요.";
+            return source[Mathf.Abs(seed) % source.Length];
+        }
+
+        public string TrendNewsFallback(ShopProductCategory category, int day)
+        {
+            int categoryIndex = category switch
+            {
+                ShopProductCategory.CatPlush => 0,
+                ShopProductCategory.CatFigure => 1,
+                ShopProductCategory.CatGoods => 2,
+                ShopProductCategory.CatSeasonal => 3,
+                ShopProductCategory.CatRetro => 4,
+                _ => 2
+            };
+            int offset = categoryIndex * 3 + Mathf.Abs(day) % 3;
+            return trendNewsFallbacks != null && trendNewsFallbacks.Length > offset
+                ? trendNewsFallbacks[offset]
+                : ShopProductLocalization.CategoryLabel(category) + " 상품이 동네에서 입소문을 타고 있어요.";
+        }
 
         public int SalesGoalForStage(int zeroBasedStage)
         {
