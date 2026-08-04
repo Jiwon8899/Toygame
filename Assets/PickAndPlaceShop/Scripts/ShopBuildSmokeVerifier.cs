@@ -189,6 +189,21 @@ namespace PickAndPlaceShop
                 result = "rarity/category distribution invalid";
                 return false;
             }
+            if (products.Any(product => product.VisualPrefab == null || product.Icon == null ||
+                                        product.PlaceholderArtwork) ||
+                products.Select(product => product.VisualPrefab).Distinct().Count() != 80)
+            {
+                result = "GLB visual/icon assignment invalid";
+                return false;
+            }
+            GameObject sampleVisual = products[0].VisualPrefab;
+            if (sampleVisual.GetComponentsInChildren<Renderer>(true).Length == 0 ||
+                sampleVisual.GetComponentsInChildren<Collider>(true).Length != 0 ||
+                sampleVisual.GetComponentsInChildren<Rigidbody>(true).Length != 0)
+            {
+                result = "GLB wrapper runtime layout invalid";
+                return false;
+            }
             string[] legacy =
             {
                 "동물 친구들", "음식 캐릭터", "우주 탐험대", "달토끼",
@@ -205,7 +220,8 @@ namespace PickAndPlaceShop
                 result = "legacy world text=" + remaining;
                 return false;
             }
-            result = "products=200 rarity=110/40/40/10 legacyText=0";
+            result = "products=200 visuals=80 icons=200 placeholders=0 " +
+                     "rarity=110/40/40/10 legacyText=0";
             return true;
         }
 
