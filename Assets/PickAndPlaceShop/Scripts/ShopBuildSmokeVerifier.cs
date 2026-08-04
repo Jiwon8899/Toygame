@@ -47,6 +47,10 @@ namespace PickAndPlaceShop
             if (!InvokeButton("BtnMainStart")) yield return Fail("main start button missing");
             yield return null;
             if (!InvokeButton("BtnSolo")) yield return Fail("solo button missing");
+            yield return null;
+            Button continueButton = FindComponent<Button>("BtnContinueGame");
+            if (continueButton != null && continueButton.gameObject.activeInHierarchy)
+                continueButton.onClick.Invoke();
 
             float deadline = Time.realtimeSinceStartup + 20f;
             while (SceneManager.GetActiveScene().name == ShopLaunchContext.MainMenuScene &&
@@ -131,6 +135,10 @@ namespace PickAndPlaceShop
             if (!InvokeButton("BtnMainStart")) yield return Fail("restart main start missing");
             yield return null;
             if (!InvokeButton("BtnSolo")) yield return Fail("restart solo missing");
+            yield return null;
+            continueButton = FindComponent<Button>("BtnContinueGame");
+            if (continueButton != null && continueButton.gameObject.activeInHierarchy)
+                continueButton.onClick.Invoke();
             deadline = Time.realtimeSinceStartup + 20f;
             while (SceneManager.GetActiveScene().name == ShopLaunchContext.MainMenuScene &&
                    Time.realtimeSinceStartup < deadline) yield return null;
