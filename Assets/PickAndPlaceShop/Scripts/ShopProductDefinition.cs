@@ -54,6 +54,9 @@ namespace PickAndPlaceShop
         [SerializeField] private string stableItemId;
         [SerializeField] private GameObject prizePrefab;
         [SerializeField] private ShopPrizePhysicsProfile physicsProfile;
+        [SerializeField] private GameObject visualPrefab;
+        [SerializeField] private Sprite icon;
+        [SerializeField] private Color tint = Color.white;
         [Min(1)] [SerializeField] private int maxStack = 10;
         [SerializeField] private bool placeholderArtwork;
 
@@ -69,6 +72,9 @@ namespace PickAndPlaceShop
             : stableItemId;
         public GameObject PrizePrefab => prizePrefab;
         public ShopPrizePhysicsProfile PhysicsProfile => physicsProfile;
+        public GameObject VisualPrefab => visualPrefab;
+        public Sprite Icon => icon;
+        public Color Tint => tint;
         public int MaxStack => Mathf.Max(1, maxStack);
         public bool PlaceholderArtwork => placeholderArtwork;
 
@@ -96,6 +102,14 @@ namespace PickAndPlaceShop
 
         public void EditorSetPlaceholderArtwork(bool placeholder) =>
             placeholderArtwork = placeholder;
+
+        public void EditorConfigureVisual(GameObject prefab, Sprite sprite, Color color)
+        {
+            visualPrefab = prefab;
+            icon = sprite;
+            tint = color;
+            placeholderArtwork = prefab == null;
+        }
 #endif
     }
 }

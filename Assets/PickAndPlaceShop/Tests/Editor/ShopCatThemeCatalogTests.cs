@@ -15,15 +15,37 @@ namespace PickAndPlaceShop.Tests
             "Assets/PickAndPlaceShop/Resources/Products/CatCatalog";
 
         [Test]
-        public void Products_UseExactStableIdsAndPlaceholderFlags()
+        public void Products_UseExactStableIdsAndGeneratedVisuals()
         {
             ShopProductDefinition[] products = LoadCatProducts();
             Assert.AreEqual(200, products.Length);
             Assert.AreEqual(200, products.Select(product => product.StableItemId).Distinct().Count());
-            Assert.IsTrue(products.All(product => product.PlaceholderArtwork));
+            Assert.IsTrue(products.All(product => !product.PlaceholderArtwork));
+            Assert.IsTrue(products.All(product => product.VisualPrefab != null));
+            Assert.IsTrue(products.All(product => product.Icon != null));
             Assert.IsTrue(products.All(product => product.MaxStack == 10));
             Assert.IsTrue(products.All(product => product.StableItemId.StartsWith("cat_") &&
                                                   product.StableItemId.Length >= 13));
+        }
+
+        [Test]
+        public void GeneratedVisuals_AreNormalizedAndPhysicsFree()
+        {
+            GameObject[] wrappers = AssetDatabase.FindAssets("t:Prefab",
+                    new[] { "Assets/PickAndPlaceShop/Resources/ProductVisuals/Generated" })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
+                .Where(item => item != null)
+                .ToArray();
+            Assert.AreEqual(80, wrappers.Length);
+            Assert.IsTrue(wrappers.All(item =>
+                item.GetComponentsInChildren<Collider>(true).Length == 0));
+            Assert.IsTrue(wrappers.All(item =>
+                item.GetComponentsInChildren<Rigidbody>(true).Length == 0));
+            Assert.IsTrue(wrappers.SelectMany(item => item.GetComponentsInChildren<MeshFilter>(true))
+                .All(filter => filter.sharedMesh == null || !filter.sharedMesh.isReadable));
+            Assert.AreEqual(201,
+                File.ReadAllLines("Assets/PickAndPlaceShop/Docs/model_assignment.csv").Length);
         }
 
         [Test]

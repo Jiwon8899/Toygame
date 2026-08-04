@@ -22,5 +22,8 @@ MonoBehaviour:
   stableItemId: cat_seasonal_006
   prizePrefab: {fileID: 0}
   physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  visualPrefab: {fileID: 8585165037504165948, guid: 98926d274c6f96d47899fe2046d68012, type: 3}
+  icon: {fileID: 21300000, guid: 30c992c324a9796498f13cebdd627580, type: 3}
+  tint: {r: 0.8137134, g: 1, b: 0.68, a: 1}
   maxStack: 10
-  placeholderArtwork: 1
+  placeholderArtwork: 0

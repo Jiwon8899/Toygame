@@ -1,0 +1,66 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace PickAndPlaceShop
+{
+    public static class ShopProductVisuals
+    {
+        private static Dictionary<int, ShopProductDefinition> byId;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Reset() => byId = null;
+
+        public static ShopProductDefinition Find(int productId)
+        {
+            EnsureCatalog();
+            return byId.TryGetValue(productId, out ShopProductDefinition product) ? product : null;
+        }
+
+        public static ShopProductDefinition FindByName(string displayName)
+        {
+            EnsureCatalog();
+            foreach (ShopProductDefinition product in byId.Values)
+                if (product != null && product.DisplayName == displayName) return product;
+            return null;
+        }
+
+        public static GameObject Instantiate(ShopProductDefinition product, Transform parent)
+        {
+            if (product == null || product.VisualPrefab == null) return null;
+            GameObject visual = Object.Instantiate(product.VisualPrefab, parent);
+            DisablePhysics(visual);
+            ApplyTint(visual, product.Tint);
+            return visual;
+        }
+
+        public static void ApplyTint(GameObject root, Color tint)
+        {
+            if (root == null) return;
+            MaterialPropertyBlock block = new();
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor", tint);
+                block.SetColor("_Color", tint);
+                renderer.SetPropertyBlock(block);
+            }
+        }
+
+        public static void DisablePhysics(GameObject root)
+        {
+            if (root == null) return;
+            foreach (Collider item in root.GetComponentsInChildren<Collider>(true))
+                Object.Destroy(item);
+            foreach (Rigidbody item in root.GetComponentsInChildren<Rigidbody>(true))
+                Object.Destroy(item);
+        }
+
+        private static void EnsureCatalog()
+        {
+            if (byId != null) return;
+            byId = new Dictionary<int, ShopProductDefinition>();
+            foreach (ShopProductDefinition product in Resources.LoadAll<ShopProductDefinition>("Products"))
+                if (product != null) byId[product.ProductId] = product;
+        }
+    }
+}

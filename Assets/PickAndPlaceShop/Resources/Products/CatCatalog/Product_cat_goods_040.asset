@@ -22,5 +22,8 @@ MonoBehaviour:
   stableItemId: cat_goods_040
   prizePrefab: {fileID: 0}
   physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  visualPrefab: {fileID: 2408481970943404125, guid: be7cf86a205ccf8428c2accb03f88cac, type: 3}
+  icon: {fileID: 21300000, guid: 35410a92ad603d44f868d9dc981bdb24, type: 3}
+  tint: {r: 0.68, g: 0.89346194, b: 1, a: 1}
   maxStack: 10
-  placeholderArtwork: 1
+  placeholderArtwork: 0
