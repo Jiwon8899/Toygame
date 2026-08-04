@@ -16,7 +16,8 @@ namespace PickAndPlaceShop
         private readonly string[] panelNames =
         {
             "MainPanel", "StartPanel", "HelpPanel", "SettingsPanel",
-            "CreditsPanel", "QuitPanel", "ErrorPanel", "LoadingPanel"
+            "CreditsPanel", "QuitPanel", "ErrorPanel", "LoadingPanel",
+            "ContinueChoicePanel", "NewGameConfirmPanel"
         };
 
         private readonly string[] helpTitles =
@@ -59,7 +60,9 @@ namespace PickAndPlaceShop
             }
             if (subtitle != null) subtitle.text = ShopGameIdentity.Subtitle;
             if (version != null) version.text = ShopGameIdentity.VersionLabel;
+            CreateSaveChoicePanels();
             RegisterButtons();
+            RegisterSaveChoiceButtons();
             PopulateResolutionDropdown();
             Show("MainPanel", "BtnMainStart");
         }
@@ -110,6 +113,16 @@ namespace PickAndPlaceShop
 
         private void StartSolo()
         {
+            if (ShopProgressionSaveStore.HasUsableSave)
+            {
+                Show("ContinueChoicePanel", "BtnContinueGame");
+                return;
+            }
+            LaunchSolo(true);
+        }
+
+        private void LaunchSolo(bool resetCampaign)
+        {
             StartCoroutine(LoadGame(new ShopLaunchRequest
             {
                 Mode = ShopLaunchMode.Solo,
@@ -117,8 +130,94 @@ namespace PickAndPlaceShop
                 Address = "127.0.0.1",
                 Port = ShopFlowRules.DefaultPort,
                 PlayerName = "점장",
-                ResetCampaign = true
+                ResetCampaign = resetCampaign
             }));
+        }
+
+        private void RegisterSaveChoiceButtons()
+        {
+            OnClick("BtnContinueGame", () => LaunchSolo(false));
+            OnClick("BtnChooseNewGame", () => Show("NewGameConfirmPanel", "BtnCancelNewGame"));
+            OnClick("BtnSaveChoiceBack", () => Show("StartPanel", "BtnSolo"));
+            OnClick("BtnConfirmNewGame", () => LaunchSolo(true));
+            OnClick("BtnCancelNewGame", () => Show("ContinueChoicePanel", "BtnContinueGame"));
+        }
+
+        private void CreateSaveChoicePanels()
+        {
+            Canvas canvas = GetComponentInChildren<Canvas>(true);
+            Button template = Find<Button>("BtnSolo");
+            if (canvas == null || template == null || FindObject("ContinueChoicePanel") != null) return;
+            CreateChoicePanel(canvas.transform, template, "ContinueChoicePanel", "저장된 게임이 있습니다",
+                "이어서 하시겠습니까?", new[]
+                {
+                    ("BtnContinueGame", "이어하기"),
+                    ("BtnChooseNewGame", "새로 시작"),
+                    ("BtnSaveChoiceBack", "뒤로")
+                });
+            CreateChoicePanel(canvas.transform, template, "NewGameConfirmPanel", "새 게임 확인",
+                "새로 시작하면 기존 저장을 덮어씁니다.\n정말 새 게임을 시작하시겠습니까?", new[]
+                {
+                    ("BtnConfirmNewGame", "덮어쓰고 시작"),
+                    ("BtnCancelNewGame", "취소")
+                });
+        }
+
+        private static void CreateChoicePanel(Transform parent, Button template, string panelName,
+            string title, string message, (string name, string label)[] buttons)
+        {
+            GameObject panel = new(panelName, typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(parent, false);
+            RectTransform panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+            panel.GetComponent<Image>().color = new Color(0.015f, 0.035f, 0.055f, 0.96f);
+
+            Text sourceText = template.GetComponentInChildren<Text>(true);
+            Text titleText = CreatePromptText(panel.transform, "PromptTitle", sourceText, 30,
+                new Vector2(0f, 112f), new Vector2(700f, 52f));
+            titleText.text = title;
+            titleText.color = new Color(1f, 0.82f, 0.28f);
+            Text bodyText = CreatePromptText(panel.transform, "PromptMessage", sourceText, 22,
+                new Vector2(0f, 40f), new Vector2(780f, 90f));
+            bodyText.text = message;
+            bodyText.color = Color.white;
+
+            float totalWidth = buttons.Length * 210f + (buttons.Length - 1) * 18f;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                Button button = Instantiate(template, panel.transform);
+                button.name = buttons[i].name;
+                RectTransform rect = button.GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(210f, 62f);
+                rect.anchoredPosition = new Vector2(-totalWidth * 0.5f + 105f + i * 228f, -80f);
+                Text label = button.GetComponentInChildren<Text>(true);
+                if (label != null) label.text = buttons[i].label;
+            }
+            panel.SetActive(false);
+        }
+
+        private static Text CreatePromptText(Transform parent, string name, Text template, int size,
+            Vector2 position, Vector2 dimensions)
+        {
+            GameObject go = new(name, typeof(RectTransform), typeof(Text));
+            go.transform.SetParent(parent, false);
+            RectTransform rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = dimensions;
+            rect.anchoredPosition = position;
+            Text text = go.GetComponent<Text>();
+            text.font = template != null ? template.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = size;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 16;
+            text.resizeTextMaxSize = size;
+            return text;
         }
 
         private IEnumerator LoadGame(ShopLaunchRequest request)

@@ -121,6 +121,7 @@ namespace PickAndPlaceShop
         }
 
         public static string SavePath => Path.Combine(SaveDirectory, FileName);
+        public static bool HasUsableSave => TryLoad(out _);
 
         public static bool TryLoad(out ShopProgressionSaveData data)
         {

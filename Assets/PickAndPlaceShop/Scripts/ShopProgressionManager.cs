@@ -345,6 +345,16 @@ namespace PickAndPlaceShop
             return saved;
         }
 
+        public bool SaveNowWithFeedback()
+        {
+            NotificationRaised?.Invoke("저장 중...");
+            bool saved = SaveNow();
+            NotificationRaised?.Invoke(saved
+                ? "진행 상황을 저장했습니다."
+                : "저장하지 못했습니다.");
+            return saved;
+        }
+
         public bool LoadNow()
         {
             if (!ShopProgressionSaveStore.TryLoad(out ShopProgressionSaveData save)) return false;

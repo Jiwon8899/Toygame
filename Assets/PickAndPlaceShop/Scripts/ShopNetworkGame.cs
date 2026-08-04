@@ -703,7 +703,7 @@ namespace PickAndPlaceShop
                     ? "7일 운영 완료! 최종 점수: " + ShopEconomy.CalculateDayScore(Coins.Value, SoldToday.Value, Reputation.Value)
                     : "Seven-day prototype complete! Final score: " +
                       ShopEconomy.CalculateDayScore(Coins.Value, SoldToday.Value, Reputation.Value) + ".");
-                ShopProgressionManager.Instance?.SaveNow();
+                ShopProgressionManager.Instance?.SaveNowWithFeedback();
                 return;
             }
 
@@ -717,7 +717,7 @@ namespace PickAndPlaceShop
                   "원을 지불했고 새 유행이 공개되었습니다."
                 : "Day " + completedDay + " closed. Rent " + rent + " and wages " + wages +
                   " paid. New trend revealed.");
-            ShopProgressionManager.Instance?.SaveNow();
+            ShopProgressionManager.Instance?.SaveNowWithFeedback();
         }
 
         private void ResetCampaign()

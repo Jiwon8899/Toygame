@@ -255,7 +255,8 @@ namespace PickAndPlaceShop
             DayAnnouncement.Value = new FixedString512Bytes(announcement + "\n" + TrendNews.Value);
             game.ServerSetEvent(announcement);
             SyncRemaining();
-            if (!firstLoad) ShopProgressionManager.Instance?.SaveNow();
+            // The completed settlement owns the one end-of-day autosave. Saving again here
+            // would write the same day transition twice.
         }
 
         private void PickTrend(int day)

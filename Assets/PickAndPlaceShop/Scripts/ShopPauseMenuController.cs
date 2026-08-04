@@ -27,6 +27,7 @@ namespace PickAndPlaceShop
             if (root != null) root.SetActive(false);
             Text title = Find<Text>("PauseTitle");
             if (title != null) title.text = ShopGameIdentity.KoreanShortName;
+            CreateSaveButton();
             RegisterButtons();
         }
 
@@ -44,6 +45,7 @@ namespace PickAndPlaceShop
         private void RegisterButtons()
         {
             OnClick("BtnPauseResume", Close);
+            OnClick("BtnPauseSave", SaveGame);
             OnClick("BtnPauseHelp", () => ShowOnly("PauseHelpPanel", "BtnPauseHelpBack"));
             OnClick("BtnPauseSettings", OpenSettings);
             OnClick("BtnPauseMainMenu", () => OpenConfirm("menu"));
@@ -113,6 +115,67 @@ namespace PickAndPlaceShop
             };
             ShopUserSettings.Save(data);
             ShowMain();
+        }
+
+        private void SaveGame()
+        {
+            ShopProgressionManager manager = ShopProgressionManager.Instance;
+            bool saved = manager != null && manager.SaveNowWithFeedback();
+            Text status = Find<Text>("PauseSaveStatus");
+            if (status != null)
+            {
+                status.text = saved ? "저장 완료" : "저장 실패";
+                StartCoroutine(ClearSaveStatus(status));
+            }
+        }
+
+        private IEnumerator ClearSaveStatus(Text status)
+        {
+            yield return new WaitForSecondsRealtime(1.5f);
+            if (status != null) status.text = string.Empty;
+        }
+
+        private void CreateSaveButton()
+        {
+            Button template = Find<Button>("BtnPauseResume");
+            GameObject panel = FindObject("PauseMainPanel");
+            if (template == null || panel == null || FindObject("BtnPauseSave") != null) return;
+
+            Button saveButton = Instantiate(template, panel.transform);
+            saveButton.name = "BtnPauseSave";
+            Text label = saveButton.GetComponentInChildren<Text>(true);
+            if (label != null) label.text = "저장";
+
+            RectTransform saveRect = saveButton.GetComponent<RectTransform>();
+            RectTransform resumeRect = template.GetComponent<RectTransform>();
+            Button help = Find<Button>("BtnPauseHelp");
+            RectTransform helpRect = help != null ? help.GetComponent<RectTransform>() : null;
+            saveRect.anchoredPosition = helpRect != null
+                ? Vector2.Lerp(resumeRect.anchoredPosition, helpRect.anchoredPosition, 0.5f)
+                : resumeRect.anchoredPosition + Vector2.down * 64f;
+            if (helpRect != null)
+            {
+                float shift = Mathf.Abs(resumeRect.anchoredPosition.y - helpRect.anchoredPosition.y) * 0.5f;
+                foreach (Button button in panel.GetComponentsInChildren<Button>(true))
+                {
+                    if (button == template || button == saveButton) continue;
+                    RectTransform rect = button.GetComponent<RectTransform>();
+                    if (rect.anchoredPosition.y <= helpRect.anchoredPosition.y + 0.1f)
+                        rect.anchoredPosition += Vector2.down * shift;
+                }
+            }
+
+            GameObject statusObject = new("PauseSaveStatus", typeof(RectTransform), typeof(Text));
+            statusObject.transform.SetParent(panel.transform, false);
+            RectTransform statusRect = statusObject.GetComponent<RectTransform>();
+            statusRect.anchorMin = statusRect.anchorMax = new Vector2(0.5f, 0.5f);
+            statusRect.sizeDelta = new Vector2(280f, 36f);
+            statusRect.anchoredPosition = saveRect.anchoredPosition + Vector2.right * 270f;
+            Text status = statusObject.GetComponent<Text>();
+            status.font = label != null ? label.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            status.fontSize = 20;
+            status.alignment = TextAnchor.MiddleLeft;
+            status.color = new Color(0.45f, 1f, 0.75f);
         }
 
         private void OpenConfirm(string action)
