@@ -46,8 +46,10 @@ namespace PickAndPlaceShop
             if (station == null || !station.IsSpawned || NetworkManager.Singleton == null) return;
             bool isOccupant = station.OccupantClientId.Value == NetworkManager.Singleton.LocalClientId;
             ShopKujiState state = station.State.Value;
-            bool shouldShow = isOccupant && state != ShopKujiState.Idle && state != ShopKujiState.DrawingTicket &&
-                              state != ShopKujiState.Cooldown;
+            bool shouldShow = isOccupant &&
+                              (state == ShopKujiState.AwaitingScratch ||
+                               state == ShopKujiState.Scratching ||
+                               state == ShopKujiState.RevealingTicket);
             SetVisible(shouldShow);
             if (!shouldShow) return;
 

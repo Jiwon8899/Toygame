@@ -33,6 +33,8 @@ namespace PickAndPlaceShop
         public NetworkVariable<float> StateProgress = new(0f);
         public NetworkVariable<ShopKujiRank> ResultRank = new(ShopKujiRank.D);
         public NetworkVariable<FixedString64Bytes> ResultProduct = new(new FixedString64Bytes("티켓 준비 중"));
+        public NetworkVariable<FixedString128Bytes> ResultStorageMessage =
+            new(new FixedString128Bytes("획득 결과를 확인하는 중입니다."));
         public NetworkVariable<bool> LastPrizeAwarded = new(false);
         public NetworkVariable<bool> CurrentDrawHasLastPrize = new(false);
         public NetworkVariable<bool> CurrentDrawHasCeiling = new(false);
@@ -42,6 +44,7 @@ namespace PickAndPlaceShop
         private readonly ShopAcquisitionAwardLedger awardLedger = new();
         private float stateElapsed;
         private float scratchElapsed;
+        private int presentedAttempt = -1;
 
         public string PoolId => config != null ? config.PoolId : name;
         public int TicketPrice => config != null ? config.TicketPrice : 0;
@@ -232,6 +235,7 @@ namespace PickAndPlaceShop
         {
             ApplyVisuals();
             UpdateInformationText();
+            TryPresentResult();
         }
 
         private void ServerAwardResult()
@@ -265,6 +269,11 @@ namespace PickAndPlaceShop
                         out lastDestination)) break;
                 storedRewards++;
             }
+            ResultStorageMessage.Value = new FixedString128Bytes(storedRewards == rewards
+                ? lastDestination == ShopContainerKind.PersonalInventory
+                    ? storedRewards + "개 상품을 가방에 넣었습니다."
+                    : storedRewards + "개 상품을 창고로 보냈습니다."
+                : storedRewards + "/" + rewards + "개 보관 · 용량 부족");
             game.ServerRecordAcquired(storedRewards);
             ShopProgressionManager progression = ShopProgressionManager.Instance;
             if (progression == null)
@@ -276,17 +285,8 @@ namespace PickAndPlaceShop
                         config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)?.Category ??
                         ShopProductCategory.CatSeasonal),
                     rare, storedRewards);
-            string last = CurrentDrawHasLastPrize.Value ? " + " + config.LastPrize : string.Empty;
-            string ceiling = CurrentDrawHasCeiling.Value ? " + 천장 " + config.CeilingPrize : string.Empty;
-            game.ServerSetEvent(config.DisplayName + " 결과: " + ResultRank.Value + "상 " +
-                                ResultProduct.Value + last + ceiling + " - 가게 창고에 " + rewards +
-                                "개 중 " + storedRewards + "개를 " +
-                                (lastDestination == ShopContainerKind.PersonalInventory
-                                    ? "개인 인벤토리에 추가했습니다."
-                                    : "공용 창고로 이동했습니다.") +
-                                (storedRewards < rewards
-                                    ? " 남은 상품은 인벤토리와 창고가 가득 차 지급을 보류했습니다."
-                                    : string.Empty));
+            game.ServerSetEvent(config.DisplayName + " " + ResultRank.Value + "상: " +
+                                ResultProduct.Value + " · " + storedRewards + "/" + rewards + "개 보관");
             Debug.Log("[Arcade Kuji] AWARD pool=" + PoolId + " attempt=" + AttemptId.Value +
                       " rank=" + ResultRank.Value + " last=" + CurrentDrawHasLastPrize.Value +
                       " ceiling=" + CurrentDrawHasCeiling.Value + " rewards=" + rewards +
@@ -294,6 +294,29 @@ namespace PickAndPlaceShop
                       " remaining=" + TotalRemaining + " coins=" + game.Coins.Value +
                       " inventory=" + game.Inventory.Value);
         }
+
+        private void TryPresentResult()
+        {
+            if (State.Value != ShopKujiState.Result || AttemptId.Value == presentedAttempt ||
+                config == null || NetworkManager.Singleton == null ||
+                OccupantClientId.Value != NetworkManager.Singleton.LocalClientId) return;
+            ShopProductDefinition product = config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value);
+            if (product == null) return;
+            presentedAttempt = AttemptId.Value;
+            ShopCapsuleOpeningPresenter.Show("쿠지 결과 · " + ResultRank.Value + "상", product,
+                ResultAccent(ResultRank.Value), ResultStorageMessage.Value.ToString());
+            Debug.Log("[Arcade Result UI] kuji shown attempt=" + AttemptId.Value +
+                      " product=" + product.DisplayName, this);
+        }
+
+        private static Color ResultAccent(ShopKujiRank rank) => rank switch
+        {
+            ShopKujiRank.S => new Color(1f, 0.72f, 0.12f),
+            ShopKujiRank.A => new Color(0.78f, 0.42f, 1f),
+            ShopKujiRank.B => new Color(0.32f, 0.62f, 1f),
+            ShopKujiRank.C => new Color(0.32f, 0.92f, 0.88f),
+            _ => Color.white
+        };
 
         private ShopKujiStock CurrentStock() => new(StockS.Value, StockA.Value, StockB.Value, StockC.Value, StockD.Value);
 

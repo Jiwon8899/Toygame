@@ -25,9 +25,12 @@ namespace PickAndPlaceShop
         public NetworkVariable<float> StateProgress = new(0f);
         public NetworkVariable<ShopGachaRarity> ResultRarity = new(ShopGachaRarity.Common);
         public NetworkVariable<FixedString64Bytes> ResultProduct = new(new FixedString64Bytes("상품 준비 중"));
+        public NetworkVariable<FixedString128Bytes> ResultStorageMessage =
+            new(new FixedString128Bytes("획득 결과를 확인하는 중입니다."));
 
         private readonly ShopAcquisitionAwardLedger awardLedger = new();
         private float stateElapsed;
+        private int presentedAttempt = -1;
 
         public string MachineId => config != null ? config.MachineId : name;
         public int AttemptCost => config != null ? config.AttemptCost : 0;
@@ -160,6 +163,7 @@ namespace PickAndPlaceShop
         {
             ApplyVisuals();
             UpdateInformationText();
+            TryPresentResult();
         }
 
         private void ServerAwardResult()
@@ -181,6 +185,11 @@ namespace PickAndPlaceShop
                 : -1;
             bool stored = game.ServerTryAcquireItem(OccupantClientId.Value, product, visualIndex,
                 out ShopContainerKind destination);
+            ResultStorageMessage.Value = new FixedString128Bytes(stored
+                ? destination == ShopContainerKind.PersonalInventory
+                    ? "가방에 넣었습니다."
+                    : "가방이 가득 차 창고로 보냈습니다."
+                : "가방과 창고가 가득 차 상품 획득을 보류했습니다.");
             if (stored) game.ServerRecordAcquired(1);
             ShopProgressionManager progression = ShopProgressionManager.Instance;
             if (progression == null)
@@ -198,7 +207,21 @@ namespace PickAndPlaceShop
             Debug.Log("[Arcade Gacha] AWARD machine=" + MachineId + " attempt=" + AttemptId.Value +
                       " rarity=" + ResultRarity.Value + " product=" + ResultProduct.Value +
                        " stored=" + stored + " destination=" + destination +
-                       " coins=" + game.Coins.Value + " inventory=" + game.Inventory.Value);
+                      " coins=" + game.Coins.Value + " inventory=" + game.Inventory.Value);
+        }
+
+        private void TryPresentResult()
+        {
+            if (State.Value != ShopGachaState.Result || AttemptId.Value == presentedAttempt ||
+                config == null || NetworkManager.Singleton == null ||
+                OccupantClientId.Value != NetworkManager.Singleton.LocalClientId) return;
+            ShopProductDefinition product = config.ProductDefinitionFor(ResultRarity.Value, AttemptId.Value);
+            if (product == null) return;
+            presentedAttempt = AttemptId.Value;
+            ShopCapsuleOpeningPresenter.Show("가챠 결과", product, config.CapsuleColor,
+                ResultStorageMessage.Value.ToString());
+            Debug.Log("[Arcade Result UI] gacha shown attempt=" + AttemptId.Value +
+                      " product=" + product.DisplayName, this);
         }
 
         private bool IsPlayerInRange(ulong clientId)

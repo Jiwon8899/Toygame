@@ -9,9 +9,9 @@ namespace PickAndPlaceShop
             ShopProductCategory.CapsuleToy or ShopProductCategory.Space or
                 ShopProductCategory.CatFigure => "고양이 피규어",
             ShopProductCategory.Decoration or ShopProductCategory.Other or
-                ShopProductCategory.CatGoods => "냥냥 잡화",
-            ShopProductCategory.Seasonal or ShopProductCategory.CatSeasonal => "계절 한정 냥이",
-            ShopProductCategory.Retro or ShopProductCategory.CatRetro => "레트로 냥이",
+                ShopProductCategory.CatGoods => "잡화·소품",
+            ShopProductCategory.Seasonal or ShopProductCategory.CatSeasonal => "계절 한정 상품",
+            ShopProductCategory.Retro or ShopProductCategory.CatRetro => "레트로 상품",
             _ => "상품"
         };
 
