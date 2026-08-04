@@ -30,6 +30,11 @@ namespace PickAndPlaceShop
         public NetworkVariable<FixedString64Bytes> PersistentCustomerId =
             new(new FixedString64Bytes("customer:unassigned"));
         public NetworkVariable<int> PreferredCategory = new((int)ShopProductCategory.CatGoods);
+        public NetworkVariable<int> PurchaseCount = new(0);
+        public NetworkVariable<int> LastSatisfaction = new(70);
+        public NetworkVariable<FixedString512Bytes> DialogueText =
+            new(new FixedString512Bytes(string.Empty));
+        public NetworkVariable<int> DialogueRevision = new(0);
 
         [Header("Appearance")]
         [SerializeField] private Transform appearanceRoot;
@@ -81,6 +86,7 @@ namespace PickAndPlaceShop
         public override void OnNetworkSpawn()
         {
             AppearanceIndex.OnValueChanged += HandleAppearanceChanged;
+            DialogueRevision.OnValueChanged += HandleDialogueChanged;
             ApplyAppearance(AppearanceIndex.Value);
             lastVisualPosition = transform.position;
 
@@ -91,6 +97,7 @@ namespace PickAndPlaceShop
         public override void OnNetworkDespawn()
         {
             AppearanceIndex.OnValueChanged -= HandleAppearanceChanged;
+            DialogueRevision.OnValueChanged -= HandleDialogueChanged;
             base.OnNetworkDespawn();
         }
 
@@ -114,6 +121,8 @@ namespace PickAndPlaceShop
             patienceSeconds = archetype.PatienceSeconds;
             PersistentCustomerId.Value = new FixedString64Bytes(profile.CustomerId ?? "customer:unassigned");
             PreferredCategory.Value = (int)profile.PreferredCategory;
+            PurchaseCount.Value = Mathf.Max(0, profile.PurchaseCount);
+            LastSatisfaction.Value = Mathf.Clamp(profile.LastSatisfaction, 0, 100);
             preference = new ShopCustomerPreference(
                 budget,
                 archetype.PreferredPrice,
@@ -208,6 +217,15 @@ namespace PickAndPlaceShop
         {
             if (!IsServer || State.Value != ShopCustomerState.Checkout) return;
             Satisfaction.Value = satisfaction;
+            if (ShopLiveOperationsNetwork.Instance != null &&
+                satisfaction >= ShopLiveOperationsNetwork.Instance.Config.HighSatisfactionDialogueThreshold)
+            {
+                ShopLiveOperationsNetwork.Instance.ServerRequestCustomerDialogue(this,
+                    ShopCustomerDialogueEvent.HighSatisfactionPurchase,
+                    DesiredProductName.Value.ToString(), satisfaction, QueueWaitSeconds,
+                    ShopNightSalesSystem.Instance != null &&
+                    ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
+            }
             target = ShopNightSalesSystem.Instance.ExitPosition;
             SetState(ShopCustomerState.Leave);
         }
@@ -216,6 +234,14 @@ namespace PickAndPlaceShop
         {
             if (!IsServer || giveUpReported || State.Value == ShopCustomerState.Leave) return;
             giveUpReported = true;
+            bool longWait = reason != null &&
+                            reason.IndexOf("patience", System.StringComparison.OrdinalIgnoreCase) >= 0;
+            ShopLiveOperationsNetwork.Instance?.ServerRequestCustomerDialogue(this,
+                longWait ? ShopCustomerDialogueEvent.LongWaitComplaint :
+                    ShopCustomerDialogueEvent.ExitWithoutPurchase,
+                DesiredProductName.Value.ToString(), Satisfaction.Value, QueueWaitSeconds,
+                ShopNightSalesSystem.Instance != null &&
+                ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
             ShopNightSalesSystem.Instance.ServerRegisterGiveUp(this, reason);
             DesiredProductName.Value = new FixedString64Bytes("Gave up");
             target = ShopNightSalesSystem.Instance.ExitPosition;
@@ -291,6 +317,22 @@ namespace PickAndPlaceShop
         private void HandleAppearanceChanged(int previous, int current)
         {
             ApplyAppearance(current);
+        }
+
+        public void ServerSetDialogue(string message)
+        {
+            if (!IsServer || string.IsNullOrWhiteSpace(message)) return;
+            DialogueText.Value = new FixedString512Bytes(message);
+            DialogueRevision.Value++;
+        }
+
+        private void HandleDialogueChanged(int previous, int current)
+        {
+            if (current <= previous || DialogueText.Value.Length == 0) return;
+            ShopOperationsConfig config = ShopOperationsConfig.Load();
+            ShopCustomerDialogueBubble.Show(transform, DialogueText.Value.ToString(),
+                config != null ? config.DialogueBubbleSeconds : 3f,
+                config != null ? config.MaximumDialogueBubbles : 2);
         }
 
         private void ApplyAppearance(int index)

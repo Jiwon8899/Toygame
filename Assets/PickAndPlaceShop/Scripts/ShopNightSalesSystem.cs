@@ -326,6 +326,18 @@ namespace PickAndPlaceShop
             return productId >= 0 && ledger.TryReserve(customer.NetworkObjectId, productId);
         }
 
+        public bool ServerIsCategoryDisplayed(ShopProductCategory category)
+        {
+            if (products == null) return false;
+            for (int i = 0; i < products.Length; i++)
+            {
+                ShopProductDefinition product = products[i];
+                if (product != null && product.Category == category && ledger.GetStock(product.ProductId) > 0)
+                    return true;
+            }
+            return false;
+        }
+
         public void ServerJoinQueue(ShopCustomerNetwork customer)
         {
             if (!IsServer || customer == null || queue.Contains(customer)) return;

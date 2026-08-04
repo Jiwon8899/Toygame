@@ -109,13 +109,15 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void SavePayload_RoundTripsLiveOperationsVersionFive()
+        public void SavePayload_RoundTripsLiveOperationsVersionSeven()
         {
             ShopProgressionSaveData source = new()
             {
                 livePhase = (int)ShopPhase.Open,
                 livePhaseSecondsRemaining = 155f,
                 trendCategory = (int)ShopProductCategory.CatRetro,
+                previousTrendCategory = (int)ShopProductCategory.CatGoods,
+                trendNews = "복고풍 고양이 굿즈가 화제예요.",
                 dailySalesGoal = 12,
                 dailySalesProgress = 5
             };
@@ -130,10 +132,49 @@ namespace PickAndPlaceShop.Tests
             });
             string json = JsonUtility.ToJson(source);
             ShopProgressionSaveData restored = JsonUtility.FromJson<ShopProgressionSaveData>(json);
-            Assert.AreEqual(6, restored.version);
+            Assert.AreEqual(7, restored.version);
             Assert.AreEqual(155f, restored.livePhaseSecondsRemaining);
+            Assert.AreEqual("복고풍 고양이 굿즈가 화제예요.", restored.trendNews);
             Assert.IsTrue(restored.customerProfiles.Single().regular);
             Assert.IsTrue(restored.automationMachines.Single().installed);
+        }
+
+        [Test]
+        public void NarrativeConfiguration_IsBoundedAndHasCompleteFallbackCoverage()
+        {
+            Assert.AreEqual("claude-haiku-4-5-20251001", operations.NarrativeModel);
+            Assert.LessOrEqual(operations.NarrativeMaxTokens, 100);
+            Assert.AreEqual(3f, operations.NarrativeTimeoutSeconds);
+            Assert.AreEqual("ANTHROPIC_API_KEY", operations.NarrativeApiKeyEnvironmentVariable);
+            foreach (ShopCustomerDialogueEvent eventType in
+                     System.Enum.GetValues(typeof(ShopCustomerDialogueEvent)))
+            {
+                System.Collections.Generic.HashSet<string> fallbacks = new();
+                for (int i = 0; i < 5; i++) fallbacks.Add(operations.CustomerDialogueFallback(eventType, i));
+                Assert.AreEqual(5, fallbacks.Count, eventType.ToString());
+            }
+            foreach (ShopProductCategory category in new[]
+                     {
+                         ShopProductCategory.CatPlush, ShopProductCategory.CatFigure,
+                         ShopProductCategory.CatGoods, ShopProductCategory.CatSeasonal,
+                         ShopProductCategory.CatRetro
+                     })
+            {
+                System.Collections.Generic.HashSet<string> news = new();
+                for (int day = 0; day < 3; day++) news.Add(operations.TrendNewsFallback(category, day));
+                Assert.AreEqual(3, news.Count, category.ToString());
+            }
+        }
+
+        [Test]
+        public void FinalGameName_UsesConfirmedSpacingAndHangul()
+        {
+            Assert.AreEqual("미야옹 츄르 부자가 될거야 : 소품샵 뽑기 시뮬레이터",
+                ShopGameIdentity.KoreanFormalName);
+            StringAssert.Contains("츄", ShopGameIdentity.KoreanFormalName);
+            StringAssert.DoesNotContain("될 거야", ShopGameIdentity.KoreanFormalName);
+            Assert.AreEqual(1, ShopGameIdentity.KoreanFormalName.Split(':').Length - 1);
+            StringAssert.Contains(" : ", ShopGameIdentity.KoreanFormalName);
         }
     }
 }

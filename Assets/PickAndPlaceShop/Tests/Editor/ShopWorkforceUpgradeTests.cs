@@ -46,7 +46,7 @@ namespace PickAndPlaceShop.Tests
             };
             string json = JsonUtility.ToJson(data);
             ShopProgressionSaveData restored = JsonUtility.FromJson<ShopProgressionSaveData>(json);
-            Assert.AreEqual(6, restored.version);
+            Assert.AreEqual(ShopProgressionSaveStore.CurrentVersion, restored.version);
             Assert.AreEqual(2, restored.playerUpgradeLevel);
             Assert.AreEqual(3, restored.operationsUpgradeLevel);
             Assert.AreEqual(7, restored.staffHiredMask);

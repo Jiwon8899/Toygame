@@ -96,8 +96,14 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> DailySalesProgress = new(0);
         public NetworkVariable<int> AutomatedAcquiredToday = new(0);
         public NetworkVariable<int> AutomatedCostToday = new(0);
-        public NetworkVariable<FixedString128Bytes> DayAnnouncement =
-            new(new FixedString128Bytes("오늘의 운영 정보를 준비 중입니다."));
+        public NetworkVariable<int> NarrativeApiCallsToday = new(0);
+        public NetworkVariable<int> NarrativeFallbacksToday = new(0);
+        public NetworkVariable<int> NarrativeFailuresToday = new(0);
+        public NetworkVariable<int> NarrativeCacheHitsToday = new(0);
+        public NetworkVariable<FixedString512Bytes> TrendNews =
+            new(new FixedString512Bytes("오늘의 유행 소식을 준비 중입니다."));
+        public NetworkVariable<FixedString512Bytes> DayAnnouncement =
+            new(new FixedString512Bytes("오늘의 운영 정보를 준비 중입니다."));
         public NetworkVariable<FixedString128Bytes> DaySummary =
             new(new FixedString128Bytes(string.Empty));
         public NetworkList<ShopOnlineOrderState> OnlineOrders = new();
@@ -109,6 +115,8 @@ namespace PickAndPlaceShop
         private ShopPhase observedPhase;
         private int nextOrderId = 1;
         private bool openCloseRequested;
+        private int previousTrendCategory = (int)ShopProductCategory.CatGoods;
+        private readonly HashSet<string> generatedCustomerDialogueDays = new(StringComparer.Ordinal);
 
         public ShopOperationsConfig Config => config != null ? config : config = ShopOperationsConfig.Load();
         public ShopProductCategory CurrentTrendCategory =>
@@ -226,19 +234,25 @@ namespace PickAndPlaceShop
             openCloseRequested = false;
             AutomatedAcquiredToday.Value = 0;
             AutomatedCostToday.Value = 0;
+            NarrativeApiCallsToday.Value = 0;
+            NarrativeFallbacksToday.Value = 0;
+            NarrativeFailuresToday.Value = 0;
+            NarrativeCacheHitsToday.Value = 0;
+            generatedCustomerDialogueDays.Clear();
             DailySalesProgress.Value = 0;
             DailySalesGoal.Value = Config.SalesGoalForStage(
                 ShopProgressionManager.Instance != null
                     ? ShopProgressionManager.Instance.CurrentStageIndex
                     : 0);
             PickTrend(game.Day.Value);
+            ServerGenerateTrendNews(game.Day.Value);
             ExpireOrders(game.Day.Value);
             FillOrderBoard(game.Day.Value);
             string announcement = "준비 2분 시작 · 오늘의 유행: " +
                                   ShopProductLocalization.CategoryLabel(CurrentTrendCategory) +
                                   " (+" + Mathf.RoundToInt(Config.TrendPriceBonus * 100f) + "%) · 판매 목표 " +
                                   DailySalesGoal.Value + "개";
-            DayAnnouncement.Value = new FixedString128Bytes(announcement);
+            DayAnnouncement.Value = new FixedString512Bytes(announcement + "\n" + TrendNews.Value);
             game.ServerSetEvent(announcement);
             SyncRemaining();
             if (!firstLoad) ShopProgressionManager.Instance?.SaveNow();
@@ -254,6 +268,7 @@ namespace PickAndPlaceShop
                 ShopProductCategory.CatSeasonal,
                 ShopProductCategory.CatRetro
             };
+            previousTrendCategory = TrendCategory.Value;
             TrendCategory.Value = (int)categories[Mathf.Abs(day * 17 + 3) % categories.Length];
             if (ShopNetworkGame.Instance != null)
                 ShopNetworkGame.Instance.TrendPercent.Value = Mathf.RoundToInt(Config.TrendPriceBonus * 100f);
@@ -273,6 +288,126 @@ namespace PickAndPlaceShop
         }
 
         public bool IsTrend(ShopProductCategory category) => category == CurrentTrendCategory;
+
+        private void ServerGenerateTrendNews(int day)
+        {
+            if (!IsServer || Config == null) return;
+            ShopProductCategory current = CurrentTrendCategory;
+            string fallback = Config.TrendNewsFallback(current, day);
+            TrendNews.Value = new FixedString512Bytes(fallback);
+            string previous = ShopProductLocalization.CategoryLabel((ShopProductCategory)previousTrendCategory);
+            string districts = BuildUnlockedDistrictNames();
+            int stage = ShopProgressionManager.Instance != null
+                ? ShopProgressionManager.Instance.CurrentStageIndex + 1
+                : 1;
+            string prompt = "오늘의 유행 뉴스 한 문장을 작성하세요. " +
+                            "유행=" + ShopProductLocalization.CategoryLabel(current) +
+                            ", 전날 유행=" + previous +
+                            ", 가게 등급=" + stage +
+                            ", 개방 상권=" + districts +
+                            ". 게임 수치나 규칙을 바꾸지 말고 왜 유행인지 생활 소식처럼 표현하세요.";
+            string contextKey = "trend:" + day + ":" + (int)current + ":" + previousTrendCategory;
+            ShopNarrativeAIService.Instance?.Request(contextKey, prompt, result =>
+            {
+                if (!IsServer || ShopNetworkGame.Instance == null || ShopNetworkGame.Instance.Day.Value != day)
+                    return;
+                if (result.IsApiSuccess && result.HasText)
+                {
+                    TrendNews.Value = new FixedString512Bytes(result.Text);
+                    if (result.Kind == ShopNarrativeResultKind.Api) NarrativeApiCallsToday.Value++;
+                    else NarrativeCacheHitsToday.Value++;
+                    string label = "오늘의 유행: " + ShopProductLocalization.CategoryLabel(current) +
+                                   " · " + result.Text;
+                    DayAnnouncement.Value = new FixedString512Bytes(label);
+                    ShopNetworkGame.Instance.ServerSetEvent(label);
+                }
+                else
+                {
+                    NarrativeFallbacksToday.Value++;
+                    if (IsNarrativeFailure(result.Kind)) NarrativeFailuresToday.Value++;
+                }
+            });
+        }
+
+        private string BuildUnlockedDistrictNames()
+        {
+            ShopProgressionManager progression = ShopProgressionManager.Instance;
+            if (progression?.Catalog == null) return "기본 거리";
+            List<string> names = new();
+            for (int i = 0; i < progression.Catalog.DistrictUnlocks.Count; i++)
+            {
+                ShopDistrictUnlock district = progression.Catalog.DistrictUnlocks[i];
+                if (district != null && progression.IsDistrictUnlocked(district.DistrictId))
+                    names.Add(district.DisplayName);
+            }
+            return names.Count > 0 ? string.Join(", ", names) : "기본 거리";
+        }
+
+        public void ServerRequestCustomerDialogue(ShopCustomerNetwork customer,
+            ShopCustomerDialogueEvent eventType, string productName, int satisfaction,
+            float waitSeconds, bool preferredCategoryDisplayed)
+        {
+            if (!IsServer || customer == null || Config == null || ShopNetworkGame.Instance == null) return;
+            int day = ShopNetworkGame.Instance.Day.Value;
+            ShopCustomerProfileSave profile = FindProfile(customer.CustomerId);
+            int visits = profile != null ? profile.purchaseCount : customer.PurchaseCount.Value;
+            bool regular = profile != null && profile.regular;
+            string category = ShopProductLocalization.CategoryLabel(customer.Preference.PreferredCategory);
+            string itemName = string.IsNullOrWhiteSpace(productName) ? "원하던 상품" : productName;
+            string fallback = FormatDialogueFallback(
+                Config.CustomerDialogueFallback(eventType, day * 397 + customer.CustomerId.GetHashCode()),
+                category, itemName, waitSeconds, TrendNews.Value.ToString());
+            string generationKey = day + "|" + customer.CustomerId;
+            if (!generatedCustomerDialogueDays.Add(generationKey))
+            {
+                NarrativeFallbacksToday.Value++;
+                customer.ServerSetDialogue(fallback);
+                return;
+            }
+
+            string prompt = "손님 대사 한 문장을 작성하세요. 이벤트=" + eventType +
+                            ", 선호=" + category +
+                            ", 단골=" + (regular ? "예" : "아니오") +
+                            ", 누적구매=" + visits +
+                            ", 구매상품=" + itemName +
+                            ", 대기=" + Mathf.RoundToInt(waitSeconds) + "초" +
+                            ", 만족도=" + satisfaction +
+                            ", 선호카테고리진열=" + (preferredCategoryDisplayed ? "있음" : "없음") +
+                            ", 오늘뉴스=" + TrendNews.Value +
+                            ". 상태를 드러내되 시스템 설명이나 새 사실은 만들지 마세요.";
+            string contextKey = "customer:" + generationKey + ":" + eventType;
+            ShopNarrativeAIService.Instance?.Request(contextKey, prompt, result =>
+            {
+                if (!IsServer || customer == null) return;
+                if (result.IsApiSuccess && result.HasText)
+                {
+                    customer.ServerSetDialogue(result.Text);
+                    if (result.Kind == ShopNarrativeResultKind.Api) NarrativeApiCallsToday.Value++;
+                    else NarrativeCacheHitsToday.Value++;
+                }
+                else
+                {
+                    customer.ServerSetDialogue(fallback);
+                    NarrativeFallbacksToday.Value++;
+                    if (IsNarrativeFailure(result.Kind)) NarrativeFailuresToday.Value++;
+                }
+            });
+        }
+
+        private static bool IsNarrativeFailure(ShopNarrativeResultKind kind) =>
+            kind == ShopNarrativeResultKind.Timeout ||
+            kind == ShopNarrativeResultKind.RequestFailed ||
+            kind == ShopNarrativeResultKind.InvalidResponse;
+
+        private static string FormatDialogueFallback(string template, string category,
+            string productName, float waitSeconds, string news)
+        {
+            return (template ?? string.Empty)
+                .Replace("{선호카테고리}", category)
+                .Replace("{상품명}", productName)
+                .Replace("{대기시간}", Mathf.RoundToInt(waitSeconds).ToString())
+                .Replace("{오늘뉴스}", news);
+        }
 
         public int ApplyTrendPrice(ShopProductDefinition product, int basePrice)
         {
@@ -499,6 +634,7 @@ namespace PickAndPlaceShop
                             " · 남은 시간 " + PhaseSecondsRemaining.Value + "초");
             text.AppendLine("유행: " + ShopProductLocalization.CategoryLabel(CurrentTrendCategory) +
                             " · 판매가 +" + Mathf.RoundToInt(Config.TrendPriceBonus * 100f) + "%");
+            text.AppendLine("유행 소식: " + TrendNews.Value);
             text.AppendLine("일일 판매 목표: " + DailySalesProgress.Value + " / " + DailySalesGoal.Value);
             text.AppendLine("단골: " + RegularCustomerCount + " / " + Config.PersistentCustomerCount);
             int shown = 0;
@@ -513,6 +649,10 @@ namespace PickAndPlaceShop
             text.AppendLine("온라인 주문: " + OnlineOrders.Count + "건");
             text.AppendLine("자동화: 오늘 획득 " + AutomatedAcquiredToday.Value + "개 · 소모 " +
                             AutomatedCostToday.Value + "원");
+            text.AppendLine("대사 AI 디버그: API " + NarrativeApiCallsToday.Value +
+                            " · 캐시 " + NarrativeCacheHitsToday.Value +
+                            " · 폴백 " + NarrativeFallbacksToday.Value +
+                            " · 실패 " + NarrativeFailuresToday.Value);
             if (ShopNetworkGame.Instance != null)
                 text.AppendLine(ShopNetworkGame.Instance.StaffStatusSummary());
         }
@@ -523,6 +663,8 @@ namespace PickAndPlaceShop
             save.livePhase = ShopNetworkGame.Instance != null ? (int)ShopNetworkGame.Instance.Phase.Value : 0;
             save.livePhaseSecondsRemaining = phaseRemaining;
             save.trendCategory = TrendCategory.Value;
+            save.previousTrendCategory = previousTrendCategory;
+            save.trendNews = TrendNews.Value.ToString();
             save.dailySalesGoal = DailySalesGoal.Value;
             save.dailySalesProgress = DailySalesProgress.Value;
             save.nextOrderId = nextOrderId;
@@ -559,6 +701,14 @@ namespace PickAndPlaceShop
                     (ShopProductCategory)save.trendCategory)
                 ? save.trendCategory
                 : (int)ShopProductCategory.CatPlush;
+            previousTrendCategory = ShopProductLocalization.IsCatTheme(
+                    (ShopProductCategory)save.previousTrendCategory)
+                ? save.previousTrendCategory
+                : (int)ShopProductCategory.CatGoods;
+            TrendNews.Value = new FixedString512Bytes(string.IsNullOrWhiteSpace(save.trendNews)
+                ? Config.TrendNewsFallback(CurrentTrendCategory,
+                    ShopNetworkGame.Instance != null ? ShopNetworkGame.Instance.Day.Value : 1)
+                : save.trendNews);
             DailySalesGoal.Value = Mathf.Max(1, save.dailySalesGoal);
             DailySalesProgress.Value = Mathf.Max(0, save.dailySalesProgress);
             nextOrderId = Mathf.Max(1, save.nextOrderId);

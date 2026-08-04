@@ -83,6 +83,8 @@ namespace PickAndPlaceShop
         public int livePhase;
         public float livePhaseSecondsRemaining;
         public int trendCategory;
+        public int previousTrendCategory;
+        public string trendNews;
         public int dailySalesGoal = 1;
         public int dailySalesProgress;
         public int nextOrderId = 1;
@@ -101,10 +103,24 @@ namespace PickAndPlaceShop
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
         private const string FileName = "ShopProgressionSave.json";
+        private const string StableSaveFolderName = "ToyGame";
 
-        public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);
+        // PlayerSettings.productName is now the localized formal title. Keep the original
+        // save directory so existing players continue from the same file without a one-off move.
+        public static string SaveDirectory
+        {
+            get
+            {
+                DirectoryInfo companyDirectory = Directory.GetParent(Application.persistentDataPath);
+                return companyDirectory != null
+                    ? Path.Combine(companyDirectory.FullName, StableSaveFolderName)
+                    : Application.persistentDataPath;
+            }
+        }
+
+        public static string SavePath => Path.Combine(SaveDirectory, FileName);
 
         public static bool TryLoad(out ShopProgressionSaveData data)
         {
@@ -139,7 +155,7 @@ namespace PickAndPlaceShop
             try
             {
                 data.version = CurrentVersion;
-                Directory.CreateDirectory(Application.persistentDataPath);
+                Directory.CreateDirectory(SaveDirectory);
                 string temporaryPath = SavePath + ".tmp";
                 File.WriteAllText(temporaryPath, JsonUtility.ToJson(data, true));
                 if (File.Exists(SavePath))
