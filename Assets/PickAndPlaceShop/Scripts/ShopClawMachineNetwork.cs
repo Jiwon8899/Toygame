@@ -129,6 +129,7 @@ namespace PickAndPlaceShop
         private bool floorVerificationRunning;
         private int loggedReleaseAttempt = -1;
         private GameObject spawnGuardRoot;
+        private Collider chuteAwardVolume;
 
         public ShopClawMachineConfig Config => config;
         public bool IsManuallyBusy => OccupantClientId.Value != ShopClawRules.NoOccupant ||
@@ -348,6 +349,7 @@ namespace PickAndPlaceShop
 
             int coins = ShopNetworkGame.Instance.Coins.Value;
             bool freeTutorialAttempt = ShopTutorialRuntime.FreeScoopAttempt;
+            if (freeTutorialAttempt) chargedAttempts.Add(attemptId);
             if (!freeTutorialAttempt &&
                 !ShopClawRules.TryChargeAttempt(ref coins, config.AttemptCost, attemptId, chargedAttempts))
             {
@@ -460,6 +462,7 @@ namespace PickAndPlaceShop
                         SetState(ShopClawMachineState.Judge);
                     break;
                 case ShopClawMachineState.Judge:
+                    ServerObserveChuteCandidates();
                     if (stateElapsed >= config.JudgeTimeout)
                         SetState(ShopClawMachineState.Cooldown);
                     break;
@@ -778,6 +781,22 @@ namespace PickAndPlaceShop
             if (prize == null) return;
             chuteStableSeconds.Remove(prize.NetworkObjectId);
             chuteLastObservationTime.Remove(prize.NetworkObjectId);
+        }
+
+        private void ServerObserveChuteCandidates()
+        {
+            if (!IsServer) return;
+            if (chuteAwardVolume == null)
+            {
+                ShopClawChuteTrigger trigger = GetComponentInChildren<ShopClawChuteTrigger>(true);
+                chuteAwardVolume = trigger != null ? trigger.GetComponent<Collider>() : null;
+            }
+            if (chuteAwardVolume == null || !chuteAwardVolume.enabled) return;
+            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            {
+                if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
+                ServerObserveChutePrize(prize, chuteAwardVolume);
+            }
         }
 
         private void ServerAwardChutePrize(ShopClawPrizeNetwork prize)

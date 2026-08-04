@@ -51,11 +51,11 @@ MonoBehaviour:
   scoopMaxAngularSpeed: 42.5
   scoopAngularAcceleration: 112.5
   scoopRotationSweepStep: 3
-  pourAngle: 52
+  pourAngle: 62
   sweepSkin: 0.006
   floorClearance: 0.004
   chuteHorizontalInset: 0
-  scoopReturnInset: 0.38
+  scoopReturnInset: 0.68
   scoopVerticalAcceleration: 4.5
   loadedLiftSpeedMultiplier: 0.76
   capsuleMaxDepenetrationVelocity: 1.4

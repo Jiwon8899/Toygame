@@ -272,14 +272,14 @@ namespace PickAndPlaceShop.Editor
                 float scrape = 0.78f + index * 0.02f;
                 float lift = 1.25f;
                 config.EditorConfigureScoop(diameter, 0.065f, rim, scrape, 0.48f,
-                    8f, 52f, 0.006f, 0.004f, 0.76f,
+                    8f, 62f, 0.006f, 0.004f, 0.76f,
                     new Vector4(0.34f, 0.40f, 0.48f, 0.58f));
                 config.EditorConfigureRarity(config.RarityWeights, ShopMultiPrizePolicy.AwardAll);
                 float tunedDescend = config.MachineId == 101 ? 0.525f :
                     config.MachineId == 102 ? 0.60f : 0.6875f;
                 config.EditorConfigureCaptureMotion(config.DropHeight, lift, tunedDescend);
                 config.EditorConfigureScoopMotion(tunedDescend, lift, 42.5f, 112.5f);
-                config.EditorConfigureScoopDischarge(0.38f);
+                config.EditorConfigureScoopDischarge(0.68f);
                 config.EditorConfigureScoopAwardTiming(0.2f, 3f);
                 config.EditorConfigureReturnSpeed(1.2f);
                 EditorUtility.SetDirty(config);
