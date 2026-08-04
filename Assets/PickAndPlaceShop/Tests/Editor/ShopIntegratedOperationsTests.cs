@@ -109,7 +109,7 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void SavePayload_RoundTripsLiveOperationsVersionSeven()
+        public void SavePayload_RoundTripsCurrentLiveOperationsVersion()
         {
             ShopProgressionSaveData source = new()
             {
@@ -132,7 +132,7 @@ namespace PickAndPlaceShop.Tests
             });
             string json = JsonUtility.ToJson(source);
             ShopProgressionSaveData restored = JsonUtility.FromJson<ShopProgressionSaveData>(json);
-            Assert.AreEqual(7, restored.version);
+            Assert.AreEqual(ShopProgressionSaveStore.CurrentVersion, restored.version);
             Assert.AreEqual(155f, restored.livePhaseSecondsRemaining);
             Assert.AreEqual("복고풍 고양이 굿즈가 화제예요.", restored.trendNews);
             Assert.IsTrue(restored.customerProfiles.Single().regular);
