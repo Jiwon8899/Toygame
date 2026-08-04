@@ -88,7 +88,7 @@ namespace PickAndPlaceShop
 
         public void ServerInitialize(ulong machineId, int definitionIndex, ShopClawPrizeDefinition definition,
             Vector3 position, Quaternion rotation, int visualPrefabIndex = -1,
-            ShopProductRarity? spawnedRarity = null)
+            ShopProductRarity? spawnedRarity = null, float maximumDepenetrationVelocity = 1.4f)
         {
             if (!IsServer || definition == null) return;
             if (NetworkManager.NetworkConfig.NetworkTopology == NetworkTopologyTypes.DistributedAuthority)
@@ -121,6 +121,7 @@ namespace PickAndPlaceShop
             Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             Body.constraints = RigidbodyConstraints.None;
             Body.maxAngularVelocity = 12f;
+            Body.maxDepenetrationVelocity = Mathf.Max(0.1f, maximumDepenetrationVelocity);
             Body.solverIterations = 12;
             Body.solverVelocityIterations = 6;
             Body.isKinematic = false;

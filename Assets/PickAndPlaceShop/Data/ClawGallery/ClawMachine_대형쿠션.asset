@@ -20,13 +20,13 @@ MonoBehaviour:
   acceleration: 8
   xBounds: {x: -1.45, y: 1.45}
   zBounds: {x: -1.18, y: 1.18}
-  topHeight: 3.55
+  topHeight: 3.2
   dropHeight: 1
   descendSpeed: 0.55
   liftSpeed: 1
   returnSpeed: 1.2
   closeDuration: 1.75
-  releaseDuration: 0.45
+  releaseDuration: 1.4
   interactionRange: 4.5
   inputSendInterval: 0.06
   autoDropDelay: 3
@@ -45,12 +45,28 @@ MonoBehaviour:
   scrapeDistance: 0.84
   scrapeSpeed: 0.48
   scrapeTiltAngle: 8
-  pourAngle: 52
+  scoopPivotHeight: 0.55
+  scoopDigAngle: 28
+  scoopCarryAngle: -10
+  scoopMaxAngularSpeed: 34
+  scoopAngularAcceleration: 90
+  scoopRotationSweepStep: 3
+  pourAngle: 85
   sweepSkin: 0.006
   floorClearance: 0.004
   chuteHorizontalInset: 0
   scoopVerticalAcceleration: 4.5
   loadedLiftSpeedMultiplier: 0.76
+  capsuleMaxDepenetrationVelocity: 1.4
+  spawnGuardEnabled: 1
+  spawnGuardCenterZ: 1.38
+  spawnGuardWidth: 2.2
+  spawnGuardDepth: 0.8
+  spawnGuardFeederLength: 0.9
+  spawnGuardHeight: 0.24
+  spawnGuardSlopeAngle: 6
+  spawnGuardScoopClearance: 0.08
+  spawnGuardColor: {r: 0.12, g: 0.38, b: 0.52, a: 1}
   commonCapsuleMass: 0.34
   uncommonCapsuleMass: 0.4
   rareCapsuleMass: 0.48
@@ -70,4 +86,5 @@ MonoBehaviour:
   releaseTimeout: 2
   judgeTimeout: 3.25
   scoopPhysicsMaterial: {fileID: 13400000, guid: 5a17b886b4ed639418f5c65d2ba1ce4a, type: 2}
+  scoopOuterPhysicsMaterial: {fileID: 13400000, guid: afa695e3b7a3a8947b8a60fef469c76a, type: 2}
   machineFloorMaterial: {fileID: 13400000, guid: b4b09659acf44754eba2dd5257ea0516, type: 2}

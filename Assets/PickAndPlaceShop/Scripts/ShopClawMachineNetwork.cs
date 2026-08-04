@@ -115,6 +115,10 @@ namespace PickAndPlaceShop
         private System.Random prizeRandom;
         private Vector2 scrapeOrigin;
         private Vector2 scrapeTarget;
+        private float scoopTiltAngle;
+        private float scoopAngularVelocity;
+        private float scoopCurlDirection = 1f;
+        private bool scoopReachedDigAngle;
         private Quaternion scoopTargetRotation = Quaternion.identity;
         private Vector3 scoopPourDirectionLocal = Vector3.right;
         private bool scoopBlockedDuringDescent;
@@ -124,6 +128,7 @@ namespace PickAndPlaceShop
         private bool floorVerificationOverride;
         private bool floorVerificationRunning;
         private int loggedReleaseAttempt = -1;
+        private GameObject spawnGuardRoot;
 
         public ShopClawMachineConfig Config => config;
         public bool IsManuallyBusy => OccupantClientId.Value != ShopClawRules.NoOccupant ||
@@ -220,6 +225,8 @@ namespace PickAndPlaceShop
         {
             if (Instance == null) Instance = this;
             EnsureAimGroundMarker();
+            EnsureSpawnGuard();
+            EnsureChuteGlassOpening();
             AwardedCount.OnValueChanged += OnAwardedCountChanged;
             if (IsServer)
             {
@@ -250,6 +257,7 @@ namespace PickAndPlaceShop
         {
             ExitLocalMode();
             if (aimGroundMarker != null) Destroy(aimGroundMarker);
+            if (spawnGuardRoot != null) Destroy(spawnGuardRoot);
             if (Instance == this) Instance = null;
             if (LocalActiveMachine == this) LocalActiveMachine = null;
             base.OnDestroy();
@@ -410,10 +418,9 @@ namespace PickAndPlaceShop
                         SetState(ShopClawMachineState.Close);
                     break;
                 case ShopClawMachineState.Close:
-                    ServerUpdateScoopScrape(dt);
+                    bool curlComplete = ServerUpdateScoopCurl(dt);
                     UpdateScoopLoadDiagnostics();
-                    if ((RailPosition.Value - scrapeTarget).sqrMagnitude < 0.0025f ||
-                        stateElapsed >= config.CloseTimeout)
+                    if (curlComplete || stateElapsed >= config.CloseTimeout)
                         SetState(ShopClawMachineState.Ascend);
                     break;
                 case ShopClawMachineState.Ascend:
@@ -429,7 +436,16 @@ namespace PickAndPlaceShop
                     break;
                 case ShopClawMachineState.Return:
                     UpdateScoopLoadDiagnostics();
-                    Vector2 chute = new(chuteDropPoint.localPosition.x, chuteDropPoint.localPosition.z);
+                    Vector3 chuteLocal = transform.InverseTransformPoint(chuteDropPoint.position);
+                    Vector2 chuteDirection = new(chuteLocal.x, chuteLocal.z);
+                    if (chuteDirection.sqrMagnitude > 0.0001f) chuteDirection.Normalize();
+                    else chuteDirection = Vector2.right;
+                    // Stop one pan radius before the chute.  Driving the pan centre all
+                    // the way to the drop point makes its outer rim collide with the
+                    // cabinet corner post, preventing the pour rotation entirely.
+                    Vector2 chute = new Vector2(chuteLocal.x, chuteLocal.z) -
+                                    chuteDirection * (config.ScoopDiameter * 0.5f +
+                                                      config.SweepSkin);
                     RailPosition.Value = Vector2.MoveTowards(RailPosition.Value, chute, config.ReturnSpeed * dt);
                     if ((RailPosition.Value - chute).sqrMagnitude < 0.0025f ||
                         stateElapsed >= config.ReturnTimeout)
@@ -490,6 +506,165 @@ namespace PickAndPlaceShop
             markerRenderer.receiveShadows = false;
         }
 
+        private void EnsureSpawnGuard()
+        {
+            if (config == null || !config.SpawnGuardEnabled || spawnGuardRoot != null) return;
+            Transform existing = transform.Find("CapsuleSpawnGuard");
+            if (existing != null)
+            {
+                spawnGuardRoot = existing.gameObject;
+                return;
+            }
+
+            spawnGuardRoot = new GameObject("CapsuleSpawnGuard");
+            spawnGuardRoot.transform.SetParent(transform, false);
+            float floorY = config.DropHeight - config.ScoopBottomThickness;
+            float halfWidth = config.SpawnGuardWidth * 0.5f;
+            float halfDepth = config.SpawnGuardDepth * 0.5f;
+            float slope = Mathf.Tan(config.SpawnGuardSlopeAngle * Mathf.Deg2Rad);
+            // The feeder must finish on the playfield, not underneath it.  Keeping the
+            // whole ramp above floor level also removes the small seam that used to catch
+            // sleeping capsules at the guard entrance.
+            float guardCenterY = floorY + 0.03f +
+                                 slope * (config.SpawnGuardFeederLength + halfDepth);
+            float feederCenterY = floorY + 0.025f +
+                                  slope * config.SpawnGuardFeederLength * 0.5f;
+            CreateSpawnGuardPart("경사 바닥", new Vector3(0f, guardCenterY, config.SpawnGuardCenterZ),
+                new Vector3(config.SpawnGuardWidth, 0.06f, config.SpawnGuardDepth),
+                Quaternion.Euler(-config.SpawnGuardSlopeAngle, 0f, 0f), true);
+            float guardFront = config.SpawnGuardCenterZ - halfDepth;
+            CreateSpawnGuardPart("완만한 유도 경사",
+                new Vector3(0f, feederCenterY,
+                    guardFront - config.SpawnGuardFeederLength * 0.5f),
+                new Vector3(config.SpawnGuardWidth * 0.92f, 0.05f,
+                    config.SpawnGuardFeederLength),
+                Quaternion.Euler(-config.SpawnGuardSlopeAngle, 0f, 0f), true);
+            CreateSpawnGuardPart("왼쪽 가림벽",
+                new Vector3(-halfWidth, guardCenterY + config.SpawnGuardHeight * 0.5f,
+                    config.SpawnGuardCenterZ),
+                new Vector3(0.08f, config.SpawnGuardHeight, config.SpawnGuardDepth),
+                Quaternion.identity);
+            CreateSpawnGuardPart("오른쪽 가림벽",
+                new Vector3(halfWidth, guardCenterY + config.SpawnGuardHeight * 0.5f,
+                    config.SpawnGuardCenterZ),
+                new Vector3(0.08f, config.SpawnGuardHeight, config.SpawnGuardDepth),
+                Quaternion.identity);
+            CreateSpawnGuardPart("뒤 가림벽",
+                new Vector3(0f, guardCenterY + config.SpawnGuardHeight * 0.5f,
+                    config.SpawnGuardCenterZ + halfDepth),
+                new Vector3(config.SpawnGuardWidth, config.SpawnGuardHeight, 0.08f),
+                Quaternion.identity);
+        }
+
+        private void CreateSpawnGuardPart(string partName, Vector3 localPosition, Vector3 localScale,
+            Quaternion localRotation, bool glideSurface = false)
+        {
+            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = partName;
+            part.transform.SetParent(spawnGuardRoot.transform, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localRotation = localRotation;
+            part.transform.localScale = localScale;
+            Renderer renderer = part.GetComponent<Renderer>();
+            renderer.material.color = config.SpawnGuardColor;
+            BoxCollider collider = part.GetComponent<BoxCollider>();
+            collider.size = new Vector3(0.94f, 0.9f, 0.94f);
+            collider.material = glideSurface && config.ScoopOuterPhysicsMaterial != null
+                ? config.ScoopOuterPhysicsMaterial
+                : config.MachineFloorMaterial;
+        }
+
+        private void EnsureChuteGlassOpening()
+        {
+            if (config == null || chuteDropPoint == null || localGlassRenderers == null ||
+                localGlassRenderers.Length == 0) return;
+
+            Vector3 chuteDirection = Vector3.ProjectOnPlane(
+                chuteDropPoint.position - transform.position, transform.up).normalized;
+            Renderer selectedRenderer = null;
+            BoxCollider selectedCollider = null;
+            float bestAlignment = float.NegativeInfinity;
+            foreach (Renderer glassRenderer in localGlassRenderers)
+            {
+                if (glassRenderer == null) continue;
+                BoxCollider glassCollider = glassRenderer.GetComponent<BoxCollider>();
+                if (glassCollider == null || !glassCollider.enabled || glassCollider.isTrigger ||
+                    glassCollider.transform.Find("ChuteCollisionGap") != null) continue;
+                Vector3 fromMachine = Vector3.ProjectOnPlane(
+                    glassRenderer.bounds.center - transform.position, transform.up).normalized;
+                float alignment = Vector3.Dot(fromMachine, chuteDirection);
+                if (alignment <= bestAlignment) continue;
+                bestAlignment = alignment;
+                selectedRenderer = glassRenderer;
+                selectedCollider = glassCollider;
+            }
+            if (selectedRenderer == null || selectedCollider == null || bestAlignment < 0.5f) return;
+
+            Transform glassTransform = selectedCollider.transform;
+            Vector3 size = selectedCollider.size;
+            Vector3 center = selectedCollider.center;
+            bool splitZ = size.z >= size.x;
+            float fullMin = (splitZ ? center.z : center.x) - (splitZ ? size.z : size.x) * 0.5f;
+            float fullMax = (splitZ ? center.z : center.x) + (splitZ ? size.z : size.x) * 0.5f;
+            Vector3 chuteInGlass = glassTransform.InverseTransformPoint(chuteDropPoint.position);
+            float gapCenter = splitZ ? chuteInGlass.z : chuteInGlass.x;
+            Collider awardTrigger = null;
+            foreach (Collider childCollider in GetComponentsInChildren<Collider>(true))
+            {
+                if (childCollider != null && childCollider.isTrigger &&
+                    childCollider.name == "PrizeAwardTrigger")
+                {
+                    awardTrigger = childCollider;
+                    break;
+                }
+            }
+            float axisScale = splitZ
+                ? Mathf.Abs(glassTransform.lossyScale.z)
+                : Mathf.Abs(glassTransform.lossyScale.x);
+            float triggerWidth = awardTrigger != null
+                ? (splitZ ? awardTrigger.bounds.size.z : awardTrigger.bounds.size.x)
+                : 0f;
+            float requiredScoopOpening = config.ScoopDiameter +
+                                         2f * (config.SweepSkin + config.SpawnGuardScoopClearance);
+            float gapWidth = Mathf.Max(requiredScoopOpening, triggerWidth) /
+                             Mathf.Max(0.001f, axisScale);
+            float gapMin = Mathf.Clamp(gapCenter - gapWidth * 0.5f, fullMin, fullMax);
+            float gapMax = Mathf.Clamp(gapCenter + gapWidth * 0.5f, fullMin, fullMax);
+            if (gapMin <= fullMin || gapMax >= fullMax || gapMax <= gapMin) return;
+
+            PhysicsMaterial material = selectedCollider.material;
+            selectedCollider.enabled = false;
+            AddGlassCollisionSegment(selectedRenderer.gameObject, center, size, splitZ,
+                fullMin, gapMin, material);
+            AddGlassCollisionSegment(selectedRenderer.gameObject, center, size, splitZ,
+                gapMax, fullMax, material);
+            GameObject marker = new("ChuteCollisionGap");
+            marker.transform.SetParent(glassTransform, false);
+        }
+
+        private static void AddGlassCollisionSegment(GameObject target, Vector3 originalCenter,
+            Vector3 originalSize, bool splitZ, float minimum, float maximum,
+            PhysicsMaterial material)
+        {
+            if (target == null || maximum - minimum <= 0.01f) return;
+            BoxCollider segment = target.AddComponent<BoxCollider>();
+            Vector3 center = originalCenter;
+            Vector3 size = originalSize;
+            if (splitZ)
+            {
+                center.z = (minimum + maximum) * 0.5f;
+                size.z = maximum - minimum;
+            }
+            else
+            {
+                center.x = (minimum + maximum) * 0.5f;
+                size.x = maximum - minimum;
+            }
+            segment.center = center;
+            segment.size = size;
+            segment.material = material;
+        }
+
         private void UpdateAimGroundMarker()
         {
             if (aimGroundMarker == null || config == null) return;
@@ -512,7 +687,7 @@ namespace PickAndPlaceShop
             Vector2 desired = Vector2.ClampMagnitude(OperatorInput.Value, 1f) * EffectiveMoveSpeed;
             railVelocity = Vector2.MoveTowards(railVelocity, desired, config.Acceleration * dt);
             RailPosition.Value = ShopClawRules.ClampRail(RailPosition.Value + railVelocity * dt,
-                config.XBounds, config.ZBounds);
+                config.XBounds, config.ScoopZBounds);
             if (autoDropIdleElapsed >= config.AutoDropDelay || aimRemaining <= 0f)
             {
                 ResultMessage.Value = new FixedString128Bytes(aimRemaining <= 0f
@@ -719,16 +894,22 @@ namespace PickAndPlaceShop
             {
                 scoopBlockedDuringDescent = false;
                 scoopTouchedPrize = false;
+                scoopTiltAngle = 0f;
+                scoopAngularVelocity = 0f;
+                scoopReachedDigAngle = false;
+                scoopRig?.ClearPrizeContactHistory();
             }
             if (next == ShopClawMachineState.Close)
             {
                 scrapeOrigin = RailPosition.Value;
-                float preferredDirection = RailPosition.Value.y + config.ScrapeDistance <= config.ZBounds.y
+                float preferredDirection = RailPosition.Value.y + config.ScrapeDistance <= config.ScoopZBounds.y
                     ? 1f
                     : -1f;
-                scrapeTarget = ShopClawRules.ClampRail(
-                    scrapeOrigin + Vector2.up * (config.ScrapeDistance * preferredDirection),
-                    config.XBounds, config.ZBounds);
+                scrapeTarget = scrapeOrigin;
+                scoopCurlDirection = preferredDirection;
+                scoopTiltAngle = 0f;
+                scoopAngularVelocity = 0f;
+                scoopReachedDigAngle = false;
                 ResultMessage.Value = new FixedString128Bytes("팬을 기울여 상품을 퍼올립니다.");
             }
             if (next == ShopClawMachineState.Release)
@@ -741,10 +922,10 @@ namespace PickAndPlaceShop
                     : Vector3.zero;
                 Vector3 chuteLocal = transform.InverseTransformPoint(ChuteWorldPosition);
                 scoopPourDirectionLocal = Vector3.ProjectOnPlane(chuteLocal - bodyLocal, Vector3.up);
-                float depthDirection = Mathf.Sign(scoopPourDirectionLocal.z);
-                if (Mathf.Approximately(depthDirection, 0f)) depthDirection = Mathf.Sign(chuteLocal.z);
-                if (Mathf.Approximately(depthDirection, 0f)) depthDirection = -1f;
-                scoopPourDirectionLocal = Vector3.forward * depthDirection;
+                if (scoopPourDirectionLocal.sqrMagnitude < 0.0001f)
+                    scoopPourDirectionLocal = Vector3.right;
+                else
+                    scoopPourDirectionLocal.Normalize();
             }
             if (next == ShopClawMachineState.Cooldown && IsServer && ShopNetworkGame.Instance != null)
             {
@@ -768,6 +949,12 @@ namespace PickAndPlaceShop
                           " nearest=" + (nearest != null
                               ? nearest.transform.position.ToString("F3") +
                                 " velocity=" + nearest.Body.linearVelocity.ToString("F3")
+                              : "none") +
+                          " scoopRotation=" + (scoopRig != null && scoopRig.Body != null
+                              ? scoopRig.Body.rotation.eulerAngles.ToString("F1")
+                              : "none") +
+                          " scoopBlocker=" + (scoopRig != null
+                              ? scoopRig.LastPoseBlockerName
                               : "none"), this);
                 LastResultSuccess.Value = roundAwardCount > 0;
                 ShopNetworkGame.Instance.ServerRecordClawResult(LastResultSuccess.Value);
@@ -787,6 +974,9 @@ namespace PickAndPlaceShop
             railVelocity = Vector2.zero;
             verticalVelocity = 0f;
             FingerClosed.Value = 0f;
+            scoopTiltAngle = 0f;
+            scoopAngularVelocity = 0f;
+            scoopReachedDigAngle = false;
             RailPosition.Value = Vector2.zero;
             ClawHeight.Value = config.TopHeight;
             AttemptId.Value++;
@@ -813,6 +1003,9 @@ namespace PickAndPlaceShop
             railVelocity = Vector2.zero;
             verticalVelocity = 0f;
             FingerClosed.Value = 0f;
+            scoopTiltAngle = 0f;
+            scoopAngularVelocity = 0f;
+            scoopReachedDigAngle = false;
             RailPosition.Value = Vector2.zero;
             ClawHeight.Value = config.TopHeight;
             AimSecondsRemaining.Value = 0;
@@ -891,7 +1084,8 @@ namespace PickAndPlaceShop
                     visualIndex = config != null ? config.MachineId * 11 + observedDay * 7 + i : i;
                 int definitionIndex = FindDefinitionIndex(definition);
                 prize.ServerInitialize(NetworkObjectId, definitionIndex, definition,
-                    spawnPosition, spawnRotation, visualIndex, spawnedRarity);
+                    spawnPosition, spawnRotation, visualIndex, spawnedRarity,
+                    config != null ? config.CapsuleMaxDepenetrationVelocity : 1.4f);
                 if (prize.Body != null && config != null)
                     prize.Body.mass = config.GetCapsuleMass(spawnedRarity);
                 activePrizes.Add(prize);
@@ -925,7 +1119,8 @@ namespace PickAndPlaceShop
                 networkObject.Spawn(true);
                 prize.ServerInitialize(NetworkObjectId, FindDefinitionIndex(definition), definition,
                     position, rotation, item.visualPrefabIndex,
-                    (ShopProductRarity)Mathf.Clamp(item.rarity, 0, 3));
+                    (ShopProductRarity)Mathf.Clamp(item.rarity, 0, 3),
+                    config != null ? config.CapsuleMaxDepenetrationVelocity : 1.4f);
                 if (prize.Body != null && config != null)
                     prize.Body.mass = config.GetCapsuleMass(
                         (ShopProductRarity)Mathf.Clamp(item.rarity, 0, 3));
@@ -987,10 +1182,31 @@ namespace PickAndPlaceShop
                 float jitterZ = (float)(prizeRandom.NextDouble() * 2.0 - 1.0) * 0.16f;
                 Vector3 candidate = spawn.position + transform.right * jitterX + transform.forward * jitterZ;
                 Vector3 candidateLocal = transform.InverseTransformPoint(candidate);
-                candidateLocal.x = Mathf.Clamp(candidateLocal.x, config.XBounds.x + 0.05f,
-                    config.XBounds.y - 0.05f);
-                candidateLocal.z = Mathf.Clamp(candidateLocal.z, config.ZBounds.x + 0.05f,
-                    config.ZBounds.y - 0.05f);
+                if (config.SpawnGuardEnabled)
+                {
+                    float halfWidth = config.SpawnGuardWidth * 0.5f - radius;
+                    float halfDepth = config.SpawnGuardDepth * 0.5f - radius * 0.35f;
+                    // Fill the guarded drop zone in three non-overlapping columns and
+                    // vertical tiers.  Randomly clamping all spawn points into this small
+                    // zone previously collapsed them to the same edge and skipped most of
+                    // the requested pool.  Vertical tiers are collision-free at creation
+                    // and settle naturally onto the shallow feeder afterwards.
+                    int slot = occupied.Count;
+                    int column = slot % 3;
+                    int tier = slot / 3;
+                    candidateLocal.x = Mathf.Lerp(-halfWidth, halfWidth, column * 0.5f);
+                    candidateLocal.z = Mathf.Clamp(config.SpawnGuardCenterZ,
+                        config.SpawnGuardCenterZ - halfDepth,
+                        config.SpawnGuardCenterZ + halfDepth);
+                    candidateLocal.y += tier * (radius * 2f + clearance);
+                }
+                else
+                {
+                    candidateLocal.x = Mathf.Clamp(candidateLocal.x, config.XBounds.x + 0.05f,
+                        config.XBounds.y - 0.05f);
+                    candidateLocal.z = Mathf.Clamp(candidateLocal.z, config.ZBounds.x + 0.05f,
+                        config.ZBounds.y - 0.05f);
+                }
                 candidate = transform.TransformPoint(candidateLocal);
                 var occupiedPositions = new List<Vector3>(occupied.Count);
                 var occupiedRadii = new List<float>(occupied.Count);
@@ -999,8 +1215,28 @@ namespace PickAndPlaceShop
                     occupiedPositions.Add(otherPosition);
                     occupiedRadii.Add(otherRadius);
                 }
-                if (!ShopClawSpawnRules.CanPlace(candidate, radius, occupiedPositions, occupiedRadii))
-                    continue;
+                bool canPlace = true;
+                if (config.SpawnGuardEnabled)
+                {
+                    // Guard tiers are deliberately separated vertically, so validate the
+                    // real 3D distance here.  The legacy helper is planar by design and
+                    // would reject every safe tier above the first three capsules.
+                    for (int i = 0; i < occupiedPositions.Count; i++)
+                    {
+                        float required = radius + occupiedRadii[i];
+                        if ((candidate - occupiedPositions[i]).sqrMagnitude < required * required)
+                        {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    canPlace = ShopClawSpawnRules.CanPlace(candidate, radius, occupiedPositions,
+                        occupiedRadii);
+                }
+                if (!canPlace) continue;
                 position = candidate;
                 rotation = Quaternion.Euler(0f, (float)prizeRandom.NextDouble() * 360f, 0f);
                 return true;
@@ -1479,6 +1715,7 @@ namespace PickAndPlaceShop
             clawHead = scoopRig.transform;
             clawBody = scoopRig.Body;
             scoopRig.ConfigureBody();
+            scoopRig.ConfigureOuterSurface(config.ScoopOuterPhysicsMaterial);
             if (carriageBody != null)
             {
                 carriageBody.isKinematic = true;
@@ -1497,12 +1734,36 @@ namespace PickAndPlaceShop
                       " rim=" + config.ScoopRimHeight.ToString("F2"), this);
         }
 
-        private void ServerUpdateScoopScrape(float dt)
+        private bool ServerUpdateScoopCurl(float dt)
         {
-            RailPosition.Value = Vector2.MoveTowards(RailPosition.Value, scrapeTarget,
-                config.ScrapeSpeed * dt);
-            float total = Mathf.Max(0.001f, Vector2.Distance(scrapeOrigin, scrapeTarget));
-            FingerClosed.Value = Mathf.Clamp01(Vector2.Distance(scrapeOrigin, RailPosition.Value) / total);
+            float target = scoopReachedDigAngle
+                ? config.ScoopCarryAngle
+                : config.ScoopDigAngle;
+            float direction = Mathf.Sign(target - scoopTiltAngle);
+            float desiredVelocity = direction * config.ScoopMaxAngularSpeed;
+            scoopAngularVelocity = Mathf.MoveTowards(scoopAngularVelocity, desiredVelocity,
+                config.ScoopAngularAcceleration * dt);
+            scoopTiltAngle = Mathf.MoveTowards(scoopTiltAngle, target,
+                Mathf.Abs(scoopAngularVelocity) * dt);
+            if (!scoopReachedDigAngle &&
+                Mathf.Abs(scoopTiltAngle - config.ScoopDigAngle) <= 0.05f)
+            {
+                scoopReachedDigAngle = true;
+                scoopAngularVelocity = 0f;
+            }
+
+            if (!scoopReachedDigAngle)
+            {
+                FingerClosed.Value = 0.5f * Mathf.Clamp01(
+                    Mathf.Abs(scoopTiltAngle) / Mathf.Max(0.01f, config.ScoopDigAngle));
+                return false;
+            }
+
+            float returnRange = Mathf.Max(0.01f,
+                Mathf.Abs(config.ScoopDigAngle - config.ScoopCarryAngle));
+            FingerClosed.Value = 0.5f + 0.5f * Mathf.Clamp01(
+                1f - Mathf.Abs(scoopTiltAngle - config.ScoopCarryAngle) / returnRange);
+            return Mathf.Abs(scoopTiltAngle - config.ScoopCarryAngle) <= 0.05f;
         }
 
         private void ServerDrivePhysicalScoop(float dt)
@@ -1517,6 +1778,8 @@ namespace PickAndPlaceShop
                              State.Value == ShopClawMachineState.Aiming ||
                              State.Value == ShopClawMachineState.Descend ||
                              State.Value == ShopClawMachineState.Close;
+            scoopRig.SetPourSurface(pouring, config.ScoopOuterPhysicsMaterial);
+            scoopRig.SetPhysicalCollisionsEnabled(State.Value != ShopClawMachineState.Judge);
             if (pouring)
                 scoopRig.SetPourOpening(scoopPourDirectionLocal, config.ScoopRimHeight,
                     config.ScoopOpenRimHeight);
@@ -1531,14 +1794,16 @@ namespace PickAndPlaceShop
 
             Vector3 targetWorld = transform.TransformPoint(
                 new Vector3(RailPosition.Value.x, ClawHeight.Value, RailPosition.Value.y));
+            // Lower the pan by its own rim height before tipping.  At the rail's parked
+            // height a full pour rotation intersects the cabinet ceiling, so the sweep
+            // correctly rejects it and prizes never leave the pan.
+            if (pouring)
+                targetWorld -= transform.up * config.ScoopRimHeight;
             Quaternion targetLocalRotation = Quaternion.identity;
             if (State.Value == ShopClawMachineState.Close)
             {
-                float direction = Mathf.Sign(scrapeTarget.y - scrapeOrigin.y);
-                float progress = Mathf.Clamp01(stateElapsed /
-                    Mathf.Max(0.05f, config.CloseDuration));
-                targetLocalRotation = Quaternion.Euler(config.ScrapeTiltAngle * direction * progress,
-                    0f, 0f);
+                targetLocalRotation = Quaternion.Euler(
+                    scoopTiltAngle * scoopCurlDirection, 0f, 0f);
             }
             else if (State.Value == ShopClawMachineState.Release ||
                      State.Value == ShopClawMachineState.Judge)
@@ -1550,14 +1815,30 @@ namespace PickAndPlaceShop
                 Vector3 tiltedNormal = Vector3.up * Mathf.Cos(angle) +
                                        scoopPourDirectionLocal * Mathf.Sin(angle);
                 targetLocalRotation = Quaternion.FromToRotation(Vector3.up, tiltedNormal);
+                // As the pan becomes vertical its lower lip retracts horizontally. Move
+                // the centre toward the chute by the same amount so the open lip remains
+                // directly above the drop opening throughout the tip.
+                float lipRetraction = config.ScoopDiameter * 0.5f *
+                                       (1f - Mathf.Cos(angle));
+                Vector3 pourDirectionWorld = transform.TransformDirection(scoopPourDirectionLocal);
+                targetWorld += pourDirectionWorld * lipRetraction;
+                if (State.Value == ShopClawMachineState.Judge)
+                {
+                    // Pull the now-vertical pan back out from under the capsule while the
+                    // chute is still in its judging state.  This gives the prize time to
+                    // fall and settle before the award window closes.
+                    float clearanceProgress = Mathf.Clamp01(stateElapsed /
+                        Mathf.Max(0.01f, config.ReleaseDuration));
+                    targetWorld -= pourDirectionWorld * lipRetraction * clearanceProgress;
+                }
                 FingerClosed.Value = 1f - progress;
             }
-            else if (State.Value == ShopClawMachineState.Ascend)
+            else if (State.Value == ShopClawMachineState.Ascend ||
+                     State.Value == ShopClawMachineState.Return)
             {
-                float progress = Mathf.Clamp01(stateElapsed / 0.35f);
-                float direction = Mathf.Sign(scrapeTarget.y - scrapeOrigin.y);
                 targetLocalRotation = Quaternion.Euler(
-                    Mathf.Lerp(config.ScrapeTiltAngle * direction, 0f, progress), 0f, 0f);
+                    config.ScoopCarryAngle * scoopCurlDirection, 0f, 0f);
+                FingerClosed.Value = 1f;
             }
             else
             {
@@ -1567,13 +1848,22 @@ namespace PickAndPlaceShop
             scoopTargetRotation = transform.rotation * targetLocalRotation;
             float tilt = Mathf.Abs(targetLocalRotation.eulerAngles.x);
             if (tilt > 180f) tilt = 360f - tilt;
+            bool pivotCurl = State.Value == ShopClawMachineState.Close ||
+                             State.Value == ShopClawMachineState.Ascend ||
+                             State.Value == ShopClawMachineState.Return;
+            if (pivotCurl)
+            {
+                Vector3 pivotWorld = targetWorld + transform.up * config.ScoopPivotHeight;
+                targetWorld = pivotWorld - scoopTargetRotation *
+                              (Vector3.up * config.ScoopPivotHeight);
+            }
             if (tilt > 0.01f)
-                targetWorld += transform.up *
-                               (config.ScoopDiameter * 0.5f * Mathf.Sin(tilt * Mathf.Deg2Rad));
+                targetWorld += transform.up * (config.ScoopDiameter * 0.5f *
+                                               Mathf.Sin(tilt * Mathf.Deg2Rad));
             bool wasBlocked = scoopBlockedDuringDescent;
             bool blocked = scoopRig.SweepMove(targetWorld, scoopTargetRotation,
                 config.SweepSkin, false,
-                out RaycastHit hit, out bool touchedPrize);
+                out RaycastHit hit, out bool touchedPrize, config.ScoopRotationSweepStep);
             scoopTouchedPrize |= touchedPrize;
 
             if (State.Value == ShopClawMachineState.Release &&

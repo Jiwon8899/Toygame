@@ -20,6 +20,8 @@ namespace PickAndPlaceShop
         private float previousTimeScale;
         private bool waitingForRefillSettle;
         private float replayReadyAt;
+        private int nonContactEjections;
+        private readonly HashSet<int> countedEjections = new();
 
         public static bool Begin(ShopClawMachineNetwork target, int attempts)
         {
@@ -30,6 +32,8 @@ namespace PickAndPlaceShop
             verifier.previousAwardedCount = target.AwardedCount.Value;
             verifier.previousTimeScale = Time.timeScale;
             Time.timeScale = 8f;
+            verifier.waitingForRefillSettle = true;
+            verifier.replayReadyAt = Time.unscaledTime + 1f;
             return true;
         }
 
@@ -43,6 +47,7 @@ namespace PickAndPlaceShop
 
             NetworkObject player = NetworkManager.Singleton.LocalClient?.PlayerObject;
             if (player != null) player.transform.position = machine.OperatorWorldPosition;
+            MonitorNonContactEjections();
 
             if (waitingForRefillSettle)
             {
@@ -79,7 +84,7 @@ namespace PickAndPlaceShop
                     break;
                 case ShopClawMachineState.Cooldown:
                     if (observedAttemptId == -machine.AttemptId.Value) break;
-                    int delta = Mathf.Max(0, machine.AwardedCount.Value);
+                    int delta = Mathf.Max(0, machine.AwardedCount.Value - previousAwardedCount);
                     previousAwardedCount = machine.AwardedCount.Value;
                     awards.Add(delta);
                     peakLoads.Add(peakLoad);
@@ -90,6 +95,10 @@ namespace PickAndPlaceShop
                     else
                     {
                         machine.RefillPrizesForScoopVerification();
+                        // The verification refill deliberately resets the machine's
+                        // network award counter. Rebase here so the next round's delta is
+                        // measured from that reset instead of being under-counted.
+                        previousAwardedCount = machine.AwardedCount.Value;
                         waitingForRefillSettle = true;
                         replayReadyAt = Time.unscaledTime + 0.75f;
                     }
@@ -106,8 +115,11 @@ namespace PickAndPlaceShop
             float radius = machine.Config.ScoopDiameter * 0.5f + machine.Config.SweepSkin;
             float minimumX = machine.Config.XBounds.x + radius;
             float maximumX = Mathf.Min(0f, machine.Config.XBounds.y - radius);
-            float minimumZ = machine.Config.ZBounds.x + radius;
-            float maximumZ = machine.Config.ZBounds.y - radius;
+            Vector2 scoopZBounds = machine.Config.ScoopZBounds;
+            float minimumZ = scoopZBounds.x + radius;
+            float maximumZ = scoopZBounds.y;
+            if (maximumZ < minimumZ)
+                minimumZ = maximumZ = (scoopZBounds.x + scoopZBounds.y) * 0.5f;
             foreach (ShopClawPrizeNetwork prize in prizes)
             {
                 if (prize == null || prize.Awarded.Value || !prize.IsSpawned ||
@@ -130,12 +142,28 @@ namespace PickAndPlaceShop
             });
             ShopClawPrizeNetwork target = candidates[0];
             Vector3 prizeLocal = machine.transform.InverseTransformPoint(target.transform.position);
-            float approach = machine.Config.ScrapeDistance * 0.55f;
-            float startZ = Mathf.Clamp(prizeLocal.z - approach, minimumZ, maximumZ);
-            if (startZ + machine.Config.ScrapeDistance > maximumZ)
-                startZ = prizeLocal.z + approach;
             return new Vector2(Mathf.Clamp(prizeLocal.x, minimumX, maximumX),
-                Mathf.Clamp(startZ, minimumZ, maximumZ));
+                Mathf.Clamp(prizeLocal.z, minimumZ, maximumZ));
+        }
+
+        private void MonitorNonContactEjections()
+        {
+            ShopClawPrizeNetwork[] prizes = FindObjectsByType<ShopClawPrizeNetwork>(
+                FindObjectsSortMode.None);
+            foreach (ShopClawPrizeNetwork prize in prizes)
+            {
+                if (prize == null || !prize.IsSpawned || prize.Awarded.Value ||
+                    prize.MachineNetworkObjectId.Value != machine.NetworkObjectId) continue;
+                Vector3 local = machine.transform.InverseTransformPoint(prize.transform.position);
+                if (!ShopClawRules.IsPrizeOutsidePlayableArea(local,
+                        machine.Config.XBounds, machine.Config.ZBounds)) continue;
+                int id = prize.GetInstanceID();
+                if (!countedEjections.Add(id) ||
+                    (machine.ScoopRig != null && machine.ScoopRig.HasContactedPrize(prize))) continue;
+                nonContactEjections++;
+                Debug.LogError("[ScoopPhysics] NON_CONTACT_EJECTION prize=" + id +
+                               " local=" + local.ToString("F3"), this);
+            }
         }
 
         private void Finish(string error)
@@ -147,6 +175,7 @@ namespace PickAndPlaceShop
             Debug.Log("[ScoopPhysics] BALANCE_COMPLETE attempts=" + awards.Count +
                       " distribution=[" + string.Join(",", awards) + "] total=" + total +
                       " average=" + average.ToString("F2") +
+                      " nonContactEjections=" + nonContactEjections +
                       " peakLoads=[" + string.Join(",", peakLoads) + "]" +
                       (string.IsNullOrEmpty(error) ? string.Empty : " error=" + error), this);
             Destroy(this);

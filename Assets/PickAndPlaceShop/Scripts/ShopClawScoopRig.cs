@@ -13,7 +13,11 @@ namespace PickAndPlaceShop
         [SerializeField] private Transform visualRoot;
 
         private readonly List<Collider> ownColliders = new();
+        private readonly List<BoxCollider> ownBoxColliders = new();
+        private readonly HashSet<int> contactedPrizeIds = new();
         private readonly RaycastHit[] floorHits = new RaycastHit[32];
+        private readonly Collider[] poseOverlaps = new Collider[64];
+        private PhysicsMaterial innerBottomMaterial;
 
         public Rigidbody Body => body;
         public BoxCollider BottomCollider => bottomCollider;
@@ -24,6 +28,7 @@ namespace PickAndPlaceShop
         public float BottomWorldY => bottomCollider != null
             ? bottomCollider.bounds.min.y
             : transform.position.y;
+        public string LastPoseBlockerName { get; private set; } = string.Empty;
 
 #if UNITY_EDITOR
         public void EditorConfigure(Rigidbody scoopBody, BoxCollider bottom,
@@ -40,6 +45,7 @@ namespace PickAndPlaceShop
         private void Awake()
         {
             if (body == null) body = GetComponent<Rigidbody>();
+            if (bottomCollider != null) innerBottomMaterial = bottomCollider.material;
             ConfigureBody();
             CacheColliders();
         }
@@ -55,10 +61,12 @@ namespace PickAndPlaceShop
         }
 
         public bool SweepMove(Vector3 targetPosition, Quaternion targetRotation,
-            float skin, bool stopOnPrize, out RaycastHit blockingHit, out bool touchedPrize)
+            float skin, bool stopOnPrize, out RaycastHit blockingHit, out bool touchedPrize,
+            float maximumRotationStep = 3f)
         {
             blockingHit = default;
             touchedPrize = false;
+            LastPoseBlockerName = string.Empty;
             if (body == null) return false;
 
             Vector3 delta = targetPosition - body.position;
@@ -86,18 +94,151 @@ namespace PickAndPlaceShop
                     if (prize != null)
                     {
                         touchedPrize = true;
+                        contactedPrizeIds.Add(prize.GetInstanceID());
                         if (!stopOnPrize) continue;
                     }
                     float candidate = Mathf.Max(0f, hit.distance - skin);
                     if (candidate >= allowedDistance) continue;
                     allowedDistance = candidate;
                     blockingHit = hit;
+                    LastPoseBlockerName = hit.collider.name;
                 }
-
-                body.MovePosition(body.position + direction * allowedDistance);
             }
-            body.MoveRotation(targetRotation);
+            Vector3 startPosition = body.position;
+            Quaternion startRotation = body.rotation;
+            Vector3 translatedPosition = distance > 0.00001f
+                ? body.position + delta.normalized * allowedDistance
+                : body.position;
+            float rotationAngle = Quaternion.Angle(startRotation, targetRotation);
+            int rotationSteps = Mathf.Max(1, Mathf.CeilToInt(rotationAngle /
+                Mathf.Max(0.25f, maximumRotationStep)));
+            Vector3 safePosition = startPosition;
+            Quaternion safeRotation = startRotation;
+            for (int step = 1; step <= rotationSteps; step++)
+            {
+                float progress = step / (float)rotationSteps;
+                Vector3 candidatePosition = Vector3.Lerp(startPosition, translatedPosition, progress);
+                Quaternion candidateRotation = Quaternion.Slerp(startRotation, targetRotation, progress);
+                if (IsPoseBlocked(candidatePosition, candidateRotation, skin, stopOnPrize,
+                        ref touchedPrize)) break;
+                safePosition = candidatePosition;
+                safeRotation = candidateRotation;
+            }
+            body.MovePosition(safePosition);
+            body.MoveRotation(safeRotation);
             return blockingHit.collider != null;
+        }
+
+        public void ConfigureOuterSurface(PhysicsMaterial material)
+        {
+            if (material == null || rimColliders == null) return;
+            for (int index = 0; index < rimColliders.Length; index++)
+            {
+                BoxCollider source = rimColliders[index];
+                if (source == null || source.transform.Find("OuterGlideCollider") != null) continue;
+                GameObject shell = new("OuterGlideCollider", typeof(BoxCollider));
+                shell.transform.SetParent(source.transform, false);
+                BoxCollider glide = shell.GetComponent<BoxCollider>();
+                Vector3 outwardWorld = source.bounds.center - body.worldCenterOfMass;
+                outwardWorld = Vector3.ProjectOnPlane(outwardWorld, transform.up).normalized;
+                Vector3 outwardLocal = source.transform.InverseTransformDirection(outwardWorld);
+                Vector3 size = source.size;
+                Vector3 center = source.center;
+                const float thickness = 0.025f;
+                if (Mathf.Abs(outwardLocal.x) > Mathf.Abs(outwardLocal.z))
+                {
+                    float sign = Mathf.Sign(outwardLocal.x);
+                    size.x = thickness;
+                    center.x += sign * (source.size.x * 0.5f + thickness * 0.5f);
+                }
+                else
+                {
+                    float sign = Mathf.Sign(outwardLocal.z);
+                    size.z = thickness;
+                    center.z += sign * (source.size.z * 0.5f + thickness * 0.5f);
+                }
+                glide.size = size;
+                glide.center = center;
+                glide.material = material;
+            }
+            CacheColliders();
+        }
+
+        public void SetPourSurface(bool pouring, PhysicsMaterial glideMaterial)
+        {
+            if (bottomCollider == null) return;
+            if (innerBottomMaterial == null && bottomCollider.material != glideMaterial)
+                innerBottomMaterial = bottomCollider.material;
+            PhysicsMaterial target = pouring && glideMaterial != null
+                ? glideMaterial
+                : innerBottomMaterial;
+            if (target != null && bottomCollider.material != target)
+                bottomCollider.material = target;
+        }
+
+        public void SetPhysicalCollisionsEnabled(bool enabled)
+        {
+            foreach (Collider ownCollider in ownColliders)
+                if (ownCollider != null && ownCollider.enabled != enabled)
+                    ownCollider.enabled = enabled;
+        }
+
+        public void ClearPrizeContactHistory() => contactedPrizeIds.Clear();
+
+        public bool HasContactedPrize(ShopClawPrizeNetwork prize) =>
+            prize != null && contactedPrizeIds.Contains(prize.GetInstanceID());
+
+        private bool IsPoseBlocked(Vector3 bodyPosition, Quaternion bodyRotation, float skin,
+            bool stopOnPrize, ref bool touchedPrize)
+        {
+            for (int boxIndex = 0; boxIndex < ownBoxColliders.Count; boxIndex++)
+            {
+                BoxCollider box = ownBoxColliders[boxIndex];
+                if (box == null || !box.enabled) continue;
+                Vector3 relativeTransformPosition = transform.InverseTransformPoint(box.transform.position);
+                Quaternion relativeTransformRotation = Quaternion.Inverse(transform.rotation) *
+                                                       box.transform.rotation;
+                Vector3 predictedTransformPosition = bodyPosition +
+                                                     bodyRotation * relativeTransformPosition;
+                Quaternion predictedTransformRotation = bodyRotation * relativeTransformRotation;
+                Vector3 predictedCenter = predictedTransformPosition +
+                                          predictedTransformRotation *
+                                          Vector3.Scale(box.center, box.transform.lossyScale);
+                Vector3 scale = box.transform.lossyScale;
+                Vector3 halfExtents = Vector3.Scale(box.size * 0.5f,
+                    new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+                halfExtents = Vector3.Max(halfExtents - Vector3.one * skin,
+                    Vector3.one * 0.002f);
+                int count = Physics.OverlapBoxNonAlloc(predictedCenter, halfExtents, poseOverlaps,
+                    predictedTransformRotation, Physics.DefaultRaycastLayers,
+                    QueryTriggerInteraction.Ignore);
+                for (int hitIndex = 0; hitIndex < count; hitIndex++)
+                {
+                    Collider hit = poseOverlaps[hitIndex];
+                    if (hit == null || IsOwnCollider(hit)) continue;
+                    ShopClawPrizeNetwork prize = hit.GetComponentInParent<ShopClawPrizeNetwork>();
+                    if (prize != null)
+                    {
+                        touchedPrize = true;
+                        contactedPrizeIds.Add(prize.GetInstanceID());
+                        if (!stopOnPrize) continue;
+                    }
+
+                    bool candidatePenetrates = Physics.ComputePenetration(box,
+                        predictedTransformPosition, predictedTransformRotation,
+                        hit, hit.transform.position, hit.transform.rotation,
+                        out _, out float candidateDepth);
+                    if (!candidatePenetrates) continue;
+                    bool currentPenetrates = Physics.ComputePenetration(box,
+                        box.transform.position, box.transform.rotation,
+                        hit, hit.transform.position, hit.transform.rotation,
+                        out _, out float currentDepth);
+                    if (currentPenetrates && candidateDepth <= currentDepth + skin) continue;
+                    LastPoseBlockerName = hit.name;
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool TryGetFloorSurface(out float floorY)
@@ -185,6 +326,8 @@ namespace PickAndPlaceShop
         {
             ownColliders.Clear();
             ownColliders.AddRange(GetComponentsInChildren<Collider>(true));
+            ownBoxColliders.Clear();
+            ownBoxColliders.AddRange(GetComponentsInChildren<BoxCollider>(true));
         }
 
         private bool IsOwnCollider(Collider candidate)
@@ -192,6 +335,17 @@ namespace PickAndPlaceShop
             for (int index = 0; index < ownColliders.Count; index++)
                 if (ownColliders[index] == candidate) return true;
             return false;
+        }
+
+        private void OnCollisionEnter(Collision collision) => RecordPrizeContact(collision.collider);
+        private void OnCollisionStay(Collision collision) => RecordPrizeContact(collision.collider);
+
+        private void RecordPrizeContact(Collider candidate)
+        {
+            ShopClawPrizeNetwork prize = candidate != null
+                ? candidate.GetComponentInParent<ShopClawPrizeNetwork>()
+                : null;
+            if (prize != null) contactedPrizeIds.Add(prize.GetInstanceID());
         }
     }
 }

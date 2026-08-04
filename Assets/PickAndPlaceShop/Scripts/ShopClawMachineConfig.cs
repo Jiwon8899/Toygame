@@ -44,12 +44,30 @@ namespace PickAndPlaceShop
         [Range(0.25f, 1.4f)] [SerializeField] private float scrapeDistance = 0.72f;
         [Range(0.2f, 2.5f)] [SerializeField] private float scrapeSpeed = 0.68f;
         [Range(2f, 22f)] [SerializeField] private float scrapeTiltAngle = 10f;
+        [Range(0.2f, 1.2f)] [SerializeField] private float scoopPivotHeight = 0.55f;
+        [Range(12f, 45f)] [SerializeField] private float scoopDigAngle = 28f;
+        [Range(-20f, -2f)] [SerializeField] private float scoopCarryAngle = -10f;
+        [Range(12f, 60f)] [SerializeField] private float scoopMaxAngularSpeed = 34f;
+        [Range(20f, 180f)] [SerializeField] private float scoopAngularAcceleration = 90f;
+        [Range(1f, 8f)] [SerializeField] private float scoopRotationSweepStep = 3f;
         [Range(25f, 85f)] [SerializeField] private float pourAngle = 62f;
         [Range(0.001f, 0.025f)] [SerializeField] private float sweepSkin = 0.006f;
         [Range(0.001f, 0.03f)] [SerializeField] private float floorClearance = 0.004f;
         [Range(0f, 0.1f)] [SerializeField] private float chuteHorizontalInset = 0f;
         [Min(0.1f)] [SerializeField] private float scoopVerticalAcceleration = 4.5f;
         [Range(0.5f, 1f)] [SerializeField] private float loadedLiftSpeedMultiplier = 0.82f;
+        [Range(0.4f, 4f)] [SerializeField] private float capsuleMaxDepenetrationVelocity = 1.4f;
+
+        [Header("Capsule drop guard")]
+        [SerializeField] private bool spawnGuardEnabled = true;
+        [Range(-1.2f, 1.4f)] [SerializeField] private float spawnGuardCenterZ = 0.92f;
+        [Range(0.8f, 2.4f)] [SerializeField] private float spawnGuardWidth = 1.9f;
+        [Range(0.25f, 0.8f)] [SerializeField] private float spawnGuardDepth = 0.46f;
+        [Range(0.4f, 1.4f)] [SerializeField] private float spawnGuardFeederLength = 0.9f;
+        [Range(0.12f, 0.5f)] [SerializeField] private float spawnGuardHeight = 0.24f;
+        [Range(2f, 12f)] [SerializeField] private float spawnGuardSlopeAngle = 6f;
+        [Range(0.02f, 0.2f)] [SerializeField] private float spawnGuardScoopClearance = 0.08f;
+        [SerializeField] private Color spawnGuardColor = new(0.12f, 0.38f, 0.52f);
 
         [Header("Capsule mass by rarity")]
         [Range(0.15f, 1.5f)] [SerializeField] private float commonCapsuleMass = 0.34f;
@@ -80,6 +98,7 @@ namespace PickAndPlaceShop
         [Header("Physics materials")]
         [FormerlySerializedAs("clawFingerMaterial")]
         [SerializeField] private PhysicsMaterial scoopPhysicsMaterial;
+        [SerializeField] private PhysicsMaterial scoopOuterPhysicsMaterial;
         [SerializeField] private PhysicsMaterial machineFloorMaterial;
 
         public int MachineId => machineId;
@@ -113,6 +132,12 @@ namespace PickAndPlaceShop
         public float ScrapeDistance => scrapeDistance;
         public float ScrapeSpeed => scrapeSpeed;
         public float ScrapeTiltAngle => scrapeTiltAngle;
+        public float ScoopPivotHeight => scoopPivotHeight;
+        public float ScoopDigAngle => scoopDigAngle;
+        public float ScoopCarryAngle => scoopCarryAngle;
+        public float ScoopMaxAngularSpeed => scoopMaxAngularSpeed;
+        public float ScoopAngularAcceleration => scoopAngularAcceleration;
+        public float ScoopRotationSweepStep => scoopRotationSweepStep;
         public float PourAngle => pourAngle;
         public float SweepSkin => sweepSkin;
         public float FloorClearance => floorClearance;
@@ -123,6 +148,27 @@ namespace PickAndPlaceShop
         public float OperatorCameraFieldOfView => operatorCameraFieldOfView;
         public float OperatorCameraFocusHeight => operatorCameraFocusHeight;
         public float LoadedLiftSpeedMultiplier => loadedLiftSpeedMultiplier;
+        public float CapsuleMaxDepenetrationVelocity => capsuleMaxDepenetrationVelocity;
+        public bool SpawnGuardEnabled => spawnGuardEnabled;
+        public float SpawnGuardCenterZ => spawnGuardCenterZ;
+        public float SpawnGuardWidth => spawnGuardWidth;
+        public float SpawnGuardDepth => spawnGuardDepth;
+        public float SpawnGuardFeederLength => spawnGuardFeederLength;
+        public float SpawnGuardHeight => spawnGuardHeight;
+        public float SpawnGuardSlopeAngle => spawnGuardSlopeAngle;
+        public float SpawnGuardScoopClearance => spawnGuardScoopClearance;
+        public Color SpawnGuardColor => spawnGuardColor;
+        public Vector2 ScoopZBounds
+        {
+            get
+            {
+                if (!spawnGuardEnabled) return zBounds;
+                float guardFront = spawnGuardCenterZ - spawnGuardDepth * 0.5f;
+                float maximum = Mathf.Min(zBounds.y,
+                    guardFront - scoopDiameter * 0.5f - spawnGuardScoopClearance);
+                return new Vector2(zBounds.x, Mathf.Max(zBounds.x + 0.2f, maximum));
+            }
+        }
         public float ChuteSettleDuration => chuteSettleDuration;
         public float ChuteSettleLinearSpeed => chuteSettleLinearSpeed;
         public float AntiStuckDelay => antiStuckDelay;
@@ -134,6 +180,7 @@ namespace PickAndPlaceShop
         public float ReleaseTimeout => releaseTimeout;
         public float JudgeTimeout => judgeTimeout;
         public PhysicsMaterial ScoopPhysicsMaterial => scoopPhysicsMaterial;
+        public PhysicsMaterial ScoopOuterPhysicsMaterial => scoopOuterPhysicsMaterial;
         public PhysicsMaterial MachineFloorMaterial => machineFloorMaterial;
 
         public float GetCapsuleMass(ShopProductRarity rarity)
@@ -239,6 +286,34 @@ namespace PickAndPlaceShop
             ultraRareCapsuleMass = Mathf.Clamp(rarityMasses.w, 0.15f, 1.5f);
             multiPrizePolicy = ShopMultiPrizePolicy.AwardAll;
             closeDuration = Mathf.Max(closeDuration, scrapeDistance / scrapeSpeed);
+        }
+
+        public void EditorConfigureScoopCurl(float pivotHeight, float digAngle, float carryAngle,
+            float maximumAngularSpeed, float angularAcceleration, float rotationSweepStep,
+            float maximumDepenetrationVelocity, PhysicsMaterial outerMaterial)
+        {
+            scoopPivotHeight = Mathf.Clamp(pivotHeight, 0.2f, 1.2f);
+            scoopDigAngle = Mathf.Clamp(digAngle, 12f, 45f);
+            scoopCarryAngle = Mathf.Clamp(carryAngle, -20f, -2f);
+            scoopMaxAngularSpeed = Mathf.Clamp(maximumAngularSpeed, 12f, 60f);
+            scoopAngularAcceleration = Mathf.Clamp(angularAcceleration, 20f, 180f);
+            scoopRotationSweepStep = Mathf.Clamp(rotationSweepStep, 1f, 8f);
+            capsuleMaxDepenetrationVelocity = Mathf.Clamp(maximumDepenetrationVelocity, 0.4f, 4f);
+            scoopOuterPhysicsMaterial = outerMaterial;
+            closeTimeout = Mathf.Max(closeTimeout, 3.2f);
+        }
+
+        public void EditorConfigureSpawnGuard(bool enabled, float centerZ, float width, float depth,
+            float feederLength, float height, float slopeAngle, float scoopClearance)
+        {
+            spawnGuardEnabled = enabled;
+            spawnGuardCenterZ = Mathf.Clamp(centerZ, -1.2f, 1.4f);
+            spawnGuardWidth = Mathf.Clamp(width, 0.8f, 2.4f);
+            spawnGuardDepth = Mathf.Clamp(depth, 0.25f, 0.8f);
+            spawnGuardFeederLength = Mathf.Clamp(feederLength, 0.4f, 1.4f);
+            spawnGuardHeight = Mathf.Clamp(height, 0.12f, 0.5f);
+            spawnGuardSlopeAngle = Mathf.Clamp(slopeAngle, 2f, 12f);
+            spawnGuardScoopClearance = Mathf.Clamp(scoopClearance, 0.02f, 0.2f);
         }
 #endif
     }
