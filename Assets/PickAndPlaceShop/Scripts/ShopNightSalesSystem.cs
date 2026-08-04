@@ -349,6 +349,14 @@ namespace PickAndPlaceShop
 
         public Vector3 ServerGetBrowsePoint(ulong customerId)
         {
+            int baseCount = browsePoints != null ? browsePoints.Length : 0;
+            int extensionCount = ShopExpansionVisualController.CustomerBrowsePointCount;
+            int total = baseCount + extensionCount;
+            if (total <= 0) return entrancePoint != null ? entrancePoint.position : transform.position;
+            int index = (int)(customerId % (ulong)total);
+            if (index < baseCount && browsePoints[index] != null) return browsePoints[index].position;
+            if (ShopExpansionVisualController.TryGetCustomerBrowsePoint(index - baseCount, out Vector3 extension))
+                return extension;
             return PointFromArray(browsePoints, customerId, entrancePoint);
         }
 

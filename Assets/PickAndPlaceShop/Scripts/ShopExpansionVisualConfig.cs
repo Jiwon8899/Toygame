@@ -15,7 +15,15 @@ namespace PickAndPlaceShop
         }
 
         [SerializeField] private StageRule[] stageRules = Array.Empty<StageRule>();
+        [SerializeField, Min(0.5f)] private float revealDuration = 1.5f;
+        [SerializeField] private Color firstRoomFloorColor = new(0.56f, 0.34f, 0.22f);
+        [SerializeField] private Color secondRoomFloorColor = new(0.25f, 0.46f, 0.48f);
+        [SerializeField] private Color roomWallColor = new(0.19f, 0.12f, 0.18f);
 
         public StageRule[] StageRules => stageRules;
+        public float RevealDuration => revealDuration;
+        public Color FirstRoomFloorColor => firstRoomFloorColor;
+        public Color SecondRoomFloorColor => secondRoomFloorColor;
+        public Color RoomWallColor => roomWallColor;
     }
 }

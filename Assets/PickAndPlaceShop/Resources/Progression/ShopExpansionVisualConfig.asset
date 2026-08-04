@@ -21,3 +21,7 @@ MonoBehaviour:
     activateObjectNames: []
     deactivateObjectNames:
     - WallEast
+  revealDuration: 1.5
+  firstRoomFloorColor: {r: 0.56, g: 0.34, b: 0.22, a: 1}
+  secondRoomFloorColor: {r: 0.25, g: 0.46, b: 0.48, a: 1}
+  roomWallColor: {r: 0.19, g: 0.12, b: 0.18, a: 1}

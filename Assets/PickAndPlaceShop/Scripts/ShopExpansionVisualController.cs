@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace PickAndPlaceShop
 {
@@ -9,10 +10,25 @@ namespace PickAndPlaceShop
     {
         private static ShopExpansionVisualController instance;
         private readonly List<GameObject> generated = new();
+        private readonly List<Vector3> customerBrowsePoints = new();
         private readonly Dictionary<GameObject, bool> sceneDefaults = new();
         private ShopExpansionVisualConfig config;
         private int appliedLevel;
         private float nextPoll;
+        private CanvasGroup revealGroup;
+        private Text revealText;
+
+        public static int CustomerBrowsePointCount => instance != null
+            ? instance.customerBrowsePoints.Count
+            : 0;
+
+        public static bool TryGetCustomerBrowsePoint(int index, out Vector3 position)
+        {
+            position = default;
+            if (instance == null || index < 0 || index >= instance.customerBrowsePoints.Count) return false;
+            position = instance.customerBrowsePoints[index];
+            return true;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => instance = null;
@@ -56,8 +72,10 @@ namespace PickAndPlaceShop
                 return;
             }
             if (level == appliedLevel) return;
+            int previousLevel = appliedLevel;
             appliedLevel = level;
             Rebuild(level);
+            if (previousLevel > 0 && level > previousLevel) StartCoroutine(PlayExpansionReveal(level));
         }
 
         private void Rebuild(int level)
@@ -147,13 +165,75 @@ namespace PickAndPlaceShop
             GameObject root = new("StoreRoomExtension_" + index);
             root.transform.SetParent(transform, false);
             root.transform.position = origin + new Vector3(index == 1 ? -2.5f : 2.5f, -0.08f, 4.8f);
-            Color floor = new(0.55f, 0.36f, 0.23f);
-            Color wall = new(0.19f, 0.12f, 0.18f);
+            Color floor = config != null
+                ? (index == 1 ? config.FirstRoomFloorColor : config.SecondRoomFloorColor)
+                : new Color(0.55f, 0.36f, 0.23f);
+            Color wall = config != null ? config.RoomWallColor : new Color(0.19f, 0.12f, 0.18f);
             CreatePart(root.transform, "Floor", Vector3.zero, new Vector3(5f, 0.16f, 4.5f), floor, true);
             CreatePart(root.transform, "BackWall", new Vector3(0f, 1.6f, 2.2f), new Vector3(5f, 3.2f, 0.18f), wall, true);
             CreatePart(root.transform, "SideWall", new Vector3(index == 1 ? -2.4f : 2.4f, 1.6f, 0f),
                 new Vector3(0.18f, 3.2f, 4.5f), wall, true);
+            customerBrowsePoints.Add(root.transform.position + new Vector3(0f, 0f, 0.55f));
             generated.Add(root);
+        }
+
+        private System.Collections.IEnumerator PlayExpansionReveal(int level)
+        {
+            EnsureRevealUi();
+            if (revealGroup == null) yield break;
+            revealText.text = "가게 확장 완료!\n새 구역 Lv." + level + " 개방";
+            revealGroup.gameObject.SetActive(true);
+            float duration = config != null ? config.RevealDuration : 1.5f;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float normalized = Mathf.Clamp01(elapsed / duration);
+                revealGroup.alpha = normalized < 0.2f
+                    ? normalized / 0.2f
+                    : normalized > 0.72f ? 1f - (normalized - 0.72f) / 0.28f : 1f;
+                yield return null;
+            }
+            revealGroup.alpha = 0f;
+            revealGroup.gameObject.SetActive(false);
+        }
+
+        private void EnsureRevealUi()
+        {
+            if (revealGroup != null) return;
+            GameObject canvasObject = new("ExpansionRevealCanvas", typeof(Canvas), typeof(CanvasScaler),
+                typeof(GraphicRaycaster), typeof(CanvasGroup));
+            canvasObject.transform.SetParent(transform, false);
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 24000;
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            revealGroup = canvasObject.GetComponent<CanvasGroup>();
+            revealGroup.blocksRaycasts = false;
+
+            GameObject banner = new("ExpansionBanner", typeof(RectTransform), typeof(Image));
+            banner.transform.SetParent(canvasObject.transform, false);
+            RectTransform rect = banner.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.72f);
+            rect.anchorMax = new Vector2(0.5f, 0.72f);
+            rect.sizeDelta = new Vector2(780f, 150f);
+            banner.GetComponent<Image>().color = new Color(0.02f, 0.11f, 0.13f, 0.94f);
+            GameObject textObject = new("ExpansionRevealText", typeof(RectTransform), typeof(Text));
+            textObject.transform.SetParent(banner.transform, false);
+            RectTransform textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            revealText = textObject.GetComponent<Text>();
+            revealText.font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Arial" }, 36);
+            revealText.fontSize = 36;
+            revealText.fontStyle = FontStyle.Bold;
+            revealText.alignment = TextAnchor.MiddleCenter;
+            revealText.color = new Color(1f, 0.84f, 0.32f);
+            canvasObject.SetActive(false);
         }
 
         private static void CreatePart(Transform parent, string name, Vector3 localPosition,
@@ -177,6 +257,7 @@ namespace PickAndPlaceShop
         {
             for (int i = 0; i < generated.Count; i++) if (generated[i] != null) Destroy(generated[i]);
             generated.Clear();
+            customerBrowsePoints.Clear();
         }
     }
 }
