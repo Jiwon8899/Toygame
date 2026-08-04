@@ -29,7 +29,7 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void ClawRails_AreVisualOnlyWhileScoopKeepsNineColliders()
+        public void ClawRails_AreVisualOnlyWhileFryingPanKeepsCompoundColliders()
         {
             string[] paths = AssetDatabase.FindAssets("t:Prefab ClawMachine_",
                     new[] { "Assets/PickAndPlaceShop/Prefabs/ClawMachines" })
@@ -48,7 +48,13 @@ namespace PickAndPlaceShop.Tests
                 Assert.IsTrue(rails.All(item => item.GetComponents<Collider>().Length == 0), path);
                 ShopClawScoopRig scoop = prefab.GetComponentInChildren<ShopClawScoopRig>(true);
                 Assert.NotNull(scoop, path);
-                Assert.AreEqual(9, scoop.GetComponentsInChildren<Collider>(true).Length, path);
+                Collider[] colliders = scoop.GetComponentsInChildren<Collider>(true);
+                Assert.AreEqual(10, colliders.Length, path);
+                Assert.AreEqual(9, colliders.Count(item => item is BoxCollider), path);
+                Assert.AreEqual(1, colliders.Count(item => item is CapsuleCollider), path);
+                Assert.AreEqual(0, colliders.Count(item => item is MeshCollider), path);
+                Collider handle = colliders.Single(item => item is CapsuleCollider);
+                Assert.AreEqual(LayerMask.NameToLayer("ScoopHandle"), handle.gameObject.layer, path);
             }
         }
     }
