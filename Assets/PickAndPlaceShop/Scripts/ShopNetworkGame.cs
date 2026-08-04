@@ -594,6 +594,7 @@ namespace PickAndPlaceShop
             }
             string displayedName = moved.DisplayName.ToString();
             SetEvent(displayedName + " 상품 1개를 진열했습니다.");
+            ShopTutorialRuntime.Report(ShopTutorialAction.ProductDisplayed);
         }
 
         private void UseRegister()
@@ -703,6 +704,7 @@ namespace PickAndPlaceShop
                     ? "7일 운영 완료! 최종 점수: " + ShopEconomy.CalculateDayScore(Coins.Value, SoldToday.Value, Reputation.Value)
                     : "Seven-day prototype complete! Final score: " +
                       ShopEconomy.CalculateDayScore(Coins.Value, SoldToday.Value, Reputation.Value) + ".");
+                ShopTutorialRuntime.Report(ShopTutorialAction.DayClosed);
                 ShopProgressionManager.Instance?.SaveNowWithFeedback();
                 return;
             }
@@ -717,6 +719,7 @@ namespace PickAndPlaceShop
                   "원을 지불했고 새 유행이 공개되었습니다."
                 : "Day " + completedDay + " closed. Rent " + rent + " and wages " + wages +
                   " paid. New trend revealed.");
+            ShopTutorialRuntime.Report(ShopTutorialAction.DayClosed);
             ShopProgressionManager.Instance?.SaveNowWithFeedback();
         }
 
@@ -779,6 +782,7 @@ namespace PickAndPlaceShop
                 Debug.LogError("[Progression] 인형뽑기 기록 관리자를 찾지 못했습니다.", this);
             else
                 progression.RecordClawResult(success);
+            if (success) ShopTutorialRuntime.Report(ShopTutorialAction.PrizeAcquired);
         }
 
         public void ServerRecordClawPrize(int visualPrefabIndex)

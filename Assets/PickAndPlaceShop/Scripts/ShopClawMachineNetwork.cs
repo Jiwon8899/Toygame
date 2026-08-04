@@ -347,7 +347,9 @@ namespace PickAndPlaceShop
                 return false;
 
             int coins = ShopNetworkGame.Instance.Coins.Value;
-            if (!ShopClawRules.TryChargeAttempt(ref coins, config.AttemptCost, attemptId, chargedAttempts))
+            bool freeTutorialAttempt = ShopTutorialRuntime.FreeScoopAttempt;
+            if (!freeTutorialAttempt &&
+                !ShopClawRules.TryChargeAttempt(ref coins, config.AttemptCost, attemptId, chargedAttempts))
             {
                 ResultMessage.Value = new FixedString128Bytes("가게 자금이 부족합니다.");
                 ShopNetworkGame.Instance.ServerSetEvent("가게 자금이 부족해 팬을 내릴 수 없습니다.");
@@ -1400,6 +1402,7 @@ namespace PickAndPlaceShop
                 LocalActiveMachine.ExitLocalMode();
             LocalActiveMachine = this;
             localMode = true;
+            ShopTutorialRuntime.Report(ShopTutorialAction.MachineEntered);
             localModeEnteredAt = Time.unscaledTime;
             lastObservedResult = ResultMessage.Value.ToString();
             toastUntil = 0f;

@@ -99,11 +99,13 @@ namespace PickAndPlaceShop
         public int kujiUpgradeLevel;
         public int staffHiredMask;
         public int staffAttendanceMask;
+        public int tutorialStep;
+        public bool tutorialCompleted;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 7;
+        public const int CurrentVersion = 8;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 

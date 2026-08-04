@@ -197,6 +197,8 @@ namespace PickAndPlaceShop
             if (game.Phase.Value != ShopPhase.Setup && game.Phase.Value != ShopPhase.Open &&
                 game.Phase.Value != ShopPhase.Summary) return;
 
+            if (ShopTutorialRuntime.IsActive) return;
+
             phaseRemaining = Mathf.Max(0f, phaseRemaining - Time.unscaledDeltaTime);
             SyncRemaining();
             if (phaseRemaining > 0f) return;

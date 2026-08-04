@@ -84,6 +84,7 @@ namespace PickAndPlaceShop
                 float gameDeadline = Time.realtimeSinceStartup + 8f;
                 while ((ShopNetworkGame.Instance == null || !ShopNetworkGame.Instance.IsSpawned) && Time.realtimeSinceStartup < gameDeadline)
                     yield return null;
+                ShopProgressionManager.Instance?.ResetProgressionForNewProfile(true);
                 ShopNetworkGame.Instance?.ServerResetCampaign();
                 ShopCampaignResultStore.Clear();
             }

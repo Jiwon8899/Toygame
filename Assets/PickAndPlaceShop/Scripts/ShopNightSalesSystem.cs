@@ -298,6 +298,7 @@ namespace PickAndPlaceShop
             ledger.AddStock(moved.ProductId, 1);
             SyncStockVariables();
             game.ServerSetEvent(moved.DisplayName + " 상품 1개를 진열했습니다.");
+            ShopTutorialRuntime.Report(ShopTutorialAction.ProductDisplayed);
         }
 
         public bool ServerTrySelectAndReserve(ShopCustomerNetwork customer, out int productId,

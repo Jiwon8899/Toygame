@@ -59,6 +59,8 @@ namespace PickAndPlaceShop
         private int observedGameFunds;
         private int observedGameReputation;
         private int observedGameDay;
+        private int tutorialStep;
+        private bool tutorialCompleted;
 
         public ShopProgressionCatalog Catalog => catalog;
         public int CurrentDay => currentDay;
@@ -86,6 +88,8 @@ namespace PickAndPlaceShop
         public IReadOnlyList<ShopProgressGoalSave> WeeklyGoals => weeklyGoals;
         public IReadOnlyCollection<string> UnlockedDistrictIds => unlockedDistrictIds;
         public bool LoadedFromSave => loadedFromSave;
+        public int TutorialStep => tutorialStep;
+        public bool TutorialCompleted => tutorialCompleted;
         public string SavePath => ShopProgressionSaveStore.SavePath;
         public ShopProgressionSaveData GetLoadedSaveData() => loadedSaveData;
 
@@ -217,6 +221,32 @@ namespace PickAndPlaceShop
             MarkChanged();
         }
 
+        public void AdvanceTutorial(int completionReward)
+        {
+            if (tutorialCompleted) return;
+            tutorialStep++;
+            if (tutorialStep >= ShopTutorialRuntime.StepCount)
+            {
+                tutorialStep = ShopTutorialRuntime.StepCount;
+                tutorialCompleted = true;
+                ChangeTeamFunds(Mathf.Max(0, completionReward));
+                RaiseNotification("튜토리얼 완료! 보상 " + Mathf.Max(0, completionReward) + "원을 받았습니다.");
+                SaveNow();
+                return;
+            }
+            MarkChanged();
+            SaveNow();
+        }
+
+        public void ResetTutorial()
+        {
+            tutorialStep = 0;
+            tutorialCompleted = false;
+            MarkChanged();
+            SaveNow();
+            RaiseNotification("튜토리얼을 처음부터 다시 시작합니다.");
+        }
+
         public void RecordSale(string itemId, string displayName, string categoryId,
             int revenue, bool rare, int satisfaction)
         {
@@ -229,6 +259,7 @@ namespace PickAndPlaceShop
                 satisfactionSamples++;
             }
             MarkChanged();
+            ShopTutorialRuntime.Report(ShopTutorialAction.ProductSold);
         }
 
         public void RecordAcquisition(string itemId, string displayName, string categoryId,
@@ -392,6 +423,8 @@ namespace PickAndPlaceShop
             weeklyGoalCycle = 0;
             dailySetRewardClaimed = false;
             weeklySetRewardClaimed = false;
+            tutorialStep = 0;
+            tutorialCompleted = false;
             regularCustomerIds.Clear();
             unlockedDistrictIds.Clear();
             ownedCollectionItemIds.Clear();
@@ -704,7 +737,9 @@ namespace PickAndPlaceShop
                 gachaUpgradeLevel = boundGame != null ? boundGame.GachaUpgradeLevel.Value : 0,
                 kujiUpgradeLevel = boundGame != null ? boundGame.KujiUpgradeLevel.Value : 0,
                 staffHiredMask = boundGame != null ? boundGame.StaffHiredMask.Value : 0,
-                staffAttendanceMask = boundGame != null ? boundGame.StaffAttendanceMask.Value : 0
+                staffAttendanceMask = boundGame != null ? boundGame.StaffAttendanceMask.Value : 0,
+                tutorialStep = tutorialStep,
+                tutorialCompleted = tutorialCompleted
             };
         }
 
@@ -744,6 +779,8 @@ namespace PickAndPlaceShop
             if (save.containerItems != null) pendingContainerItems.AddRange(save.containerItems);
             pendingClawMachines.Clear();
             if (save.clawMachines != null) pendingClawMachines.AddRange(save.clawMachines);
+            tutorialStep = Mathf.Clamp(save.tutorialStep, 0, ShopTutorialRuntime.StepCount);
+            tutorialCompleted = save.tutorialCompleted;
         }
 
         public bool TryConsumeClawMachineSave(int machineId, out ShopClawMachineSave saved)

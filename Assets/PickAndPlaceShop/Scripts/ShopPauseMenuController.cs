@@ -28,6 +28,7 @@ namespace PickAndPlaceShop
             Text title = Find<Text>("PauseTitle");
             if (title != null) title.text = ShopGameIdentity.KoreanShortName;
             CreateSaveButton();
+            CreateTutorialResetButton();
             RegisterButtons();
         }
 
@@ -53,6 +54,7 @@ namespace PickAndPlaceShop
             OnClick("BtnPauseHelpBack", ShowMain);
             OnClick("BtnPauseSettingsApply", SaveSettings);
             OnClick("BtnPauseSettingsBack", ShowMain);
+            OnClick("BtnPauseTutorialReset", ResetTutorial);
             OnClick("BtnPauseConfirmYes", Confirm);
             OnClick("BtnPauseConfirmNo", ShowMain);
         }
@@ -127,6 +129,26 @@ namespace PickAndPlaceShop
                 status.text = saved ? "저장 완료" : "저장 실패";
                 StartCoroutine(ClearSaveStatus(status));
             }
+        }
+
+        private void ResetTutorial()
+        {
+            ShopProgressionManager.Instance?.ResetTutorial();
+            ShowMain();
+        }
+
+        private void CreateTutorialResetButton()
+        {
+            GameObject panel = FindObject("PauseSettingsPanel");
+            Button template = Find<Button>("BtnPauseSettingsBack");
+            if (panel == null || template == null || FindObject("BtnPauseTutorialReset") != null) return;
+            Button button = Instantiate(template, panel.transform);
+            button.name = "BtnPauseTutorialReset";
+            Text label = button.GetComponentInChildren<Text>(true);
+            if (label != null) label.text = "튜토리얼 다시 보기";
+            RectTransform rect = button.GetComponent<RectTransform>();
+            RectTransform templateRect = template.GetComponent<RectTransform>();
+            rect.anchoredPosition = templateRect.anchoredPosition + Vector2.up * 72f;
         }
 
         private IEnumerator ClearSaveStatus(Text status)

@@ -115,7 +115,7 @@ namespace PickAndPlaceShop
                 EnqueueNotification("WASD 이동 · Shift 달리기 · 마우스 시점 · E 상호작용");
 
             if (manager != null && keyboard.f6Key.wasPressedThisFrame)
-                EnqueueNotification(manager.SaveNow() ? "진행 상황을 저장했습니다." : "저장하지 못했습니다.");
+                manager.SaveNowWithFeedback();
 
             if (!open) return;
             if (keyboard.escapeKey.wasPressedThisFrame)
@@ -374,6 +374,24 @@ namespace PickAndPlaceShop
 
         private void RefreshObjective()
         {
+            if (ShopTutorialRuntime.TryGetDisplay(out string tutorialLabel, out int tutorialCurrent,
+                    out int tutorialTarget))
+            {
+                string tutorialKey = "tutorial:" + manager.TutorialStep;
+                if (tutorialKey != objectiveKey)
+                {
+                    objectiveKey = tutorialKey;
+                    objectiveGroup.alpha = 0.25f;
+                }
+                objectiveText.text = "<color=#46FFBF><b>튜토리얼</b></color>  " + tutorialLabel + "\n" +
+                                     (manager.TutorialStep == 0
+                                         ? (tutorialCurrent / 10f).ToString("0.0") + "m / " +
+                                           (tutorialTarget / 10f).ToString("0.0") + "m"
+                                         : "실제 행동을 완료하면 다음 단계로 넘어갑니다.");
+                objectiveFill.rectTransform.anchorMax = new Vector2(
+                    tutorialTarget <= 0 ? 0f : Mathf.Clamp01(tutorialCurrent / (float)tutorialTarget), 1f);
+                return;
+            }
             string key;
             string label;
             ShopProgressConditionType type;

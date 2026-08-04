@@ -104,7 +104,11 @@ namespace PickAndPlaceShop
         {
             isOpen = open;
             if (panel != null) panel.SetActive(open);
-            if (open) dirty = true;
+            if (open)
+            {
+                dirty = true;
+                ShopTutorialRuntime.Report(ShopTutorialAction.InventoryOpened);
+            }
             else ClearPreviews();
         }
 
