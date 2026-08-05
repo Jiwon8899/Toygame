@@ -161,43 +161,74 @@ namespace PickAndPlaceShop
         {
             Button template = Find<Button>("BtnPauseResume");
             GameObject panel = FindObject("PauseMainPanel");
-            if (template == null || panel == null || FindObject("BtnPauseSave") != null) return;
+            if (template == null || panel == null) return;
 
-            Button saveButton = Instantiate(template, panel.transform);
-            saveButton.name = "BtnPauseSave";
-            Text label = saveButton.GetComponentInChildren<Text>(true);
-            if (label != null) label.text = "저장";
-
-            RectTransform saveRect = saveButton.GetComponent<RectTransform>();
-            RectTransform resumeRect = template.GetComponent<RectTransform>();
-            Button help = Find<Button>("BtnPauseHelp");
-            RectTransform helpRect = help != null ? help.GetComponent<RectTransform>() : null;
-            saveRect.anchoredPosition = helpRect != null
-                ? Vector2.Lerp(resumeRect.anchoredPosition, helpRect.anchoredPosition, 0.5f)
-                : resumeRect.anchoredPosition + Vector2.down * 64f;
-            if (helpRect != null)
+            Button saveButton = Find<Button>("BtnPauseSave");
+            if (saveButton == null)
             {
-                float shift = Mathf.Abs(resumeRect.anchoredPosition.y - helpRect.anchoredPosition.y) * 0.5f;
-                foreach (Button button in panel.GetComponentsInChildren<Button>(true))
-                {
-                    if (button == template || button == saveButton) continue;
-                    RectTransform rect = button.GetComponent<RectTransform>();
-                    if (rect.anchoredPosition.y <= helpRect.anchoredPosition.y + 0.1f)
-                        rect.anchoredPosition += Vector2.down * shift;
-                }
+                saveButton = Instantiate(template, panel.transform);
+                saveButton.name = "BtnPauseSave";
+                Text saveLabel = saveButton.GetComponentInChildren<Text>(true);
+                if (saveLabel != null) saveLabel.text = "저장";
             }
 
-            GameObject statusObject = new("PauseSaveStatus", typeof(RectTransform), typeof(Text));
-            statusObject.transform.SetParent(panel.transform, false);
-            RectTransform statusRect = statusObject.GetComponent<RectTransform>();
-            statusRect.anchorMin = statusRect.anchorMax = new Vector2(0.5f, 0.5f);
-            statusRect.sizeDelta = new Vector2(280f, 36f);
-            statusRect.anchoredPosition = saveRect.anchoredPosition + Vector2.right * 270f;
-            Text status = statusObject.GetComponent<Text>();
-            status.font = label != null ? label.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            status.fontSize = 20;
-            status.alignment = TextAnchor.MiddleLeft;
-            status.color = new Color(0.45f, 1f, 0.75f);
+            BuildButtonLayout(panel.transform);
+
+            if (FindObject("PauseSaveStatus") == null)
+            {
+                GameObject statusObject = new("PauseSaveStatus", typeof(RectTransform), typeof(Text));
+                statusObject.transform.SetParent(panel.transform, false);
+                RectTransform statusRect = statusObject.GetComponent<RectTransform>();
+                statusRect.anchorMin = statusRect.anchorMax = new Vector2(0.5f, 0.5f);
+                statusRect.sizeDelta = new Vector2(430f, 36f);
+                statusRect.anchoredPosition = new Vector2(0f, -326f);
+                Text status = statusObject.GetComponent<Text>();
+                Text label = template.GetComponentInChildren<Text>(true);
+                status.font = label != null ? label.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                status.fontSize = 20;
+                status.alignment = TextAnchor.MiddleCenter;
+                status.color = new Color(0.45f, 1f, 0.75f);
+            }
+        }
+
+        private void BuildButtonLayout(Transform panel)
+        {
+            Transform existing = panel.Find("PauseButtonColumn");
+            GameObject column = existing != null ? existing.gameObject :
+                new GameObject("PauseButtonColumn", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            if (existing == null) column.transform.SetParent(panel, false);
+            RectTransform columnRect = column.GetComponent<RectTransform>();
+            columnRect.anchorMin = columnRect.anchorMax = columnRect.pivot = new Vector2(0.5f, 0.5f);
+            columnRect.sizeDelta = new Vector2(430f, 444f);
+            columnRect.anchoredPosition = new Vector2(0f, -70f);
+            VerticalLayoutGroup layout = column.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 12f;
+            layout.padding = new RectOffset(0, 0, 0, 0);
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            string[] orderedButtons =
+            {
+                "BtnPauseResume", "BtnPauseSave", "BtnPauseHelp", "BtnPauseSettings",
+                "BtnPauseMainMenu", "BtnPauseQuit"
+            };
+            for (int index = 0; index < orderedButtons.Length; index++)
+            {
+                Button button = Find<Button>(orderedButtons[index]);
+                if (button == null) continue;
+                button.transform.SetParent(column.transform, false);
+                button.transform.SetSiblingIndex(index);
+                LayoutElement element = button.GetComponent<LayoutElement>() ??
+                                        button.gameObject.AddComponent<LayoutElement>();
+                element.preferredWidth = 430f;
+                element.preferredHeight = 64f;
+                element.flexibleWidth = 0f;
+                element.flexibleHeight = 0f;
+            }
+            LayoutRebuilder.ForceRebuildLayoutImmediate(columnRect);
         }
 
         private void OpenConfirm(string action)
