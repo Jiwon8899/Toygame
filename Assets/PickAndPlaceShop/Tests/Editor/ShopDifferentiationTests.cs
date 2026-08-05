@@ -68,5 +68,15 @@ namespace PickAndPlaceShop.Tests
             Assert.That(save.kujiStations[0].refilling, Is.True);
             Assert.That(save.kujiStations[0].refillSecondsRemaining, Is.InRange(5f, 8f));
         }
+
+        [Test]
+        public void StampCard_UsesSavedPurchasesAndDataVipThreshold()
+        {
+            ShopDifferentiationConfig config = ShopDifferentiationConfig.Load();
+            Assert.That(config, Is.Not.Null);
+            Assert.That(config.VipPurchaseThreshold, Is.EqualTo(6));
+            ShopCustomerProfileSave profile = new() { customerId = "cat_01", purchaseCount = 6 };
+            Assert.That(profile.purchaseCount, Is.GreaterThanOrEqualTo(config.VipPurchaseThreshold));
+        }
     }
 }

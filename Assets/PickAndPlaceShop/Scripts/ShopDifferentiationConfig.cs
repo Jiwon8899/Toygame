@@ -19,6 +19,10 @@ namespace PickAndPlaceShop
         [SerializeField] private Vector2 kujiRefillSeconds = new(5f, 8f);
         [SerializeField] private int[] lastOneTitleThresholds = { 1, 10, 30, 100 };
 
+        [Header("단골 발도장 카드")]
+        [SerializeField, Min(2)] private int vipPurchaseThreshold = 6;
+        [SerializeField, Min(1)] private int visibleStampCardCount = 8;
+
         [Header("리뷰 게시판")]
         [SerializeField, Min(1)] private int reviewHistoryCapacity = 5;
         [SerializeField] private Vector3 reviewBoardPosition = new(1.25f, 0f, -3.8f);
@@ -47,6 +51,8 @@ namespace PickAndPlaceShop
         public Vector2 KujiRefillSeconds => new(Mathf.Max(0.1f, kujiRefillSeconds.x),
             Mathf.Max(kujiRefillSeconds.x, kujiRefillSeconds.y));
         public int[] LastOneTitleThresholds => lastOneTitleThresholds ?? System.Array.Empty<int>();
+        public int VipPurchaseThreshold => Mathf.Max(2, vipPurchaseThreshold);
+        public int VisibleStampCardCount => Mathf.Max(1, visibleStampCardCount);
         public int ReviewHistoryCapacity => Mathf.Max(1, reviewHistoryCapacity);
         public Vector3 ReviewBoardPosition => reviewBoardPosition;
         public Vector3 AppraisalPosition => appraisalPosition;

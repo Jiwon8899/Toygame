@@ -502,6 +502,7 @@ namespace PickAndPlaceShop
             text.Append("\n<size=34><color=#8FB9FF><b>주간 목표</b></color></size>\n\n");
             AppendGoals(text, manager.WeeklyGoals);
             ShopLiveOperationsNetwork.Instance?.AppendStatus(text);
+            ShopLiveOperationsNetwork.Instance?.AppendStampCards(text);
             ShopDifferentiationController.Instance?.AppendStatus(text);
             return text.ToString();
         }

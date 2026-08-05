@@ -660,6 +660,38 @@ namespace PickAndPlaceShop
                 text.AppendLine(ShopNetworkGame.Instance.StaffStatusSummary());
         }
 
+        public void AppendStampCards(StringBuilder text)
+        {
+            if (text == null || Config == null) return;
+            ShopDifferentiationConfig differentiation = ShopDifferentiationConfig.Load();
+            int regularThreshold = Mathf.Max(1, Config.RegularPurchaseThreshold);
+            int vipThreshold = differentiation != null
+                ? Mathf.Max(regularThreshold + 1, differentiation.VipPurchaseThreshold)
+                : regularThreshold * 2;
+            int visible = differentiation != null ? differentiation.VisibleStampCardCount : 8;
+
+            text.AppendLine();
+            text.AppendLine("<color=#FFCF6B><b>단골 발도장 카드</b></color>");
+            int shown = 0;
+            for (int i = 0; i < customerProfiles.Count && shown < visible; i++)
+            {
+                ShopCustomerProfileSave profile = customerProfiles[i];
+                if (profile == null || profile.purchaseCount <= 0) continue;
+                int purchases = Mathf.Max(0, profile.purchaseCount);
+                int stamps = Mathf.Min(purchases, vipThreshold);
+                string paws = new string('●', stamps) + new string('○', Mathf.Max(0, vipThreshold - stamps));
+                string rank = purchases >= vipThreshold ? "VIP 단골"
+                    : purchases >= regularThreshold ? "단골" : "방문 손님";
+                text.AppendLine("  " + profile.customerId + "  " + paws + "  " +
+                                purchases + "회 · " + rank + " · " +
+                                ShopProductLocalization.CategoryLabel(
+                                    (ShopProductCategory)profile.preferredCategory));
+                shown++;
+            }
+            if (shown == 0) text.AppendLine("  첫 구매를 기다리고 있어요.");
+            text.AppendLine("  " + regularThreshold + "회 단골 · " + vipThreshold + "회 VIP 단골");
+        }
+
         public void WriteSave(ShopProgressionSaveData save)
         {
             if (save == null) return;

@@ -19,6 +19,8 @@ MonoBehaviour:
   kujiSetSize: 40
   kujiRefillSeconds: {x: 5, y: 8}
   lastOneTitleThresholds: 010000000a0000001e00000064000000
+  vipPurchaseThreshold: 6
+  visibleStampCardCount: 8
   reviewHistoryCapacity: 5
   reviewBoardPosition: {x: 1.25, y: 0, z: -3.8}
   appraisalPosition: {x: 12.7, y: 0, z: 0.2}
