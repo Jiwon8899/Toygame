@@ -30,6 +30,8 @@ namespace PickAndPlaceShop
         private Text contentText;
         private ScrollRect contentScroll;
         private Button expansionButton;
+        private Button tutorialSkipButton;
+        private GameObject tutorialSkipConfirmation;
         private Text tabHint;
         private GameObject notificationPanel;
         private Text notificationText;
@@ -77,6 +79,7 @@ namespace PickAndPlaceShop
 
         private void OnDestroy()
         {
+            CloseTutorialSkipConfirmation();
             Detach();
             if (toggleStatusAction != null)
             {
@@ -110,6 +113,15 @@ namespace PickAndPlaceShop
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
+
+            if (tutorialSkipConfirmation != null && tutorialSkipConfirmation.activeSelf)
+            {
+                if (keyboard.escapeKey.wasPressedThisFrame || keyboard.nKey.wasPressedThisFrame)
+                    CloseTutorialSkipConfirmation();
+                else if (keyboard.enterKey.wasPressedThisFrame || keyboard.yKey.wasPressedThisFrame)
+                    ConfirmTutorialSkip();
+                return;
+            }
 
             if (keyboard.f1Key.wasPressedThisFrame)
                 EnqueueNotification("WASD 이동 · Shift 달리기 · 마우스 시점 · E 상호작용");
@@ -193,6 +205,7 @@ namespace PickAndPlaceShop
             BuildObjective(safe.transform);
             BuildStatusScreen(safe.transform);
             BuildNotification(safe.transform);
+            BuildTutorialSkipConfirmation(safe.transform);
 
             tabHint = CreateText("StatusHint", safe.transform, "Tab · 가게 현황   |   I · 상품 보관함",
                 18, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.72f, 0.8f, 0.88f, 0.72f));
@@ -222,8 +235,14 @@ namespace PickAndPlaceShop
 
             objectiveText = CreateText("ObjectiveText", objectivePanel.transform, "목표를 불러오는 중",
                 22, FontStyle.Bold, TextAnchor.UpperLeft, Color.white);
-            SetRect(objectiveText.rectTransform, new Vector2(22f, -14f), new Vector2(576f, 68f),
+            SetRect(objectiveText.rectTransform, new Vector2(22f, -14f), new Vector2(438f, 68f),
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+
+            tutorialSkipButton = CreateButton("TutorialSkip", objectivePanel.transform, "건너뛰기",
+                new Vector2(126f, 44f), OpenTutorialSkipConfirmation);
+            SetRect(tutorialSkipButton.GetComponent<RectTransform>(), new Vector2(-18f, -16f),
+                new Vector2(126f, 44f), Vector2.one, Vector2.one, Vector2.one);
+            tutorialSkipButton.gameObject.SetActive(false);
 
             GameObject track = CreatePanel("ProgressTrack", objectivePanel.transform,
                 new Vector2(576f, 12f), new Color(0.12f, 0.17f, 0.23f, 1f));
@@ -331,6 +350,59 @@ namespace PickAndPlaceShop
             notificationPanel.SetActive(false);
         }
 
+        private void BuildTutorialSkipConfirmation(Transform parent)
+        {
+            tutorialSkipConfirmation = CreatePanel("TutorialSkipConfirmation", parent, Vector2.zero,
+                new Color(0.008f, 0.015f, 0.028f, 0.94f));
+            RectTransform overlayRect = tutorialSkipConfirmation.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = overlayRect.offsetMax = Vector2.zero;
+
+            GameObject card = CreatePanel("Card", tutorialSkipConfirmation.transform,
+                new Vector2(720f, 330f), new Color(0.025f, 0.055f, 0.08f, 1f));
+            SetRect(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(720f, 330f),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            Text title = CreateText("Title", card.transform, "튜토리얼을 스킵하시겠습니까?",
+                34, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
+            SetRect(title.rectTransform, new Vector2(0f, 70f), new Vector2(650f, 72f),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            Text body = CreateText("Body", card.transform,
+                "예를 선택하면 일반 목표로 전환됩니다.", 21, FontStyle.Normal,
+                TextAnchor.MiddleCenter, Muted);
+            SetRect(body.rectTransform, new Vector2(0f, 15f), new Vector2(650f, 52f),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            Button yes = CreateButton("ConfirmSkip", card.transform, "예",
+                new Vector2(240f, 62f), ConfirmTutorialSkip);
+            SetRect(yes.GetComponent<RectTransform>(), new Vector2(-132f, -82f), new Vector2(240f, 62f),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            Button no = CreateButton("CancelSkip", card.transform, "아니오",
+                new Vector2(240f, 62f), CloseTutorialSkipConfirmation);
+            SetRect(no.GetComponent<RectTransform>(), new Vector2(132f, -82f), new Vector2(240f, 62f),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            tutorialSkipConfirmation.SetActive(false);
+        }
+
+        private void OpenTutorialSkipConfirmation()
+        {
+            if (manager == null || manager.TutorialCompleted || tutorialSkipConfirmation == null) return;
+            tutorialSkipConfirmation.SetActive(true);
+            ShopInputModeManager.Push(tutorialSkipConfirmation, ShopInputMode.UI);
+        }
+
+        private void ConfirmTutorialSkip()
+        {
+            manager?.SkipTutorial();
+            CloseTutorialSkipConfirmation();
+            Refresh();
+        }
+
+        private void CloseTutorialSkipConfirmation()
+        {
+            if (tutorialSkipConfirmation != null) tutorialSkipConfirmation.SetActive(false);
+            if (tutorialSkipConfirmation != null) ShopInputModeManager.Pop(tutorialSkipConfirmation);
+        }
+
         private void SelectTab(int index)
         {
             activeTab = Mathf.Clamp(index, 0, tabButtons.Length - 1);
@@ -377,6 +449,7 @@ namespace PickAndPlaceShop
             if (ShopTutorialRuntime.TryGetDisplay(out string tutorialLabel, out int tutorialCurrent,
                     out int tutorialTarget))
             {
+                if (tutorialSkipButton != null) tutorialSkipButton.gameObject.SetActive(true);
                 string tutorialKey = "tutorial:" + manager.TutorialStep;
                 if (tutorialKey != objectiveKey)
                 {
@@ -392,6 +465,7 @@ namespace PickAndPlaceShop
                     tutorialTarget <= 0 ? 0f : Mathf.Clamp01(tutorialCurrent / (float)tutorialTarget), 1f);
                 return;
             }
+            if (tutorialSkipButton != null) tutorialSkipButton.gameObject.SetActive(false);
             string key;
             string label;
             ShopProgressConditionType type;

@@ -57,7 +57,11 @@ namespace PickAndPlaceShop
                             Keyboard.current.spaceKey.wasPressedThisFrame ||
                             Keyboard.current.escapeKey.wasPressedThisFrame);
             if (!pressed || !canvas.gameObject.activeSelf) return;
-            if (waitingForClose) Hide();
+            if (waitingForClose)
+            {
+                game?.RequestInteraction(ShopAction.EndDay);
+                Hide();
+            }
             else skipRequested = true;
         }
 
@@ -134,7 +138,7 @@ namespace PickAndPlaceShop
                 reputation.text = "평판 변화   " + (reputationDelta >= 0 ? "+" : string.Empty) + reputationDelta;
                 nextDay.text = "다음 날 예고   준비 시간에 기계 재고가 리필됩니다";
             }
-            footer.text = "[E / Space / Esc] 닫기";
+            footer.text = "[E / Space / Esc] 다음 날로";
             skipRequested = false;
             waitingForClose = true;
             presentation = null;

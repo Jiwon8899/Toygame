@@ -230,6 +230,7 @@ namespace PickAndPlaceShop
             if (!IsServer || Config == null) return;
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null) return;
+            ShopNightSalesSystem.Instance?.ServerPrepareForNextDay();
             observedPhase = ShopPhase.Setup;
             game.ServerSetPhase(ShopPhase.Setup);
             phaseRemaining = Config.PreparationSeconds;

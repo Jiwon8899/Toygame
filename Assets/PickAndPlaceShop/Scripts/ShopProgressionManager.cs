@@ -108,6 +108,21 @@ namespace PickAndPlaceShop
             MarkChanged();
         }
 
+        public int AutoAssignHotbarProduct(int productId)
+        {
+            if (productId < 0) return -1;
+            for (int slot = 0; slot < hotbarProductIds.Length; slot++)
+                if (hotbarProductIds[slot] == productId) return slot;
+            for (int slot = 0; slot < hotbarProductIds.Length; slot++)
+            {
+                if (hotbarProductIds[slot] >= 0) continue;
+                hotbarProductIds[slot] = productId;
+                MarkChanged();
+                return slot;
+            }
+            return -1;
+        }
+
         public void SetSelectedHotbarSlot(int slot)
         {
             selectedHotbarSlot = Mathf.Clamp(slot, -1, hotbarProductIds.Length - 1);
@@ -266,6 +281,16 @@ namespace PickAndPlaceShop
             MarkChanged();
             SaveNow();
             RaiseNotification("튜토리얼을 처음부터 다시 시작합니다.");
+        }
+
+        public void SkipTutorial()
+        {
+            if (tutorialCompleted) return;
+            tutorialStep = ShopTutorialRuntime.StepCount;
+            tutorialCompleted = true;
+            MarkChanged();
+            SaveNow();
+            RaiseNotification("튜토리얼을 건너뛰었습니다. 일반 목표를 표시합니다.");
         }
 
         public void RecordSale(string itemId, string displayName, string categoryId,
