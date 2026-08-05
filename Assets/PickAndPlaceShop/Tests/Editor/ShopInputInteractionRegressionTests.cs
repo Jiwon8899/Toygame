@@ -47,6 +47,26 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
+        public void OnlineOrderStation_UsesDedicatedOperatorPoint()
+        {
+            GameObject station = new GameObject("OnlineOrderPackingStation");
+            try
+            {
+                station.transform.position = new Vector3(9.4f, 0f, -4.5f);
+                ShopInteractable interactable = station.AddComponent<ShopInteractable>();
+                interactable.Configure(ShopAction.OnlineOrder, "온라인 주문 포장/발송");
+
+                Assert.AreEqual(new Vector3(10.4f, 0f, -5.7f), interactable.InteractionWorldPosition);
+                Assert.AreEqual(interactable.InteractionWorldPosition,
+                    interactable.ClosestInteractionWorldPosition(new Vector3(10.4f, 1.2f, -6f)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(station);
+            }
+        }
+
+        [Test]
         public void MainMenu_UsesSharedMenuInputMode()
         {
             const string path = "Assets/PickAndPlaceShop/Scripts/ShopMainMenuController.cs";

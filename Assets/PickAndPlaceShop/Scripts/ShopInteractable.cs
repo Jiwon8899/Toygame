@@ -25,6 +25,8 @@ namespace PickAndPlaceShop
                 if (gachaMachine != null) return gachaMachine.InteractionWorldPosition;
                 if (kujiStation != null) return kujiStation.InteractionWorldPosition;
                 if (districtPortal != null) return districtPortal.InteractionWorldPosition;
+                if (action == ShopAction.OnlineOrder)
+                    return transform.position + transform.right * 1f - transform.forward * 1.2f;
                 return transform.position;
             }
         }
@@ -48,7 +50,8 @@ namespace PickAndPlaceShop
         public Vector3 ClosestInteractionWorldPosition(Vector3 observerPosition)
         {
             CacheHandlers();
-            if (networkClaw != null || gachaMachine != null || kujiStation != null || districtPortal != null)
+            if (networkClaw != null || gachaMachine != null || kujiStation != null ||
+                districtPortal != null || action == ShopAction.OnlineOrder)
                 return InteractionWorldPosition;
 
             CacheInteractionColliders();

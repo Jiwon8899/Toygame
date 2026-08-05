@@ -97,8 +97,19 @@ namespace PickAndPlaceShop
                 currentTarget = candidate;
             }
 
+            ShopInteractable nearbyTarget = FindNearbyFacingTarget(playerCenter, rayDirection);
             if (currentTarget == null)
-                currentTarget = FindNearbyFacingTarget(playerCenter, rayDirection);
+            {
+                currentTarget = nearbyTarget;
+            }
+            else if (nearbyTarget != null && nearbyTarget != currentTarget)
+            {
+                float rayTargetDistance = Vector3.Distance(playerCenter,
+                    currentTarget.ClosestInteractionWorldPosition(playerCenter));
+                float nearbyTargetDistance = Vector3.Distance(playerCenter,
+                    nearbyTarget.ClosestInteractionWorldPosition(playerCenter));
+                if (nearbyTargetDistance + 0.05f < rayTargetDistance) currentTarget = nearbyTarget;
+            }
 
             LocalPrompt = currentTarget != null
                 ? "[E] " + currentTarget.Prompt
