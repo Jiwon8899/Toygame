@@ -24,6 +24,29 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
+        public void WideInteractable_UsesColliderSurfaceInsteadOfTransformCenter()
+        {
+            GameObject root = new GameObject("Wide Register");
+            try
+            {
+                root.transform.position = new Vector3(7.8f, 0f, -4.5f);
+                BoxCollider collider = root.AddComponent<BoxCollider>();
+                collider.center = new Vector3(0f, 0.85f, 0f);
+                collider.size = new Vector3(3.4f, 1.8f, 1.8f);
+                ShopInteractable interactable = root.AddComponent<ShopInteractable>();
+                Vector3 playerCenter = new Vector3(9.5f, 1.33f, -6.6f);
+
+                Assert.Greater(Vector3.Distance(playerCenter, root.transform.position), 2.5f);
+                Assert.Less(Vector3.Distance(playerCenter,
+                    interactable.ClosestInteractionWorldPosition(playerCenter)), 2.5f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void MainMenu_UsesSharedMenuInputMode()
         {
             const string path = "Assets/PickAndPlaceShop/Scripts/ShopMainMenuController.cs";

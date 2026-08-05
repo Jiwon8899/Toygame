@@ -12,6 +12,8 @@ namespace PickAndPlaceShop
         private ShopKujiStationNetwork kujiStation;
         private ShopDistrictPortalNetwork districtPortal;
         private ShopUpgradeTerminal upgradeTerminal;
+        private Collider[] interactionColliders;
+        private bool interactionCollidersCached;
 
         public ShopAction Action => action;
         public Vector3 InteractionWorldPosition
@@ -41,6 +43,29 @@ namespace PickAndPlaceShop
                     return ShopNetworkGame.Instance.ShopUpgradePrompt;
                 return prompt;
             }
+        }
+
+        public Vector3 ClosestInteractionWorldPosition(Vector3 observerPosition)
+        {
+            CacheHandlers();
+            if (networkClaw != null || gachaMachine != null || kujiStation != null || districtPortal != null)
+                return InteractionWorldPosition;
+
+            CacheInteractionColliders();
+            Vector3 closest = transform.position;
+            float closestSqrDistance = float.MaxValue;
+            for (int index = 0; index < interactionColliders.Length; index++)
+            {
+                Collider candidate = interactionColliders[index];
+                if (candidate == null || !candidate.enabled || !candidate.gameObject.activeInHierarchy) continue;
+                Vector3 point = candidate.ClosestPoint(observerPosition);
+                float sqrDistance = (point - observerPosition).sqrMagnitude;
+                if (sqrDistance >= closestSqrDistance) continue;
+                closestSqrDistance = sqrDistance;
+                closest = point;
+            }
+
+            return closest;
         }
 
         public void Configure(ShopAction configuredAction, string configuredPrompt)
@@ -93,6 +118,13 @@ namespace PickAndPlaceShop
             if (kujiStation == null) kujiStation = GetComponent<ShopKujiStationNetwork>();
             if (districtPortal == null) districtPortal = GetComponent<ShopDistrictPortalNetwork>();
             if (upgradeTerminal == null) upgradeTerminal = GetComponent<ShopUpgradeTerminal>();
+        }
+
+        private void CacheInteractionColliders()
+        {
+            if (interactionCollidersCached) return;
+            interactionColliders = GetComponentsInChildren<Collider>(true);
+            interactionCollidersCached = true;
         }
 
         private void OnDrawGizmosSelected()

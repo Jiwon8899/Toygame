@@ -123,8 +123,8 @@ namespace PickAndPlaceShop
                 if (collider == null || IsLocalPlayerCollider(collider)) continue;
                 ShopInteractable candidate = collider.GetComponentInParent<ShopInteractable>();
                 if (candidate == null) continue;
-                Vector3 direction = Vector3.ProjectOnPlane(
-                    candidate.InteractionWorldPosition - playerCenter, Vector3.up);
+                Vector3 interactionPoint = candidate.ClosestInteractionWorldPosition(playerCenter);
+                Vector3 direction = Vector3.ProjectOnPlane(interactionPoint - playerCenter, Vector3.up);
                 float distance = direction.magnitude;
                 if (distance > range) continue;
                 Vector3 normalizedDirection = distance <= 0.05f ? horizontalFacing : direction / distance;
@@ -145,14 +145,14 @@ namespace PickAndPlaceShop
             collider.transform == transform || collider.transform.IsChildOf(transform);
 
         private bool IsWithinPlayerRange(ShopInteractable candidate, Vector3 playerCenter) =>
-            candidate != null && Vector3.Distance(playerCenter, candidate.InteractionWorldPosition) <=
-            EffectiveInteractionRange;
+            candidate != null && Vector3.Distance(playerCenter,
+                candidate.ClosestInteractionWorldPosition(playerCenter)) <= EffectiveInteractionRange;
 
         private bool IsFacing(ShopInteractable candidate, Vector3 playerCenter, Vector3 facing)
         {
             Vector3 horizontalFacing = Vector3.ProjectOnPlane(facing, Vector3.up).normalized;
-            Vector3 direction = Vector3.ProjectOnPlane(candidate.InteractionWorldPosition - playerCenter,
-                Vector3.up).normalized;
+            Vector3 direction = Vector3.ProjectOnPlane(
+                candidate.ClosestInteractionWorldPosition(playerCenter) - playerCenter, Vector3.up).normalized;
             return direction.sqrMagnitude < 0.01f || horizontalFacing.sqrMagnitude < 0.01f ||
                    Vector3.Dot(horizontalFacing, direction) >= EffectiveFacingThreshold;
         }
