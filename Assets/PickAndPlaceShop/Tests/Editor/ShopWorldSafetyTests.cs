@@ -15,6 +15,10 @@ namespace PickAndPlaceShop.Tests
             Assert.AreEqual(-10f, config.FallRecoveryHeight, 0.001f);
             Assert.AreEqual(6, config.MaximumPedestrians);
             Assert.Greater(config.SafetyPollInterval, 0f);
+            Assert.AreEqual(0.2f, config.PedestrianSpeedVariance, 0.001f);
+            Assert.Greater(config.PedestrianSpawnStagger, 0f);
+            Assert.Greater(config.PedestrianPauseChance, 0f);
+            Assert.Greater(config.PedestrianLaneSpacing, 1f);
         }
 
         [Test]

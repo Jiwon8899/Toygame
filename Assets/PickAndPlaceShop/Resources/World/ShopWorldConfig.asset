@@ -18,3 +18,8 @@ MonoBehaviour:
   recoveryFadeSeconds: 0.28
   maximumPedestrians: 6
   pedestrianWalkSpeed: 1.45
+  pedestrianSpeedVariance: 0.2
+  pedestrianSpawnStagger: 0.65
+  pedestrianPauseChance: 0.28
+  pedestrianPauseSeconds: {x: 0.4, y: 1.4}
+  pedestrianLaneSpacing: 1.45

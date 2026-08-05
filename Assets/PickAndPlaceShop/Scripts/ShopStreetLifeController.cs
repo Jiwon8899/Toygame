@@ -12,6 +12,11 @@ namespace PickAndPlaceShop
             public GameObject Root;
             public Animator Animator;
             public int Waypoint;
+            public int Route;
+            public int Direction;
+            public float Speed;
+            public float PauseRemaining;
+            public float SpawnDelay;
         }
 
         private static readonly int MovingParameter = Animator.StringToHash("Moving");
@@ -19,7 +24,7 @@ namespace PickAndPlaceShop
         private readonly List<GameObject> decor = new();
         private readonly List<Pedestrian> pedestrians = new();
         private readonly List<Light> streetLights = new();
-        private Vector3[] waypoints;
+        private Vector3[][] routes;
         private ShopWorldConfig world;
         private ShopWorkforceConfig appearances;
         private float nextSetup;
@@ -63,7 +68,7 @@ namespace PickAndPlaceShop
                 if (decor.Count > 0 || pedestrians.Count > 0) Clear();
                 return;
             }
-            if (waypoints == null && Time.unscaledTime >= nextSetup)
+            if (routes == null && Time.unscaledTime >= nextSetup)
             {
                 nextSetup = Time.unscaledTime + 1f;
                 SetupStreet();
@@ -79,10 +84,18 @@ namespace PickAndPlaceShop
         {
             if (world == null || appearances == null) return;
             Vector3 origin = ShopNightSalesSystem.Instance.RoadsidePosition;
-            waypoints = new[]
+            float lane = world.PedestrianLaneSpacing;
+            routes = new[]
             {
-                origin + new Vector3(-12f, 0f, -1.5f), origin + new Vector3(12f, 0f, -1.5f),
-                origin + new Vector3(12f, 0f, 1.5f), origin + new Vector3(-12f, 0f, 1.5f)
+                new[] { origin + new Vector3(-12f, 0f, -lane), origin + new Vector3(12f, 0f, -lane) },
+                new[] { origin + new Vector3(12f, 0f, lane), origin + new Vector3(-12f, 0f, lane) },
+                new[]
+                {
+                    origin + new Vector3(-10f, 0f, -lane * 1.75f),
+                    origin + new Vector3(0f, 0f, -lane * 1.95f),
+                    origin + new Vector3(10f, 0f, -lane * 1.75f),
+                    origin + new Vector3(0f, 0f, lane * 1.95f)
+                }
             };
             for (int i = 0; i < 4; i++)
             {
@@ -101,10 +114,13 @@ namespace PickAndPlaceShop
 
         private void CreatePedestrian(GameObject prefab, int index)
         {
-            if (prefab == null || waypoints == null) return;
+            if (prefab == null || routes == null) return;
             GameObject root = new("StreetPedestrian_" + (index + 1));
             root.transform.SetParent(transform, false);
-            root.transform.position = waypoints[index % waypoints.Length] + Vector3.right * (index * 0.55f);
+            int routeIndex = index % routes.Length;
+            int start = Random.Range(0, routes[routeIndex].Length);
+            int direction = index % 2 == 0 ? 1 : -1;
+            root.transform.position = routes[routeIndex][start];
             root.AddComponent<ShopWorldSafetyAgent>();
             GameObject visual = Instantiate(prefab, root.transform);
             visual.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -112,25 +128,53 @@ namespace PickAndPlaceShop
             foreach (Rigidbody body in root.GetComponentsInChildren<Rigidbody>(true)) Destroy(body);
             Animator animator = root.GetComponentInChildren<Animator>(true);
             if (animator != null) animator.applyRootMotion = false;
-            pedestrians.Add(new Pedestrian { Root = root, Animator = animator, Waypoint = (index + 1) % waypoints.Length });
+            pedestrians.Add(new Pedestrian
+            {
+                Root = root,
+                Animator = animator,
+                Route = routeIndex,
+                Waypoint = Wrap(start + direction, routes[routeIndex].Length),
+                Direction = direction,
+                Speed = world.PedestrianWalkSpeed * Random.Range(
+                    1f - world.PedestrianSpeedVariance, 1f + world.PedestrianSpeedVariance),
+                SpawnDelay = index * world.PedestrianSpawnStagger
+            });
         }
 
         private void UpdatePedestrians()
         {
-            if (waypoints == null || world == null) return;
+            if (routes == null || world == null) return;
             for (int i = 0; i < pedestrians.Count; i++)
             {
                 Pedestrian pedestrian = pedestrians[i];
                 if (pedestrian.Root == null) continue;
-                Vector3 delta = waypoints[pedestrian.Waypoint] - pedestrian.Root.transform.position;
+                if (pedestrian.SpawnDelay > 0f)
+                {
+                    pedestrian.SpawnDelay -= Time.deltaTime;
+                    SetMoving(pedestrian.Animator, false);
+                    continue;
+                }
+                if (pedestrian.PauseRemaining > 0f)
+                {
+                    pedestrian.PauseRemaining -= Time.deltaTime;
+                    SetMoving(pedestrian.Animator, false);
+                    continue;
+                }
+                Vector3[] route = routes[pedestrian.Route];
+                Vector3 delta = route[pedestrian.Waypoint] - pedestrian.Root.transform.position;
                 delta.y = 0f;
                 if (delta.sqrMagnitude < 0.2f)
                 {
-                    pedestrian.Waypoint = (pedestrian.Waypoint + 1) % waypoints.Length;
+                    if (Random.value < world.PedestrianPauseChance)
+                        pedestrian.PauseRemaining = Random.Range(world.PedestrianPauseSeconds.x,
+                            world.PedestrianPauseSeconds.y);
+                    if (route.Length == 2) pedestrian.Direction *= -1;
+                    else if (Random.value < 0.18f) pedestrian.Direction *= -1;
+                    pedestrian.Waypoint = Wrap(pedestrian.Waypoint + pedestrian.Direction, route.Length);
                     continue;
                 }
                 pedestrian.Root.transform.position += delta.normalized *
-                    Mathf.Min(delta.magnitude, world.PedestrianWalkSpeed * Time.deltaTime);
+                    Mathf.Min(delta.magnitude, pedestrian.Speed * Time.deltaTime);
                 pedestrian.Root.transform.rotation = Quaternion.Slerp(pedestrian.Root.transform.rotation,
                     Quaternion.LookRotation(delta.normalized), Time.deltaTime * 7f);
                 SetMoving(pedestrian.Animator, true);
@@ -204,10 +248,17 @@ namespace PickAndPlaceShop
 
         private void Clear()
         {
-            waypoints = null;
+            routes = null;
             for (int i = 0; i < pedestrians.Count; i++) if (pedestrians[i].Root != null) Destroy(pedestrians[i].Root);
             for (int i = 0; i < decor.Count; i++) if (decor[i] != null) Destroy(decor[i]);
             pedestrians.Clear(); decor.Clear(); streetLights.Clear();
+        }
+
+        private static int Wrap(int value, int count)
+        {
+            if (count <= 0) return 0;
+            value %= count;
+            return value < 0 ? value + count : value;
         }
     }
 }
