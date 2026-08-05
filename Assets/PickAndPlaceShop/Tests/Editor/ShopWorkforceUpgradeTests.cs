@@ -52,5 +52,16 @@ namespace PickAndPlaceShop.Tests
             Assert.AreEqual(7, restored.staffHiredMask);
             Assert.AreEqual(5, restored.staffAttendanceMask);
         }
+
+        [Test]
+        public void StaffMovement_UsesCollisionControllerInsteadOfDirectTransformTranslation()
+        {
+            string source = System.IO.File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopStaffManager.cs");
+            StringAssert.Contains("CharacterController Controller", source);
+            StringAssert.Contains("actor.Controller.Move", source);
+            StringAssert.Contains("CollisionFlags.Sides", source);
+            StringAssert.DoesNotContain("actor.Root.transform.position +=", source);
+        }
     }
 }

@@ -13,8 +13,11 @@ namespace PickAndPlaceShop
             public ShopStaffRole Role;
             public GameObject Root;
             public Animator Animator;
+            public CharacterController Controller;
             public float NextWorkTime;
             public Vector3 Target;
+            public float AvoidanceTimer;
+            public float AvoidanceSign = 1f;
         }
 
         private static readonly int MovingParameter = Animator.StringToHash("Moving");
@@ -116,6 +119,13 @@ namespace PickAndPlaceShop
             }
             foreach (Collider collider in root.GetComponentsInChildren<Collider>(true)) Destroy(collider);
             foreach (Rigidbody body in root.GetComponentsInChildren<Rigidbody>(true)) Destroy(body);
+            CharacterController controller = root.AddComponent<CharacterController>();
+            controller.center = new Vector3(0f, 0.95f, 0f);
+            controller.height = 1.8f;
+            controller.radius = 0.32f;
+            controller.stepOffset = 0.25f;
+            controller.slopeLimit = 48f;
+            controller.minMoveDistance = 0f;
             Animator animator = root.GetComponentInChildren<Animator>(true);
             if (animator != null) animator.applyRootMotion = false;
 
@@ -124,6 +134,7 @@ namespace PickAndPlaceShop
                 Role = role,
                 Root = root,
                 Animator = animator,
+                Controller = controller,
                 Target = TargetFor(role),
                 NextWorkTime = Time.unscaledTime + 1f
             };
@@ -143,10 +154,26 @@ namespace PickAndPlaceShop
                 bool moving = delta.sqrMagnitude > config.WorkReachDistance * config.WorkReachDistance;
                 if (moving)
                 {
-                    Vector3 step = delta.normalized * (config.WalkSpeed * Time.deltaTime);
-                    actor.Root.transform.position += step.magnitude > delta.magnitude ? delta : step;
-                    actor.Root.transform.rotation = Quaternion.Slerp(actor.Root.transform.rotation,
-                        Quaternion.LookRotation(delta.normalized, Vector3.up), Time.deltaTime * 8f);
+                    Vector3 desiredDirection = delta.normalized;
+                    if (actor.AvoidanceTimer > 0f)
+                    {
+                        actor.AvoidanceTimer -= Time.deltaTime;
+                        desiredDirection = Quaternion.Euler(0f, 68f * actor.AvoidanceSign, 0f) *
+                                           desiredDirection;
+                    }
+                    float distance = Mathf.Min(config.WalkSpeed * Time.deltaTime, delta.magnitude);
+                    CollisionFlags collision = actor.Controller != null && actor.Controller.enabled
+                        ? actor.Controller.Move(desiredDirection * distance + Vector3.down *
+                            (2f * Time.deltaTime))
+                        : CollisionFlags.None;
+                    if ((collision & CollisionFlags.Sides) != 0)
+                    {
+                        actor.AvoidanceTimer = 0.65f;
+                        actor.AvoidanceSign *= -1f;
+                    }
+                    if (desiredDirection.sqrMagnitude > 0.0001f)
+                        actor.Root.transform.rotation = Quaternion.Slerp(actor.Root.transform.rotation,
+                            Quaternion.LookRotation(desiredDirection, Vector3.up), Time.deltaTime * 8f);
                 }
                 SetMoving(actor.Animator, moving);
                 if (!isServer || moving || Time.unscaledTime < actor.NextWorkTime) continue;
