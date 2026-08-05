@@ -50,6 +50,10 @@ namespace PickAndPlaceShop
         [Min(0f)] [SerializeField] private float idleReturnSpeed = 0.05f;
         [Min(0.05f)] [SerializeField] private float minimumAnimationStateSeconds = 0.2f;
 
+        [Header("Movement recovery")]
+        [Min(2f)] [SerializeField] private float movementStateTimeoutSeconds = 12f;
+        [Min(2f)] [SerializeField] private float leaveRecoveryTimeoutSeconds = 15f;
+
         private float movementSpeed;
         private float patienceSeconds;
         private float stateElapsed;
@@ -161,7 +165,7 @@ namespace PickAndPlaceShop
             switch (State.Value)
             {
                 case ShopCustomerState.Enter:
-                    if (MoveTo(target))
+                    if (MoveTo(target) || stateElapsed >= movementStateTimeoutSeconds)
                     {
                         target = ShopNightSalesSystem.Instance.ServerGetBrowsePoint(NetworkObjectId);
                         TraceSalesFlow("Browse", target);
@@ -169,7 +173,9 @@ namespace PickAndPlaceShop
                     }
                     break;
                 case ShopCustomerState.Browse:
-                    if (MoveTo(target) && stateElapsed >= 1.25f)
+                    bool browseReached = MoveTo(target);
+                    if ((browseReached && stateElapsed >= 1.25f) ||
+                        stateElapsed >= movementStateTimeoutSeconds)
                     {
                         target = ShopNightSalesSystem.Instance.ServerGetInspectPoint(NetworkObjectId);
                         TraceSalesFlow("Inspect", target);
@@ -177,7 +183,9 @@ namespace PickAndPlaceShop
                     }
                     break;
                 case ShopCustomerState.InspectProduct:
-                    if (MoveTo(target) && stateElapsed >= 0.9f)
+                    bool inspectReached = MoveTo(target);
+                    if ((inspectReached && stateElapsed >= 0.9f) ||
+                        stateElapsed >= movementStateTimeoutSeconds)
                     {
                         if (ShopNightSalesSystem.Instance.ServerTrySelectAndReserve(this, out int productId,
                                 out string productName, out float score))
@@ -210,8 +218,10 @@ namespace PickAndPlaceShop
                 case ShopCustomerState.Leave:
                 case ShopCustomerState.GiveUp:
                     target = ShopNightSalesSystem.Instance.ExitPosition;
-                    if (MoveTo(target))
+                    if (MoveTo(target) || stateElapsed >= leaveRecoveryTimeoutSeconds)
                     {
+                        if (stateElapsed >= leaveRecoveryTimeoutSeconds)
+                            TraceSalesFlow("ExitRecovery", target);
                         ShopNightSalesSystem.Instance.ServerCustomerReachedExit(this);
                     }
                     break;
