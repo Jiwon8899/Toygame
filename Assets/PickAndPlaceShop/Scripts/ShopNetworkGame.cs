@@ -62,7 +62,7 @@ namespace PickAndPlaceShop
         public static ShopNetworkGame Instance { get; private set; }
 
         public NetworkVariable<int> Day = new(1);
-        public NetworkVariable<int> Coins = new(1200);
+        public NetworkVariable<int> Coins = new(0);
         public NetworkVariable<int> Inventory = new(0);
         public NetworkVariable<int> RareInventory = new(0);
         public NetworkList<int> ClawInventoryVisuals = new();
@@ -815,7 +815,8 @@ namespace PickAndPlaceShop
         private void ResetCampaign()
         {
             Day.Value = 1;
-            Coins.Value = 1200;
+            ShopOperationsConfig operations = ShopOperationsConfig.Load();
+            Coins.Value = operations != null ? operations.NewGameStartingFunds : 0;
             Inventory.Value = 0;
             RareInventory.Value = 0;
             ClawInventoryVisuals.Clear();

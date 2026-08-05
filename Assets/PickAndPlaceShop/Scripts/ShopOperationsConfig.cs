@@ -71,6 +71,9 @@ namespace PickAndPlaceShop
         [Min(1f)] [SerializeField] private float closingSeconds = 60f;
         [SerializeField] private int[] salesGoalByStage = { 5, 8, 12, 16, 22, 30 };
 
+        [Header("Economy")]
+        [Min(0)] [SerializeField] private int newGameStartingFunds = 10000;
+
         [Header("Trend")]
         [Range(0f, 1f)] [SerializeField] private float trendPriceBonus = 0.15f;
         [Range(1f, 4f)] [SerializeField] private float trendCustomerWeight = 1.7f;
@@ -181,6 +184,7 @@ namespace PickAndPlaceShop
         public float PreparationSeconds => preparationSeconds;
         public float OpeningSeconds => openingSeconds;
         public float ClosingSeconds => closingSeconds;
+        public int NewGameStartingFunds => Mathf.Max(0, newGameStartingFunds);
         public float TrendPriceBonus => trendPriceBonus;
         public float TrendCustomerWeight => trendCustomerWeight;
         public float TrendSatisfactionBonus => trendSatisfactionBonus;

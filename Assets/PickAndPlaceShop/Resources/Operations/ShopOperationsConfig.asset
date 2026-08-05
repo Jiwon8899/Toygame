@@ -16,6 +16,7 @@ MonoBehaviour:
   openingSeconds: 300
   closingSeconds: 60
   salesGoalByStage: 05000000080000000c00000010000000160000001e000000
+  newGameStartingFunds: 10000
   trendPriceBonus: 0.15
   trendCustomerWeight: 1.7
   trendSatisfactionBonus: 4
