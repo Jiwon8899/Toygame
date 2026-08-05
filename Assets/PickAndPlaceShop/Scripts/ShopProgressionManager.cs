@@ -739,7 +739,8 @@ namespace PickAndPlaceShop
                 staffHiredMask = boundGame != null ? boundGame.StaffHiredMask.Value : 0,
                 staffAttendanceMask = boundGame != null ? boundGame.StaffAttendanceMask.Value : 0,
                 tutorialStep = tutorialStep,
-                tutorialCompleted = tutorialCompleted
+                tutorialCompleted = tutorialCompleted,
+                upcycleDecorMask = boundGame != null ? boundGame.UpcycleDecorMask.Value : 0
             };
         }
 
@@ -781,6 +782,8 @@ namespace PickAndPlaceShop
             if (save.clawMachines != null) pendingClawMachines.AddRange(save.clawMachines);
             tutorialStep = Mathf.Clamp(save.tutorialStep, 0, ShopTutorialRuntime.StepCount);
             tutorialCompleted = save.tutorialCompleted;
+            if (boundGame != null && boundGame.IsServer)
+                boundGame.UpcycleDecorMask.Value = Mathf.Max(0, save.upcycleDecorMask);
         }
 
         public bool TryConsumeClawMachineSave(int machineId, out ShopClawMachineSave saved)
@@ -806,7 +809,7 @@ namespace PickAndPlaceShop
                 game.ItemContainers.Add(new ShopContainerItem
                 {
                     OwnerClientId = saved.ownerClientId,
-                    Container = (ShopContainerKind)Mathf.Clamp(saved.container, 0, 3),
+                    Container = (ShopContainerKind)Mathf.Clamp(saved.container, 0, 5),
                     SlotIndex = Mathf.Max(0, saved.slotIndex),
                     ProductId = saved.productId,
                     VisualPrefabIndex = saved.visualPrefabIndex,

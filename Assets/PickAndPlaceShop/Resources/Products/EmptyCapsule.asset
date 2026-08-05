@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 746e9bdbf3621b64aa77dd9acfd77ae8, type: 3}
+  m_Name: EmptyCapsule
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopProductDefinition
+  productId: 9001
+  displayName: "\uBE48 \uCEA1\uC290"
+  category: 10
+  salePrice: 1
+  rarity: 0
+  condition: 1
+  giftWrappable: 0
+  stableItemId: optional:empty_capsule
+  prizePrefab: {fileID: 0}
+  physicsProfile: {fileID: 0}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 0}
+  tint: {r: 1, g: 1, b: 1, a: 1}
+  maxStack: 100
+  placeholderArtwork: 0

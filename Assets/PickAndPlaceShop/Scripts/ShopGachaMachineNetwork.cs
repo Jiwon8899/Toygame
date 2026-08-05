@@ -190,7 +190,11 @@ namespace PickAndPlaceShop
                     ? "가방에 넣었습니다."
                     : "가방이 가득 차 창고로 보냈습니다."
                 : "가방과 창고가 가득 차 상품 획득을 보류했습니다.");
-            if (stored) game.ServerRecordAcquired(1);
+            if (stored)
+            {
+                game.ServerRecordAcquired(1);
+                ShopDifferentiationController.Instance?.ServerCollectEmptyCapsule();
+            }
             ShopProgressionManager progression = ShopProgressionManager.Instance;
             if (progression == null)
                 Debug.LogError("[Progression] 가챠 컬렉션 관리자를 찾지 못했습니다.", this);

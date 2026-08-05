@@ -10,7 +10,9 @@ namespace PickAndPlaceShop
         PersonalInventory = 0,
         SharedStorage = 1,
         SharedDisplay = 2,
-        AutomationBuffer = 3
+        AutomationBuffer = 3,
+        CapsuleRecycler = 4,
+        ConsignmentDisplay = 5
     }
 
     [Serializable]

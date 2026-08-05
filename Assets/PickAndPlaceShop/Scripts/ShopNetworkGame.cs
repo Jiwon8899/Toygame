@@ -23,7 +23,12 @@ namespace PickAndPlaceShop
         Register,
         EndDay,
         UpgradeShop,
-        OnlineOrder
+        OnlineOrder,
+        CapsuleRecycler,
+        AppraisalDesk,
+        ConsignmentCorner,
+        ReviewBoard,
+        CurationDesk
     }
 
     public enum ShopUpgradeCategory
@@ -78,6 +83,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<ShopPhase> Phase = new(ShopPhase.PrizeHunt);
         public NetworkVariable<FixedString128Bytes> LastEvent =
             new(new FixedString128Bytes("Open a claw machine and collect stock together."));
+        public NetworkVariable<int> UpcycleDecorMask = new(0);
 
         public NetworkVariable<int> CampaignRevenue = new(0);
         public NetworkVariable<int> CampaignSold = new(0);
@@ -312,6 +318,13 @@ namespace PickAndPlaceShop
                     break;
                 case ShopAction.OnlineOrder:
                     ShopLiveOperationsNetwork.Instance?.ServerHandlePackingStation(sender);
+                    break;
+                case ShopAction.CapsuleRecycler:
+                case ShopAction.AppraisalDesk:
+                case ShopAction.ConsignmentCorner:
+                case ShopAction.ReviewBoard:
+                case ShopAction.CurationDesk:
+                    ShopDifferentiationController.Instance?.ServerHandleInteraction(action, sender);
                     break;
             }
         }
@@ -834,6 +847,8 @@ namespace PickAndPlaceShop
                 ShopContainerKind.SharedStorage => SharedStorageCapacity,
                 ShopContainerKind.SharedDisplay => SharedDisplayCapacity,
                 ShopContainerKind.AutomationBuffer => ShopOperationsConfig.Load()?.AutomationBufferSlots ?? 10,
+                ShopContainerKind.CapsuleRecycler => ShopDifferentiationConfig.Load()?.CapsuleRecyclerSlots ?? 10,
+                ShopContainerKind.ConsignmentDisplay => 3,
                 _ => 0
             };
             ulong owner = container == ShopContainerKind.PersonalInventory ||
@@ -898,6 +913,16 @@ namespace PickAndPlaceShop
                 return false;
             SyncLegacyContainerCounts();
             return true;
+        }
+
+        public bool ServerTryAcquireSharedContainer(ShopProductDefinition product, int visualPrefabIndex,
+            ShopContainerKind destination, int capacity)
+        {
+            if (!IsServer || product == null || destination == ShopContainerKind.PersonalInventory) return false;
+            bool added = TryAddToContainer(ShopContainerRules.SharedOwner, destination, product,
+                visualPrefabIndex, Mathf.Max(1, capacity));
+            if (added) SyncLegacyContainerCounts();
+            return added;
         }
 
         public bool ServerCanAcquireItem(ulong ownerClientId)
@@ -1188,6 +1213,34 @@ namespace PickAndPlaceShop
             return consumed == amount;
         }
 
+        public bool ServerTryConsumeContainerProductFrom(ShopContainerKind container, int productId, int amount)
+        {
+            if (!IsServer || amount <= 0) return false;
+            int available = 0;
+            for (int i = 0; i < ItemContainers.Count; i++)
+            {
+                ShopContainerItem item = ItemContainers[i];
+                if (item.Container == container && item.ProductId == productId)
+                    available += Mathf.Max(0, item.Quantity);
+            }
+            if (available < amount) return false;
+            int remaining = amount;
+            while (remaining > 0)
+            {
+                int index = ShopContainerRules.FindFirst(ItemContainers, ShopContainerRules.SharedOwner,
+                    container, productId);
+                if (index < 0) return false;
+                ShopContainerItem item = ItemContainers[index];
+                int take = Mathf.Min(remaining, item.Quantity);
+                item.Quantity -= take;
+                remaining -= take;
+                if (item.Quantity <= 0) ItemContainers.RemoveAt(index);
+                else ItemContainers[index] = item;
+            }
+            SyncLegacyContainerCounts();
+            return true;
+        }
+
         public bool ServerTryConsumeDisplayedProduct(int productId, out ShopContainerItem consumed)
         {
             consumed = default;
@@ -1247,6 +1300,8 @@ namespace PickAndPlaceShop
             ShopContainerKind.SharedStorage => SharedStorageCapacity,
             ShopContainerKind.SharedDisplay => SharedDisplayCapacity,
             ShopContainerKind.AutomationBuffer => ShopOperationsConfig.Load()?.AutomationBufferSlots ?? 10,
+            ShopContainerKind.CapsuleRecycler => ShopDifferentiationConfig.Load()?.CapsuleRecyclerSlots ?? 10,
+            ShopContainerKind.ConsignmentDisplay => 3,
             _ => 0
         };
 
