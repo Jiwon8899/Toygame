@@ -249,6 +249,7 @@ namespace PickAndPlaceShop
             feedback = CreateText("Feedback", panel.transform, string.Empty, 22, FontStyle.Bold,
                 TextAnchor.MiddleCenter, new Color(0.7f, 1f, 0.82f));
             SetRect(feedback.rectTransform, new Vector2(32f, -782f), new Vector2(1746f, 42f));
+            feedback.text = "개인 상품 위에 마우스를 올리고 Shift+1~5로 단축 슬롯 등록 · 클릭하면 바로 들기";
             Text help = CreateText("Help", panel.transform,
                 "I 닫기 · 드래그로 패널 간 이동 · 같은 상품은 최대 10개 합치기 · 실패한 이동은 원래 위치 유지",
                 21, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.68f, 0.78f, 0.9f));
@@ -385,6 +386,9 @@ namespace PickAndPlaceShop
 
         public void Hover(ShopContainerSlotView slot, bool entered)
         {
+            if (entered && slot != null && slot.ActiveSlot && slot.Item.HasValue &&
+                slot.Container == ShopContainerKind.PersonalInventory)
+                ShopCurationSystem.Instance?.SetHotbarAssignmentCandidate(slot.Item.Value);
             if (dragSource == null || slot == null || !slot.ActiveSlot) return;
             slot.SetHighlight(entered, CanDrop(slot));
             if (entered) SetPanelHighlight(slot.Container, CanDrop(slot));

@@ -157,11 +157,17 @@ namespace PickAndPlaceShop
         public int curationRarityScore;
         public int curationDensityScore;
         public bool curationAutomatic;
+        public int hotbarProduct0 = -1;
+        public int hotbarProduct1 = -1;
+        public int hotbarProduct2 = -1;
+        public int hotbarProduct3 = -1;
+        public int hotbarProduct4 = -1;
+        public int selectedHotbarSlot = -1;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 14;
+        public const int CurrentVersion = 15;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 

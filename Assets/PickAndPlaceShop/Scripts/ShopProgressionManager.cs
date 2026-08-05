@@ -62,6 +62,8 @@ namespace PickAndPlaceShop
         private int observedGameDay;
         private int tutorialStep;
         private bool tutorialCompleted;
+        private readonly int[] hotbarProductIds = { -1, -1, -1, -1, -1 };
+        private int selectedHotbarSlot = -1;
 
         public ShopProgressionCatalog Catalog => catalog;
         public int CurrentDay => currentDay;
@@ -93,6 +95,24 @@ namespace PickAndPlaceShop
         public bool TutorialCompleted => tutorialCompleted;
         public string SavePath => ShopProgressionSaveStore.SavePath;
         public ShopProgressionSaveData GetLoadedSaveData() => loadedSaveData;
+        public int SelectedHotbarSlot => selectedHotbarSlot;
+
+        public int GetHotbarProductId(int slot) => slot >= 0 && slot < hotbarProductIds.Length
+            ? hotbarProductIds[slot]
+            : -1;
+
+        public void SetHotbarProduct(int slot, int productId)
+        {
+            if (slot < 0 || slot >= hotbarProductIds.Length) return;
+            hotbarProductIds[slot] = productId;
+            MarkChanged();
+        }
+
+        public void SetSelectedHotbarSlot(int slot)
+        {
+            selectedHotbarSlot = Mathf.Clamp(slot, -1, hotbarProductIds.Length - 1);
+            MarkChanged();
+        }
 
         public ShopProgressStage CurrentStage =>
             catalog != null && catalog.Stages.Count > 0
@@ -426,6 +446,8 @@ namespace PickAndPlaceShop
             weeklySetRewardClaimed = false;
             tutorialStep = 0;
             tutorialCompleted = false;
+            for (int i = 0; i < hotbarProductIds.Length; i++) hotbarProductIds[i] = -1;
+            selectedHotbarSlot = -1;
             regularCustomerIds.Clear();
             unlockedDistrictIds.Clear();
             ownedCollectionItemIds.Clear();
@@ -777,7 +799,13 @@ namespace PickAndPlaceShop
                 curationSymmetryScore = boundGame != null ? boundGame.CurationSymmetryScore.Value : 0,
                 curationRarityScore = boundGame != null ? boundGame.CurationRarityScore.Value : 0,
                 curationDensityScore = boundGame != null ? boundGame.CurationDensityScore.Value : 0,
-                curationAutomatic = boundGame != null && boundGame.CurationAutomatic.Value
+                curationAutomatic = boundGame != null && boundGame.CurationAutomatic.Value,
+                hotbarProduct0 = hotbarProductIds[0],
+                hotbarProduct1 = hotbarProductIds[1],
+                hotbarProduct2 = hotbarProductIds[2],
+                hotbarProduct3 = hotbarProductIds[3],
+                hotbarProduct4 = hotbarProductIds[4],
+                selectedHotbarSlot = selectedHotbarSlot
             };
         }
 
@@ -821,6 +849,12 @@ namespace PickAndPlaceShop
             if (save.kujiStations != null) pendingKujiStations.AddRange(save.kujiStations);
             tutorialStep = Mathf.Clamp(save.tutorialStep, 0, ShopTutorialRuntime.StepCount);
             tutorialCompleted = save.tutorialCompleted;
+            hotbarProductIds[0] = save.hotbarProduct0;
+            hotbarProductIds[1] = save.hotbarProduct1;
+            hotbarProductIds[2] = save.hotbarProduct2;
+            hotbarProductIds[3] = save.hotbarProduct3;
+            hotbarProductIds[4] = save.hotbarProduct4;
+            selectedHotbarSlot = Mathf.Clamp(save.selectedHotbarSlot, -1, hotbarProductIds.Length - 1);
             if (boundGame != null && boundGame.IsServer)
             {
                 boundGame.UpcycleDecorMask.Value = Mathf.Max(0, save.upcycleDecorMask);

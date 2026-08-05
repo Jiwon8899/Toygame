@@ -92,6 +92,13 @@ namespace PickAndPlaceShop
         private float photoPitch;
         private string lastScreenshotPath;
         private bool photoCapturePending;
+        private readonly Image[] hotbarIcons = new Image[5];
+        private readonly Image[] hotbarBackgrounds = new Image[5];
+        private readonly Text[] hotbarLabels = new Text[5];
+        private Canvas hotbarCanvas;
+        private ShopContainerItem? hotbarAssignmentCandidate;
+        private int activeHotbarSlot = -1;
+        private float nextHotbarRefresh;
 
         public int CurrentScoreAverage => observedGame == null ? 0 : Mathf.RoundToInt(
             (observedGame.CurationClusterScore.Value + observedGame.CurationSymmetryScore.Value +
@@ -139,9 +146,15 @@ namespace PickAndPlaceShop
             }
             if (placementsDirty) RebuildPlacementVisuals();
             UpdateScorePanel();
+            if (Time.unscaledTime >= nextHotbarRefresh)
+            {
+                nextHotbarRefresh = Time.unscaledTime + 0.2f;
+                RefreshHotbar();
+            }
 
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null || ShopLocalPauseState.IsPaused) return;
+            if (HandleHotbarInput(keyboard)) return;
             if (photoMode) { UpdatePhotoMode(keyboard); return; }
             if (keyboard.pKey.wasPressedThisFrame) { EnterPhotoMode(); return; }
             if (heldVisual != null) UpdateHolding(keyboard);
@@ -186,12 +199,15 @@ namespace PickAndPlaceShop
             CaptureHeldColors();
             foreach (Collider collider in heldVisual.GetComponentsInChildren<Collider>(true))
                 collider.enabled = false;
-            Rigidbody body = heldVisual.GetComponent<Rigidbody>() ?? heldVisual.AddComponent<Rigidbody>();
-            body.isKinematic = true;
-            body.useGravity = false;
             heldSize = MeasureVisual(heldVisual);
             SetVisualGhost(heldVisual, false, true);
             if (helpText != null) helpText.text = "Q/E 회전 · 선반 앞 E/Space 배치 · F 인벤토리로 되돌리기";
+        }
+
+        public void SetHotbarAssignmentCandidate(ShopContainerItem item)
+        {
+            if (item.Container == ShopContainerKind.PersonalInventory)
+                hotbarAssignmentCandidate = item;
         }
 
         public void CancelHolding()
@@ -211,11 +227,17 @@ namespace PickAndPlaceShop
             heldYaw = Mathf.Repeat(heldYaw + turn * config.ShelfPlacementRotationSpeed * Time.deltaTime, 360f);
             Transform player = FindLocalPlayer();
             if (player == null) { CancelHolding(); return; }
-            Vector3 hand = player.position + player.forward * 0.8f + Vector3.up * 1.05f;
+            Transform handAnchor = FindRightHand(player);
+            Vector3 hand = handAnchor != null
+                ? handAnchor.position + handAnchor.forward * 0.12f + handAnchor.up * 0.06f
+                : player.position + player.forward * 0.55f + Vector3.up * 1.05f;
             ghostCanPlace = TryFindGhostPosition(out ghostPosition) &&
                             ServerPositionValid(ghostPosition, heldSize, heldYaw, -1, out _);
+            Quaternion handRotation = handAnchor != null
+                ? handAnchor.rotation * Quaternion.Euler(20f, 90f, 0f)
+                : Quaternion.Euler(0f, heldYaw, 0f);
             heldVisual.transform.SetPositionAndRotation(ghostCanPlace ? ghostPosition : hand,
-                Quaternion.Euler(0f, heldYaw, 0f));
+                ghostCanPlace ? Quaternion.Euler(0f, heldYaw, 0f) : handRotation);
             SetVisualGhost(heldVisual, ghostCanPlace, ghostCanPlace);
             bool confirm = keyboard.spaceKey.wasPressedThisFrame ||
                            keyboard.eKey.wasPressedThisFrame && ghostCanPlace;
@@ -675,6 +697,137 @@ namespace PickAndPlaceShop
             photoText.rectTransform.anchoredPosition = new Vector2(0f, -24f);
             photoText.rectTransform.sizeDelta = new Vector2(0f, 90f);
             photoCanvas.enabled = false;
+            BuildHotbarUi(font);
+        }
+
+        private void BuildHotbarUi(Font font)
+        {
+            GameObject canvasObject = new("Product Hotbar Canvas", typeof(Canvas), typeof(CanvasScaler));
+            canvasObject.transform.SetParent(transform, false);
+            hotbarCanvas = canvasObject.GetComponent<Canvas>();
+            hotbarCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            hotbarCanvas.sortingOrder = 1450;
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+
+            GameObject strip = new("Hotbar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            strip.transform.SetParent(canvasObject.transform, false);
+            RectTransform stripRect = strip.GetComponent<RectTransform>();
+            stripRect.anchorMin = stripRect.anchorMax = new Vector2(0.5f, 0f);
+            stripRect.pivot = new Vector2(0.5f, 0f);
+            stripRect.anchoredPosition = new Vector2(0f, 18f);
+            stripRect.sizeDelta = new Vector2(590f, 116f);
+            strip.GetComponent<Image>().color = new Color(0.02f, 0.04f, 0.06f, 0.88f);
+
+            for (int i = 0; i < 5; i++)
+            {
+                GameObject slot = new("Hotbar Slot " + (i + 1), typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                slot.transform.SetParent(strip.transform, false);
+                RectTransform slotRect = slot.GetComponent<RectTransform>();
+                slotRect.anchorMin = slotRect.anchorMax = new Vector2(0f, 0.5f);
+                slotRect.pivot = new Vector2(0f, 0.5f);
+                slotRect.anchoredPosition = new Vector2(12f + i * 114f, 8f);
+                slotRect.sizeDelta = new Vector2(104f, 94f);
+                hotbarBackgrounds[i] = slot.GetComponent<Image>();
+
+                Image icon = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image))
+                    .GetComponent<Image>();
+                icon.transform.SetParent(slot.transform, false);
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                icon.rectTransform.anchorMin = new Vector2(0.15f, 0.28f);
+                icon.rectTransform.anchorMax = new Vector2(0.85f, 0.95f);
+                icon.rectTransform.offsetMin = icon.rectTransform.offsetMax = Vector2.zero;
+                hotbarIcons[i] = icon;
+
+                Text label = CreateText(slot.transform, font, 16, TextAnchor.LowerCenter);
+                label.rectTransform.offsetMin = new Vector2(2f, 2f);
+                label.rectTransform.offsetMax = new Vector2(-2f, -68f);
+                hotbarLabels[i] = label;
+            }
+            RefreshHotbar();
+        }
+
+        private bool HandleHotbarInput(Keyboard keyboard)
+        {
+            int pressed = -1;
+            if (keyboard.digit1Key.wasPressedThisFrame) pressed = 0;
+            else if (keyboard.digit2Key.wasPressedThisFrame) pressed = 1;
+            else if (keyboard.digit3Key.wasPressedThisFrame) pressed = 2;
+            else if (keyboard.digit4Key.wasPressedThisFrame) pressed = 3;
+            else if (keyboard.digit5Key.wasPressedThisFrame) pressed = 4;
+            if (pressed < 0) return false;
+
+            bool assign = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
+            if (assign)
+            {
+                if (!hotbarAssignmentCandidate.HasValue) return true;
+                ShopProgressionManager.Instance?.SetHotbarProduct(pressed,
+                    hotbarAssignmentCandidate.Value.ProductId);
+                RefreshHotbar();
+                return true;
+            }
+            if (!ShopInputModeManager.AllowsGameplay) return false;
+            SelectHotbarSlot(pressed);
+            return true;
+        }
+
+        private void SelectHotbarSlot(int slot)
+        {
+            if (activeHotbarSlot == slot && heldVisual != null)
+            {
+                CancelHolding();
+                activeHotbarSlot = -1;
+                ShopProgressionManager.Instance?.SetSelectedHotbarSlot(-1);
+                RefreshHotbar();
+                return;
+            }
+            int productId = ShopProgressionManager.Instance?.GetHotbarProductId(slot) ?? -1;
+            if (productId < 0 || !TryFindPersonalProduct(productId, out ShopContainerItem item))
+            {
+                if (helpText != null) helpText.text = productId < 0
+                    ? "이 단축 슬롯은 비어 있습니다. 인벤토리 상품 위에서 Shift+숫자로 등록하세요."
+                    : "등록한 상품이 현재 개인 인벤토리에 없습니다.";
+                return;
+            }
+            activeHotbarSlot = slot;
+            ShopProgressionManager.Instance?.SetSelectedHotbarSlot(slot);
+            BeginHolding(ShopContainerKind.PersonalInventory, item.SlotIndex, item);
+            RefreshHotbar();
+        }
+
+        private bool TryFindPersonalProduct(int productId, out ShopContainerItem item)
+        {
+            item = default;
+            if (observedGame == null || NetworkManager.Singleton == null) return false;
+            ulong owner = NetworkManager.Singleton.LocalClientId;
+            for (int i = 0; i < observedGame.ItemContainers.Count; i++)
+            {
+                ShopContainerItem candidate = observedGame.ItemContainers[i];
+                if (candidate.OwnerClientId != owner || candidate.Container != ShopContainerKind.PersonalInventory ||
+                    candidate.ProductId != productId || candidate.Quantity <= 0) continue;
+                item = candidate;
+                return true;
+            }
+            return false;
+        }
+
+        private void RefreshHotbar()
+        {
+            ShopProgressionManager manager = ShopProgressionManager.Instance;
+            for (int i = 0; i < hotbarIcons.Length; i++)
+            {
+                if (hotbarIcons[i] == null) continue;
+                int productId = manager?.GetHotbarProductId(i) ?? -1;
+                ShopProductDefinition product = ShopProductVisuals.Find(productId);
+                hotbarIcons[i].sprite = product != null ? product.Icon : null;
+                hotbarIcons[i].enabled = hotbarIcons[i].sprite != null;
+                hotbarLabels[i].text = (i + 1) + (product != null ? "  " + product.DisplayName : "  빈 슬롯");
+                hotbarBackgrounds[i].color = activeHotbarSlot == i && heldVisual != null
+                    ? new Color(0.92f, 0.62f, 0.12f, 0.96f)
+                    : new Color(0.08f, 0.13f, 0.2f, 0.96f);
+            }
         }
 
         private static Text CreateText(Transform parent, Font font, int size, TextAnchor anchor)
@@ -693,6 +846,22 @@ namespace PickAndPlaceShop
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
             return text;
+        }
+
+        private static Transform FindRightHand(Transform player)
+        {
+            if (player == null) return null;
+            Animator animator = player.GetComponentInChildren<Animator>();
+            if (animator != null && animator.isHuman)
+            {
+                Transform bone = animator.GetBoneTransform(HumanBodyBones.RightHand);
+                if (bone != null) return bone;
+            }
+            foreach (Transform candidate in player.GetComponentsInChildren<Transform>(true))
+                if (candidate.name.IndexOf("RightHand", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    candidate.name.IndexOf("Hand_R", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return candidate;
+            return null;
         }
 
         private static Transform FindLocalPlayer()
