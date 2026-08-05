@@ -243,9 +243,9 @@ namespace PickAndPlaceShop
             if (IsSpawned) NegotiationStartRpc();
         }
 
-        public void RequestNegotiationResolve(float markerPosition)
+        public void RequestNegotiationOffer(int offerIndex)
         {
-            if (IsSpawned) NegotiationResolveRpc(Mathf.Clamp01(markerPosition));
+            if (IsSpawned) NegotiationOfferRpc(Mathf.Clamp(offerIndex, 0, 2));
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -255,10 +255,10 @@ namespace PickAndPlaceShop
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-        private void NegotiationResolveRpc(float markerPosition, RpcParams rpcParams = default)
+        private void NegotiationOfferRpc(int offerIndex, RpcParams rpcParams = default)
         {
-            ShopNightSalesSystem.Instance?.ServerResolveNegotiation(rpcParams.Receive.SenderClientId,
-                markerPosition);
+            ShopNightSalesSystem.Instance?.ServerResolveNegotiationOffer(
+                rpcParams.Receive.SenderClientId, Mathf.Clamp(offerIndex, 0, 2));
         }
 
         public void RequestUpgradePurchase(ShopUpgradeCategory category)
@@ -991,6 +991,7 @@ namespace PickAndPlaceShop
                     visualPrefabIndex))
             {
                 ServerRecordClawPrize(visualPrefabIndex);
+                ShopProgressionManager.Instance?.AutoAssignHotbarProduct(product.ProductId);
                 SyncLegacyContainerCounts();
                 return true;
             }

@@ -36,6 +36,34 @@ namespace PickAndPlaceShop
         LongWaitComplaint
     }
 
+    [System.Serializable]
+    public struct ShopNegotiationOffer
+    {
+        [SerializeField] private string label;
+        [SerializeField, Range(0f, 0.5f)] private float priceBonus;
+        [SerializeField, Range(0f, 1f)] private float successChance;
+        [SerializeField] private string difficulty;
+
+        public ShopNegotiationOffer(string offerLabel, float bonus, float chance, string difficultyLabel)
+        {
+            label = offerLabel;
+            priceBonus = bonus;
+            successChance = chance;
+            difficulty = difficultyLabel;
+        }
+
+        public string Label => string.IsNullOrWhiteSpace(label) ? "흥정" : label;
+        public float PriceBonus => Mathf.Clamp(priceBonus, 0f, 0.5f);
+        public float SuccessChance => Mathf.Clamp01(successChance);
+        public string Difficulty => difficulty ?? string.Empty;
+    }
+
+    public static class ShopNegotiationRules
+    {
+        public static bool Succeeds(float randomSample, float successChance) =>
+            Mathf.Clamp01(randomSample) < Mathf.Clamp01(successChance);
+    }
+
     [Serializable]
     public struct ShopRarityWeights
     {
@@ -121,10 +149,12 @@ namespace PickAndPlaceShop
 
         [Header("Optional checkout negotiation")]
         [Range(1, 5)] [SerializeField] private int negotiationAttemptsPerSale = 3;
-        [Range(0.05f, 0.45f)] [SerializeField] private float negotiationSuccessHalfWidth = 0.22f;
-        [Range(0f, 0.5f)] [SerializeField] private float negotiationMinimumBonus = 0.10f;
-        [Range(0f, 0.5f)] [SerializeField] private float negotiationMaximumBonus = 0.30f;
-        [Range(0.2f, 3f)] [SerializeField] private float negotiationMarkerCyclesPerSecond = 0.75f;
+        [SerializeField] private ShopNegotiationOffer[] negotiationOffers =
+        {
+            new("조금 더 얹어서", 0.10f, 0.80f, "★★★  성공 높음"),
+            new("적당히 흥정", 0.20f, 0.55f, "★★☆  성공 보통"),
+            new("크게 불러보기", 0.30f, 0.30f, "★☆☆  성공 낮음")
+        };
 
         [Header("Closing summary presentation")]
         [Range(0.1f, 1.5f)] [SerializeField] private float closingFadeSeconds = 0.45f;
@@ -234,11 +264,13 @@ namespace PickAndPlaceShop
         public bool AutomatedSuccessCountsForDailyGoal => automatedSuccessCountsForDailyGoal;
         public int MachineDailyCapsuleCapacity => Mathf.Clamp(machineDailyCapsuleCapacity, 1, 40);
         public int NegotiationAttemptsPerSale => Mathf.Clamp(negotiationAttemptsPerSale, 1, 5);
-        public float NegotiationSuccessHalfWidth => Mathf.Clamp(negotiationSuccessHalfWidth, 0.05f, 0.45f);
-        public float NegotiationMinimumBonus => Mathf.Clamp(negotiationMinimumBonus, 0f, 0.5f);
-        public float NegotiationMaximumBonus => Mathf.Max(NegotiationMinimumBonus,
-            Mathf.Clamp(negotiationMaximumBonus, 0f, 0.5f));
-        public float NegotiationMarkerCyclesPerSecond => Mathf.Clamp(negotiationMarkerCyclesPerSecond, 0.2f, 3f);
+        public int NegotiationOfferCount => negotiationOffers != null ? negotiationOffers.Length : 0;
+        public ShopNegotiationOffer NegotiationOfferAt(int index)
+        {
+            if (negotiationOffers == null || negotiationOffers.Length == 0)
+                return new ShopNegotiationOffer("조금 더 얹어서", 0.10f, 0.80f, "성공 높음");
+            return negotiationOffers[Mathf.Clamp(index, 0, negotiationOffers.Length - 1)];
+        }
         public float ClosingFadeSeconds => Mathf.Clamp(closingFadeSeconds, 0.1f, 1.5f);
         public float ClosingItemInterval => Mathf.Clamp(closingItemInterval, 0.1f, 1f);
         public float ClosingRevenueCountSeconds => Mathf.Clamp(closingRevenueCountSeconds, 0.2f, 2f);

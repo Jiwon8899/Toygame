@@ -194,6 +194,10 @@ namespace PickAndPlaceShop
 
             if (game.Phase.Value == ShopPhase.Setup)
             {
+                // The previous close returns every display item to storage and clears the
+                // sales ledger. Rebuild before evaluating the new day's register interaction.
+                RebuildLedgerFromNetworkStock();
+                SyncStockVariables();
                 if (ledger.TotalStock() <= 0)
                 {
                     game.ServerSetEvent("진열대에 상품을 하나 이상 보충해야 영업을 시작할 수 있습니다.");
@@ -261,27 +265,24 @@ namespace PickAndPlaceShop
             NegotiationOwner.Value = requester;
             NegotiationAttemptsRemaining.Value = ShopOperationsConfig.Load()?.NegotiationAttemptsPerSale ?? 3;
             NegotiationActive.Value = true;
-            game.ServerSetEvent("흥정 시작 · 중앙의 성공 구간에서 E를 눌러 주세요.");
+            game.ServerSetEvent("흥정 시작 · 원하는 가격 제안을 선택해 주세요.");
         }
 
-        public void ServerResolveNegotiation(ulong requester, float markerPosition)
+        public void ServerResolveNegotiationOffer(ulong requester, int offerIndex)
         {
             if (!IsServer || !NegotiationActive.Value || requester != NegotiationOwner.Value ||
                 negotiationCustomer == null || !negotiationCustomer.IsSpawned) return;
             ShopOperationsConfig settings = ShopOperationsConfig.Load();
-            float halfWidth = settings != null ? settings.NegotiationSuccessHalfWidth : 0.22f;
-            float distance = Mathf.Abs(Mathf.Clamp01(markerPosition) - 0.5f);
-            if (distance <= halfWidth)
+            ShopNegotiationOffer offer = settings != null
+                ? settings.NegotiationOfferAt(offerIndex)
+                : new ShopNegotiationOffer("조금 더 얹어서", 0.10f, 0.80f, "성공 높음");
+            if (ShopNegotiationRules.Succeeds(Random.value, offer.SuccessChance))
             {
-                float quality = 1f - distance / Mathf.Max(0.001f, halfWidth);
-                float minimum = settings != null ? settings.NegotiationMinimumBonus : 0.10f;
-                float maximum = settings != null ? settings.NegotiationMaximumBonus : 0.30f;
-                float bonus = Mathf.Lerp(minimum, maximum, quality);
                 ShopCustomerNetwork customer = negotiationCustomer;
                 ClearNegotiation(false);
-                StartCoroutine(ServerCheckoutRoutine(customer, 1f, 1f + bonus));
-                ShopNetworkGame.Instance.ServerSetEvent("흥정 성공! 판매가가 " +
-                    Mathf.RoundToInt(bonus * 100f) + "% 올랐습니다.");
+                StartCoroutine(ServerCheckoutRoutine(customer, 1f, 1f + offer.PriceBonus));
+                ShopNetworkGame.Instance.ServerSetEvent(offer.Label + " 성공! 판매가가 " +
+                    Mathf.RoundToInt(offer.PriceBonus * 100f) + "% 올랐습니다.");
                 return;
             }
 
@@ -546,6 +547,20 @@ namespace PickAndPlaceShop
             RemainingSeconds.Value = 0;
             ShopNetworkGame.Instance.ServerSetEvent("입장을 마감했습니다. 매장 안 손님을 모두 응대해 주세요.");
             if (activeCustomers.Count == 0 && !checkoutBusy) ServerFinishOpenSession();
+        }
+
+        public void ServerPrepareForNextDay()
+        {
+            if (!IsServer) return;
+            sessionActive = false;
+            checkoutBusy = false;
+            SpawnEnabled.Value = false;
+            RemainingSeconds.Value = 0;
+            if (NegotiationActive.Value) ClearNegotiation(true);
+            queue.Clear();
+            QueueCount.Value = 0;
+            RebuildLedgerFromNetworkStock();
+            SyncStockVariables();
         }
 
         public void ServerTakeUnsoldStock(out int total, out int rare)
