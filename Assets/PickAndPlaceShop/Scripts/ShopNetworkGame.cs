@@ -28,7 +28,8 @@ namespace PickAndPlaceShop
         AppraisalDesk,
         ConsignmentCorner,
         ReviewBoard,
-        CurationDesk
+        CurationDesk,
+        ConsignmentReject
     }
 
     public enum ShopUpgradeCategory
@@ -90,6 +91,15 @@ namespace PickAndPlaceShop
             new(new FixedString4096Bytes("아직 등록된 리뷰가 없습니다."));
         public NetworkVariable<int> LatestReviewDay = new(0);
         public NetworkVariable<int> AppraisalSequence = new(0);
+        public NetworkVariable<int> ConsignmentOfferCount = new(0);
+        public NetworkVariable<int> ConsignmentOfferProduct0 = new(-1);
+        public NetworkVariable<int> ConsignmentOfferProduct1 = new(-1);
+        public NetworkVariable<int> ConsignmentOfferProduct2 = new(-1);
+        public NetworkVariable<int> ConsignmentOfferPrice0 = new(0);
+        public NetworkVariable<int> ConsignmentOfferPrice1 = new(0);
+        public NetworkVariable<int> ConsignmentOfferPrice2 = new(0);
+        public NetworkVariable<float> ConsignmentSecondsRemaining = new(0f);
+        public NetworkVariable<int> ConsignmentOfferSerial = new(0);
 
         public NetworkVariable<int> CampaignRevenue = new(0);
         public NetworkVariable<int> CampaignSold = new(0);
@@ -328,6 +338,7 @@ namespace PickAndPlaceShop
                 case ShopAction.CapsuleRecycler:
                 case ShopAction.AppraisalDesk:
                 case ShopAction.ConsignmentCorner:
+                case ShopAction.ConsignmentReject:
                 case ShopAction.ReviewBoard:
                 case ShopAction.CurationDesk:
                     ShopDifferentiationController.Instance?.ServerHandleInteraction(action, sender);
@@ -854,7 +865,7 @@ namespace PickAndPlaceShop
                 ShopContainerKind.SharedDisplay => SharedDisplayCapacity,
                 ShopContainerKind.AutomationBuffer => ShopOperationsConfig.Load()?.AutomationBufferSlots ?? 10,
                 ShopContainerKind.CapsuleRecycler => ShopDifferentiationConfig.Load()?.CapsuleRecyclerSlots ?? 10,
-                ShopContainerKind.ConsignmentDisplay => 3,
+                ShopContainerKind.ConsignmentDisplay => ShopDifferentiationConfig.Load()?.ConsignmentSlots ?? 3,
                 _ => 0
             };
             ulong owner = container == ShopContainerKind.PersonalInventory ||
@@ -900,6 +911,17 @@ namespace PickAndPlaceShop
                 destination = ShopContainerKind.SharedStorage;
                 if (!TryAddToContainer(ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
                         product, visualPrefabIndex))
+                    return false;
+                SyncLegacyContainerCounts();
+                return true;
+            }
+
+            if (source == ShopAcquisitionSource.Consignment)
+            {
+                destination = ShopContainerKind.ConsignmentDisplay;
+                if (!TryAddToContainer(ShopContainerRules.SharedOwner,
+                        ShopContainerKind.ConsignmentDisplay, product, visualPrefabIndex,
+                        ShopDifferentiationConfig.Load()?.ConsignmentSlots ?? 3))
                     return false;
                 SyncLegacyContainerCounts();
                 return true;
@@ -1399,7 +1421,7 @@ namespace PickAndPlaceShop
             ShopContainerKind.SharedDisplay => SharedDisplayCapacity,
             ShopContainerKind.AutomationBuffer => ShopOperationsConfig.Load()?.AutomationBufferSlots ?? 10,
             ShopContainerKind.CapsuleRecycler => ShopDifferentiationConfig.Load()?.CapsuleRecyclerSlots ?? 10,
-            ShopContainerKind.ConsignmentDisplay => 3,
+            ShopContainerKind.ConsignmentDisplay => ShopDifferentiationConfig.Load()?.ConsignmentSlots ?? 3,
             _ => 0
         };
 

@@ -24,7 +24,8 @@ namespace PickAndPlaceShop
     public enum ShopAcquisitionSource
     {
         Manual,
-        Automation
+        Automation,
+        Consignment
     }
 
     public enum ShopCustomerDialogueEvent

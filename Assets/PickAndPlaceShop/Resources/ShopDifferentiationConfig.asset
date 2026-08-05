@@ -42,8 +42,13 @@ MonoBehaviour:
   - {x: 10, y: 25, z: 40, w: 25}
   consignmentPosition: {x: 12.7, y: 0, z: 6.1}
   consignmentVisitSeconds: 90
+  consignmentOfferDurationSeconds: 45
+  consignmentSlots: 3
+  consignmentOfferCount: {x: 1, y: 3}
   missingCollectionWeight: 0.75
   consignmentPriceMultiplier: 1.35
+  consignmentMachineAverageCosts: 6400000082000000aa000000e6000000
+  consignmentUnlockReputation: 30
   idealDensityPercent: {x: 30, y: 90}
   automaticLayoutScore: 45
   shelfPlacementRotationSpeed: 90

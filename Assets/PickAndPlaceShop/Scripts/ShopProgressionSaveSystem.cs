@@ -126,11 +126,20 @@ namespace PickAndPlaceShop
         public string reviewHistory;
         public int latestReviewDay;
         public int appraisalSequence;
+        public int consignmentOfferCount;
+        public int consignmentOfferProduct0 = -1;
+        public int consignmentOfferProduct1 = -1;
+        public int consignmentOfferProduct2 = -1;
+        public int consignmentOfferPrice0;
+        public int consignmentOfferPrice1;
+        public int consignmentOfferPrice2;
+        public float consignmentSecondsRemaining;
+        public int consignmentOfferSerial;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 11;
+        public const int CurrentVersion = 12;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 

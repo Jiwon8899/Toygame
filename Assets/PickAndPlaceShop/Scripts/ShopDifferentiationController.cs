@@ -15,6 +15,11 @@ namespace PickAndPlaceShop
         private readonly List<GameObject> upcycleDecorations = new();
         private TextMesh reviewBoardText;
         private string lastReviewSnapshot;
+        private GameObject consignmentNpc;
+        private Transform consignmentVisualRoot;
+        private TextMesh consignmentText;
+        private readonly List<GameObject> consignmentVisuals = new();
+        private string consignmentSnapshot;
 
         public int EmptyCapsuleCount
         {
@@ -61,6 +66,8 @@ namespace PickAndPlaceShop
             if (facilitiesRoot == null) BuildFacilities();
             RefreshUpcycleDecorations();
             RefreshReviewBoard();
+            ServerUpdateConsignment();
+            RefreshConsignmentCorner();
         }
 
         public bool ServerCollectEmptyCapsule()
@@ -88,6 +95,172 @@ namespace PickAndPlaceShop
                 game.ServerSetEvent(message);
                 ShopProgressionManager.Instance?.SaveNow();
             }
+            else if (action == ShopAction.ConsignmentCorner) ServerAcceptConsignment(game, requester);
+            else if (action == ShopAction.ConsignmentReject) ServerRejectConsignment(game);
+        }
+
+        private void ServerUpdateConsignment()
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || !game.IsServer || config == null) return;
+            if (game.Reputation.Value < config.ConsignmentUnlockReputation)
+            {
+                if (game.ConsignmentOfferCount.Value > 0) ClearConsignmentOffer(game, false);
+                return;
+            }
+            game.ConsignmentSecondsRemaining.Value = Mathf.Max(0f,
+                game.ConsignmentSecondsRemaining.Value - Time.deltaTime);
+            if (game.ConsignmentSecondsRemaining.Value > 0f) return;
+            if (game.ConsignmentOfferCount.Value > 0)
+            {
+                game.ServerSetEvent("위탁 수집가가 제안을 거두고 돌아갔습니다.");
+                ClearConsignmentOffer(game, false);
+                return;
+            }
+            ServerGenerateConsignmentOffer(game);
+        }
+
+        private void ServerGenerateConsignmentOffer(ShopNetworkGame game)
+        {
+            ShopProductDefinition[] catalog = Resources.LoadAll<ShopProductDefinition>("Products/CatCatalog");
+            if (catalog == null || catalog.Length == 0)
+            {
+                game.ConsignmentSecondsRemaining.Value = config.ConsignmentVisitSeconds;
+                return;
+            }
+            int serial = game.ConsignmentOfferSerial.Value + 1;
+            Vector2Int range = config.ConsignmentOfferCount;
+            int count = range.x + Mathf.Abs(serial * 1103515245 + game.Day.Value) %
+                Mathf.Max(1, range.y - range.x + 1);
+            count = Mathf.Min(count, config.ConsignmentSlots);
+            var excluded = new HashSet<int>();
+            for (int slot = 0; slot < count; slot++)
+            {
+                ShopProductDefinition selected = SelectConsignmentProduct(catalog,
+                    serial * 31 + slot * 997 + game.Day.Value, excluded);
+                if (selected == null) break;
+                excluded.Add(selected.ProductId);
+                SetConsignmentOffer(game, slot, selected.ProductId,
+                    config.ConsignmentPrice(selected.Rarity));
+            }
+            game.ConsignmentOfferCount.Value = excluded.Count;
+            game.ConsignmentOfferSerial.Value = serial;
+            game.ConsignmentSecondsRemaining.Value = config.ConsignmentOfferDurationSeconds;
+            game.ServerSetEvent("위탁 수집가가 " + excluded.Count + "개의 상품을 제안했습니다. " +
+                                "위탁 코너에서 수락하거나 거절하세요.");
+        }
+
+        private ShopProductDefinition SelectConsignmentProduct(ShopProductDefinition[] catalog,
+            int seed, HashSet<int> excluded)
+        {
+            ShopProgressionManager progression = ShopProgressionManager.Instance;
+            float missingWeight = config.MissingCollectionWeight;
+            var missingProducts = new List<ShopProductDefinition>();
+            var ownedProducts = new List<ShopProductDefinition>();
+            for (int i = 0; i < catalog.Length; i++)
+            {
+                ShopProductDefinition product = catalog[i];
+                if (product == null || excluded.Contains(product.ProductId)) continue;
+                bool missing = progression == null || !progression.OwnsCollectionItem(product.StableItemId);
+                (missing ? missingProducts : ownedProducts).Add(product);
+            }
+            uint hash = unchecked((uint)seed * 747796405u + 2891336453u);
+            float groupRoll = (hash & 0x00FFFFFFu) / 16777215f;
+            List<ShopProductDefinition> selectedGroup = groupRoll < missingWeight && missingProducts.Count > 0
+                ? missingProducts : ownedProducts.Count > 0 ? ownedProducts : missingProducts;
+            if (selectedGroup.Count == 0) return null;
+            uint itemHash = unchecked(hash * 1664525u + 1013904223u);
+            return selectedGroup[(int)(itemHash % (uint)selectedGroup.Count)];
+        }
+
+        private void ServerAcceptConsignment(ShopNetworkGame game, ulong requester)
+        {
+            int count = game.ConsignmentOfferCount.Value;
+            if (count <= 0)
+            {
+                game.ServerSetEvent(game.Reputation.Value < config.ConsignmentUnlockReputation
+                    ? "위탁 코너는 평판 " + config.ConsignmentUnlockReputation + "에 열립니다."
+                    : "현재 도착한 위탁 제안이 없습니다.");
+                return;
+            }
+            int used = ShopContainerRules.UsedCount(game.ItemContainers, ShopContainerRules.SharedOwner,
+                ShopContainerKind.ConsignmentDisplay);
+            if (used + count > config.ConsignmentSlots)
+            {
+                game.ServerSetEvent("위탁 진열 슬롯을 먼저 비워 주세요.");
+                return;
+            }
+            var products = new List<ShopProductDefinition>();
+            int total = 0;
+            for (int slot = 0; slot < count; slot++)
+            {
+                int id = GetConsignmentProduct(game, slot);
+                ShopProductDefinition product = ShopProductVisuals.Find(id);
+                if (product == null || product.ExclusiveReward) return;
+                products.Add(product);
+                total += GetConsignmentPrice(game, slot);
+            }
+            if (game.Coins.Value < total)
+            {
+                game.ServerSetEvent("위탁 제안을 수락하려면 " + total + "원이 필요합니다.");
+                return;
+            }
+            for (int i = 0; i < products.Count; i++)
+            {
+                if (!game.ServerTryAcquireItem(requester, products[i], -1,
+                        ShopAcquisitionSource.Consignment, 0, out _))
+                {
+                    game.ServerSetEvent("위탁 상품을 진열하지 못했습니다. 슬롯을 확인해 주세요.");
+                    return;
+                }
+                ShopProgressionManager.Instance?.RecordAcquisition(products[i].StableItemId,
+                    products[i].DisplayName, ShopProductLocalization.CategoryId(products[i].Category),
+                    products[i].Rarity >= ShopProductRarity.Rare);
+            }
+            game.Coins.Value -= total;
+            game.ServerSetEvent("위탁 상품 " + products.Count + "개를 " + total + "원에 들였습니다.");
+            ClearConsignmentOffer(game, true);
+            ShopProgressionManager.Instance?.SaveNow();
+        }
+
+        private void ServerRejectConsignment(ShopNetworkGame game)
+        {
+            if (game.ConsignmentOfferCount.Value <= 0)
+            {
+                game.ServerSetEvent("거절할 위탁 제안이 없습니다.");
+                return;
+            }
+            game.ServerSetEvent("위탁 제안을 정중히 거절했습니다.");
+            ClearConsignmentOffer(game, true);
+        }
+
+        private void ClearConsignmentOffer(ShopNetworkGame game, bool restartTimer)
+        {
+            game.ConsignmentOfferCount.Value = 0;
+            for (int i = 0; i < 3; i++) SetConsignmentOffer(game, i, -1, 0);
+            game.ConsignmentSecondsRemaining.Value = restartTimer || game.Reputation.Value >=
+                config.ConsignmentUnlockReputation ? config.ConsignmentVisitSeconds : 0f;
+        }
+
+        private static int GetConsignmentProduct(ShopNetworkGame game, int index) => index switch
+        {
+            0 => game.ConsignmentOfferProduct0.Value,
+            1 => game.ConsignmentOfferProduct1.Value,
+            _ => game.ConsignmentOfferProduct2.Value
+        };
+
+        private static int GetConsignmentPrice(ShopNetworkGame game, int index) => index switch
+        {
+            0 => game.ConsignmentOfferPrice0.Value,
+            1 => game.ConsignmentOfferPrice1.Value,
+            _ => game.ConsignmentOfferPrice2.Value
+        };
+
+        private static void SetConsignmentOffer(ShopNetworkGame game, int index, int productId, int price)
+        {
+            if (index == 0) { game.ConsignmentOfferProduct0.Value = productId; game.ConsignmentOfferPrice0.Value = price; }
+            else if (index == 1) { game.ConsignmentOfferProduct1.Value = productId; game.ConsignmentOfferPrice1.Value = price; }
+            else { game.ConsignmentOfferProduct2.Value = productId; game.ConsignmentOfferPrice2.Value = price; }
         }
 
         public void ServerGenerateDailyReview(int day, float averageWaitSeconds,
@@ -249,6 +422,105 @@ namespace PickAndPlaceShop
             BuildFacility("굿즈 감정소", config.AppraisalPosition,
                 new Color(0.34f, 0.23f, 0.52f), ShopAction.AppraisalDesk,
                 "보유 상품 1개 감정하기");
+            BuildConsignmentCorner();
+        }
+
+        private void BuildConsignmentCorner()
+        {
+            GameObject corner = BuildFacility("위탁 판매 코너", config.ConsignmentPosition,
+                new Color(0.62f, 0.38f, 0.17f), ShopAction.ConsignmentCorner,
+                "위탁 수집가의 제안 수락");
+            corner.transform.localScale = new Vector3(2.4f, 1.45f, 0.9f);
+            Transform label = corner.transform.Find("위탁 판매 코너_Label");
+            if (label != null)
+            {
+                consignmentText = label.GetComponent<TextMesh>();
+                label.localPosition = new Vector3(0f, 0.75f, -0.55f);
+                consignmentText.characterSize = 0.075f;
+                consignmentText.fontSize = 42;
+            }
+            GameObject reject = BuildFacility("위탁 제안 거절", config.ConsignmentPosition +
+                new Vector3(1.8f, 0f, 0f), new Color(0.48f, 0.16f, 0.16f),
+                ShopAction.ConsignmentReject, "현재 위탁 제안 거절");
+            reject.transform.localScale = new Vector3(0.65f, 0.65f, 0.65f);
+
+            GameObject visualHost = new("Consignment Product Visuals");
+            visualHost.transform.SetParent(facilitiesRoot.transform, false);
+            visualHost.transform.position = config.ConsignmentPosition + new Vector3(0f, 1.15f, -0.65f);
+            consignmentVisualRoot = visualHost.transform;
+
+            ShopWorkforceConfig workforce = ShopWorkforceConfig.Load();
+            GameObject[] appearances = workforce != null ? workforce.AppearancePrefabs : null;
+            if (appearances != null && appearances.Length > 0 && appearances[0] != null)
+            {
+                consignmentNpc = new GameObject("Consignment Collector NPC");
+                consignmentNpc.transform.SetParent(facilitiesRoot.transform, false);
+                consignmentNpc.transform.position = config.ConsignmentPosition + new Vector3(-1.7f, 0f, 0.2f);
+                consignmentNpc.AddComponent<ShopWorldSafetyAgent>();
+                GameObject visual = Instantiate(appearances[0], consignmentNpc.transform);
+                visual.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, 135f, 0f));
+                foreach (Collider collider in consignmentNpc.GetComponentsInChildren<Collider>(true))
+                    Destroy(collider);
+                foreach (Rigidbody body in consignmentNpc.GetComponentsInChildren<Rigidbody>(true))
+                    Destroy(body);
+                Animator animator = consignmentNpc.GetComponentInChildren<Animator>(true);
+                if (animator != null) animator.applyRootMotion = false;
+            }
+        }
+
+        private void RefreshConsignmentCorner()
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || config == null) return;
+            bool unlocked = game.Reputation.Value >= config.ConsignmentUnlockReputation;
+            bool visiting = unlocked && game.ConsignmentOfferCount.Value > 0;
+            if (consignmentNpc != null) consignmentNpc.SetActive(visiting);
+            if (consignmentText != null)
+            {
+                var text = new StringBuilder("위탁 판매 코너\n");
+                if (!unlocked) text.Append("평판 ").Append(config.ConsignmentUnlockReputation).Append("에 해금");
+                else if (!visiting) text.Append("다음 방문 ").Append(Mathf.CeilToInt(
+                    game.ConsignmentSecondsRemaining.Value)).Append("초");
+                else
+                {
+                    for (int i = 0; i < game.ConsignmentOfferCount.Value; i++)
+                    {
+                        ShopProductDefinition product = ShopProductVisuals.Find(GetConsignmentProduct(game, i));
+                        text.Append(product != null ? product.DisplayName : "상품").Append(" ")
+                            .Append(GetConsignmentPrice(game, i)).Append("원\n");
+                    }
+                    text.Append("E 수락 · 옆 버튼 거절 · ")
+                        .Append(Mathf.CeilToInt(game.ConsignmentSecondsRemaining.Value)).Append("초");
+                }
+                consignmentText.text = text.ToString();
+            }
+
+            var signature = new StringBuilder();
+            for (int i = 0; i < game.ItemContainers.Count; i++)
+            {
+                ShopContainerItem item = game.ItemContainers[i];
+                if (item.Container == ShopContainerKind.ConsignmentDisplay)
+                    signature.Append(item.ProductId).Append(':').Append(item.Quantity).Append('|');
+            }
+            string next = signature.ToString();
+            if (next == consignmentSnapshot || consignmentVisualRoot == null) return;
+            consignmentSnapshot = next;
+            foreach (GameObject visual in consignmentVisuals) if (visual != null) Destroy(visual);
+            consignmentVisuals.Clear();
+            int slot = 0;
+            for (int i = 0; i < game.ItemContainers.Count && slot < config.ConsignmentSlots; i++)
+            {
+                ShopContainerItem item = game.ItemContainers[i];
+                if (item.Container != ShopContainerKind.ConsignmentDisplay || item.Quantity <= 0) continue;
+                ShopProductDefinition product = ShopProductVisuals.Find(item.ProductId);
+                GameObject visual = ShopProductVisuals.Instantiate(product, consignmentVisualRoot);
+                if (visual == null) continue;
+                visual.name = "ConsignmentDisplayed_" + item.ProductId;
+                visual.transform.localPosition = new Vector3((slot - 1) * 0.55f, 0f, 0f);
+                visual.transform.localRotation = Quaternion.Euler(0f, slot * 30f - 30f, 0f);
+                consignmentVisuals.Add(visual);
+                slot++;
+            }
         }
 
         private void BuildReviewBoard()

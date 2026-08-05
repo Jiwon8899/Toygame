@@ -114,5 +114,20 @@ namespace PickAndPlaceShop.Tests
             Assert.That(config.AppraisalPriceMultiplier(ShopAppraisalGrade.S), Is.EqualTo(1.4f));
             Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(11));
         }
+
+        [Test]
+        public void Consignment_UsesOnlyTwoHundredItemCatalogAndPremiumPrice()
+        {
+            ShopProductDefinition[] catalog = UnityEngine.Resources.LoadAll<ShopProductDefinition>(
+                "Products/CatCatalog");
+            ShopDifferentiationConfig config = ShopDifferentiationConfig.Load();
+            Assert.That(catalog.Length, Is.EqualTo(200));
+            Assert.That(config.ConsignmentUnlockReputation, Is.EqualTo(30));
+            Assert.That(config.ConsignmentSlots, Is.EqualTo(3));
+            Assert.That(config.ConsignmentPrice(ShopProductRarity.Common), Is.GreaterThan(100));
+            Assert.That((int)ShopAcquisitionSource.Consignment, Is.GreaterThan(
+                (int)ShopAcquisitionSource.Automation));
+            Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(12));
+        }
     }
 }

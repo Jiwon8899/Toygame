@@ -43,8 +43,13 @@ namespace PickAndPlaceShop
         [Header("위탁 판매")]
         [SerializeField] private Vector3 consignmentPosition = new(12.7f, 0f, 6.1f);
         [SerializeField, Min(1f)] private float consignmentVisitSeconds = 90f;
+        [SerializeField, Min(5f)] private float consignmentOfferDurationSeconds = 45f;
+        [SerializeField, Min(1)] private int consignmentSlots = 3;
+        [SerializeField] private Vector2Int consignmentOfferCount = new(1, 3);
         [SerializeField, Range(0f, 1f)] private float missingCollectionWeight = 0.75f;
         [SerializeField, Min(1f)] private float consignmentPriceMultiplier = 1.35f;
+        [SerializeField] private int[] consignmentMachineAverageCosts = { 100, 130, 170, 230 };
+        [SerializeField, Min(0)] private int consignmentUnlockReputation = 30;
 
         [Header("진열 큐레이션")]
         [SerializeField] private Vector2 idealDensityPercent = new(30f, 90f);
@@ -85,8 +90,15 @@ namespace PickAndPlaceShop
         }
         public Vector3 ConsignmentPosition => consignmentPosition;
         public float ConsignmentVisitSeconds => Mathf.Max(1f, consignmentVisitSeconds);
+        public float ConsignmentOfferDurationSeconds => Mathf.Max(5f, consignmentOfferDurationSeconds);
+        public int ConsignmentSlots => Mathf.Max(1, consignmentSlots);
+        public Vector2Int ConsignmentOfferCount => new(Mathf.Max(1, consignmentOfferCount.x),
+            Mathf.Max(consignmentOfferCount.x, consignmentOfferCount.y));
         public float MissingCollectionWeight => Mathf.Clamp01(missingCollectionWeight);
         public float ConsignmentPriceMultiplier => Mathf.Max(1f, consignmentPriceMultiplier);
+        public int ConsignmentUnlockReputation => Mathf.Max(0, consignmentUnlockReputation);
+        public int ConsignmentPrice(ShopProductRarity rarity) => Mathf.CeilToInt(
+            ValueAt(consignmentMachineAverageCosts, (int)rarity, 100) * ConsignmentPriceMultiplier);
         public Vector2 IdealDensityPercent => idealDensityPercent;
         public int AutomaticLayoutScore => Mathf.Clamp(automaticLayoutScore, 0, 100);
         public float ShelfPlacementRotationSpeed => Mathf.Max(1f, shelfPlacementRotationSpeed);

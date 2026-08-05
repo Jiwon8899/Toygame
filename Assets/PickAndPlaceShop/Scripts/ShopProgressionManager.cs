@@ -521,6 +521,7 @@ namespace PickAndPlaceShop
                         ? "아직 등록된 리뷰가 없습니다." : loadedSaveData.reviewHistory);
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, loadedSaveData.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, loadedSaveData.appraisalSequence);
+                RestoreConsignment(boundGame, loadedSaveData);
             }
             observedGameFunds = teamFunds;
             observedGameReputation = reputation;
@@ -759,7 +760,16 @@ namespace PickAndPlaceShop
                 recentLastOneRecords = boundGame != null ? boundGame.RecentLastOneRecords.Value.ToString() : string.Empty,
                 reviewHistory = boundGame != null ? boundGame.ReviewHistory.Value.ToString() : string.Empty,
                 latestReviewDay = boundGame != null ? boundGame.LatestReviewDay.Value : 0,
-                appraisalSequence = boundGame != null ? boundGame.AppraisalSequence.Value : 0
+                appraisalSequence = boundGame != null ? boundGame.AppraisalSequence.Value : 0,
+                consignmentOfferCount = boundGame != null ? boundGame.ConsignmentOfferCount.Value : 0,
+                consignmentOfferProduct0 = boundGame != null ? boundGame.ConsignmentOfferProduct0.Value : -1,
+                consignmentOfferProduct1 = boundGame != null ? boundGame.ConsignmentOfferProduct1.Value : -1,
+                consignmentOfferProduct2 = boundGame != null ? boundGame.ConsignmentOfferProduct2.Value : -1,
+                consignmentOfferPrice0 = boundGame != null ? boundGame.ConsignmentOfferPrice0.Value : 0,
+                consignmentOfferPrice1 = boundGame != null ? boundGame.ConsignmentOfferPrice1.Value : 0,
+                consignmentOfferPrice2 = boundGame != null ? boundGame.ConsignmentOfferPrice2.Value : 0,
+                consignmentSecondsRemaining = boundGame != null ? boundGame.ConsignmentSecondsRemaining.Value : 0f,
+                consignmentOfferSerial = boundGame != null ? boundGame.ConsignmentOfferSerial.Value : 0
             };
         }
 
@@ -814,7 +824,22 @@ namespace PickAndPlaceShop
                         ? "아직 등록된 리뷰가 없습니다." : save.reviewHistory);
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, save.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, save.appraisalSequence);
+                RestoreConsignment(boundGame, save);
             }
+        }
+
+        private static void RestoreConsignment(ShopNetworkGame game, ShopProgressionSaveData save)
+        {
+            if (game == null || save == null) return;
+            game.ConsignmentOfferCount.Value = Mathf.Clamp(save.consignmentOfferCount, 0, 3);
+            game.ConsignmentOfferProduct0.Value = save.consignmentOfferProduct0;
+            game.ConsignmentOfferProduct1.Value = save.consignmentOfferProduct1;
+            game.ConsignmentOfferProduct2.Value = save.consignmentOfferProduct2;
+            game.ConsignmentOfferPrice0.Value = Mathf.Max(0, save.consignmentOfferPrice0);
+            game.ConsignmentOfferPrice1.Value = Mathf.Max(0, save.consignmentOfferPrice1);
+            game.ConsignmentOfferPrice2.Value = Mathf.Max(0, save.consignmentOfferPrice2);
+            game.ConsignmentSecondsRemaining.Value = Mathf.Max(0f, save.consignmentSecondsRemaining);
+            game.ConsignmentOfferSerial.Value = Mathf.Max(0, save.consignmentOfferSerial);
         }
 
         public bool TryConsumeClawMachineSave(int machineId, out ShopClawMachineSave saved)
