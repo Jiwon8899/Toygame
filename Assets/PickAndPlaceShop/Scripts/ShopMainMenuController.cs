@@ -35,20 +35,26 @@ namespace PickAndPlaceShop
         };
 
         private readonly List<Resolution> resolutions = new();
+        private ShopTitlePresentationConfig presentation;
+        private RectTransform logoRect;
+        private CanvasGroup logoGroup;
+        private Vector2 logoRestPosition;
         private GameObject currentPanel;
         private bool loading;
         private int helpPage;
 
         private void Awake()
         {
+            presentation = ShopTitlePresentationConfig.Load();
             NormalizeTitlePresentation();
+            BuildTitleArtwork();
             ShopInputModeManager.Push(this, ShopInputMode.Menu);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             Text title = Find<Text>("TitleText");
             Text subtitle = Find<Text>("TitleSubtitle");
             Text version = Find<Text>("VersionText");
-            if (title != null)
+            if (title != null && (presentation == null || presentation.Logo == null))
             {
                 string formalTitle = string.IsNullOrWhiteSpace(gameTitle)
                     ? ShopGameIdentity.KoreanFormalName
@@ -110,9 +116,102 @@ namespace PickAndPlaceShop
         private void Start()
         {
             ShopUserSettings.Apply(ShopUserSettings.Current, false);
+            if (logoRect != null) StartCoroutine(AnimateLogo());
             string error = ShopLaunchContext.ConsumeError();
             if (!string.IsNullOrEmpty(error)) ShowError(error);
             else if (ShopLaunchContext.TryCreateQaRequest(out ShopLaunchRequest request)) StartCoroutine(LoadGame(request));
+        }
+
+        private void BuildTitleArtwork()
+        {
+            if (presentation == null) return;
+            Canvas canvas = GetComponentInChildren<Canvas>(true);
+            if (canvas == null) return;
+
+            if (presentation.Background != null)
+            {
+                GameObject backgroundObject = new("TitleBackground", typeof(RectTransform),
+                    typeof(CanvasRenderer), typeof(Image), typeof(AspectRatioFitter));
+                backgroundObject.transform.SetParent(canvas.transform, false);
+                backgroundObject.transform.SetAsFirstSibling();
+                Image background = backgroundObject.GetComponent<Image>();
+                background.sprite = presentation.Background;
+                background.color = Color.white;
+                background.raycastTarget = false;
+                RectTransform rect = background.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(presentation.Background.rect.width,
+                    presentation.Background.rect.height);
+                AspectRatioFitter fitter = backgroundObject.GetComponent<AspectRatioFitter>();
+                fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fitter.aspectRatio = presentation.Background.rect.width /
+                                     Mathf.Max(1f, presentation.Background.rect.height);
+            }
+
+            GameObject veilObject = FindObject("MenuVeil");
+            Image veil = veilObject != null ? veilObject.GetComponent<Image>() : null;
+            if (veil != null)
+            {
+                Color color = veil.color;
+                color.a = presentation.BackgroundVeilAlpha;
+                veil.color = color;
+            }
+
+            Text title = Find<Text>("TitleText");
+            if (presentation.Logo == null || title == null) return;
+            GameObject logoObject = new("TitleLogo", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image), typeof(CanvasGroup));
+            logoObject.transform.SetParent(title.transform.parent, false);
+            logoObject.transform.SetSiblingIndex(title.transform.GetSiblingIndex());
+            logoRect = logoObject.GetComponent<RectTransform>();
+            RectTransform titleRect = title.rectTransform;
+            logoRect.anchorMin = titleRect.anchorMin;
+            logoRect.anchorMax = titleRect.anchorMax;
+            logoRect.pivot = titleRect.pivot;
+            logoRect.anchoredPosition = titleRect.anchoredPosition + presentation.LogoOffset;
+            Vector2 configuredSize = presentation.LogoSize;
+            logoRect.sizeDelta = configuredSize.x > 0f && configuredSize.y > 0f
+                ? configuredSize
+                : titleRect.sizeDelta;
+            logoRestPosition = logoRect.anchoredPosition;
+            Image logo = logoObject.GetComponent<Image>();
+            logo.sprite = presentation.Logo;
+            logo.preserveAspect = true;
+            logo.raycastTarget = false;
+            logoGroup = logoObject.GetComponent<CanvasGroup>();
+            title.gameObject.SetActive(false);
+        }
+
+        private IEnumerator AnimateLogo()
+        {
+            float duration = presentation != null ? presentation.EntranceSeconds : 0.65f;
+            float startScale = presentation != null ? presentation.EntranceStartScale : 0.85f;
+            logoGroup.alpha = 0f;
+            logoRect.localScale = Vector3.one * startScale;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, duration));
+                float eased = 1f - Mathf.Pow(1f - t, 3f);
+                logoGroup.alpha = eased;
+                logoRect.localScale = Vector3.one * Mathf.Lerp(startScale, 1f, eased);
+                yield return null;
+            }
+            logoGroup.alpha = 1f;
+            logoRect.localScale = Vector3.one;
+
+            float amplitude = presentation != null ? presentation.IdleAmplitudePixels : 4f;
+            float period = presentation != null ? presentation.IdlePeriodSeconds : 2.6f;
+            float phase = 0f;
+            while (logoRect != null)
+            {
+                phase += Time.unscaledDeltaTime * Mathf.PI * 2f / Mathf.Max(0.1f, period);
+                logoRect.anchoredPosition = logoRestPosition + Vector2.up * (Mathf.Sin(phase) * amplitude);
+                yield return null;
+            }
         }
 
         private void Update()
