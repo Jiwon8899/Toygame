@@ -452,6 +452,10 @@ namespace PickAndPlaceShop
                         config.ScoopReturnInset);
                     Vector2 chute = new Vector2(chuteLocal.x, chuteLocal.z) -
                                     chuteDirection * stopDistance;
+                    // The pan centre is not the prize centre. A prize usually rests against
+                    // one side of the bowl, so align that live cargo centroid with the chute
+                    // on the lateral axis while preserving the authored wall-clearance inset.
+                    chute -= GetScoopCargoLateralOffset(chuteDirection);
                     RailPosition.Value = Vector2.MoveTowards(RailPosition.Value, chute, config.ReturnSpeed * dt);
                     if ((RailPosition.Value - chute).sqrMagnitude < 0.0025f ||
                         stateElapsed >= config.ReturnTimeout)
@@ -467,6 +471,10 @@ namespace PickAndPlaceShop
                         SetState(ShopClawMachineState.Cooldown);
                     break;
                 case ShopClawMachineState.Cooldown:
+                    // A capsule can need a little longer than the authored judge window to
+                    // settle, especially when several prizes enter together. Keep observing
+                    // during cooldown so a sleeping body never misses the trigger callback.
+                    ServerObserveChuteCandidates();
                     if (stateElapsed >= 12f)
                         ServerResetMachine();
                     break;
@@ -736,6 +744,28 @@ namespace PickAndPlaceShop
             }
         }
 
+        private Vector2 GetScoopCargoLateralOffset(Vector2 chuteDirection)
+        {
+            if (scoopRig == null || scoopRig.Body == null) return Vector2.zero;
+            Vector3 bodyLocal = transform.InverseTransformPoint(scoopRig.Body.position);
+            Vector2 sum = Vector2.zero;
+            int count = 0;
+            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            {
+                if (prize == null || !prize.IsSpawned || prize.Awarded.Value ||
+                    !scoopRig.ContainsPrize(prize, config.ScoopDiameter, config.ScoopRimHeight)) continue;
+                Vector3 prizeLocal = transform.InverseTransformPoint(GetPrizePhysicalCenter(prize));
+                sum += new Vector2(prizeLocal.x - bodyLocal.x, prizeLocal.z - bodyLocal.z);
+                count++;
+            }
+            if (count == 0) return Vector2.zero;
+            Vector2 average = sum / count;
+            Vector2 forward = chuteDirection.sqrMagnitude > 0.0001f
+                ? chuteDirection.normalized : Vector2.right;
+            Vector2 lateral = average - Vector2.Dot(average, forward) * forward;
+            return Vector2.ClampMagnitude(lateral, config.ScoopDiameter * 0.35f);
+        }
+
         private void ServerMoveClawHeight(float targetHeight, float maxSpeed, float dt)
         {
             float direction = Mathf.Sign(targetHeight - ClawHeight.Value);
@@ -992,6 +1022,12 @@ namespace PickAndPlaceShop
         private void ServerPrepareNextAttempt()
         {
             if (!IsServer || OccupantClientId.Value == ShopClawRules.NoOccupant) return;
+            ServerObserveChuteCandidates();
+            if (HasPendingChutePrize())
+            {
+                ResultMessage.Value = new FixedString128Bytes("투하구 안의 상품을 판정하고 있습니다. 잠시 후 다시 움직이세요.");
+                return;
+            }
             HeldPrizeNetworkObjectId.Value = 0;
             OperatorInput.Value = Vector2.zero;
             railVelocity = Vector2.zero;
@@ -1015,7 +1051,39 @@ namespace PickAndPlaceShop
             chuteStableSeconds.Clear();
             chuteLastObservationTime.Clear();
             ResultMessage.Value = new FixedString128Bytes("다음 판 준비 완료. WASD로 위치를 정하세요.");
+            ResetPhysicalScoopPose();
             SetState(ShopClawMachineState.Reserved);
+        }
+
+        private bool HasPendingChutePrize()
+        {
+            if (chuteAwardVolume == null)
+            {
+                ShopClawChuteTrigger trigger = GetComponentInChildren<ShopClawChuteTrigger>(true);
+                chuteAwardVolume = trigger != null ? trigger.GetComponent<Collider>() : null;
+            }
+            if (chuteAwardVolume == null || !chuteAwardVolume.enabled) return false;
+            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            {
+                if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
+                if (TryGetPrizePhysicalBounds(prize, out Bounds prizeBounds) &&
+                    ShopClawRules.IsFullyInsideChute(prizeBounds, chuteAwardVolume.bounds,
+                        config.ChuteHorizontalInset)) return true;
+            }
+            return false;
+        }
+
+        private void ResetPhysicalScoopPose()
+        {
+            if (scoopRig == null || scoopRig.Body == null) return;
+            Vector3 target = transform.TransformPoint(new Vector3(
+                RailPosition.Value.x, ClawHeight.Value, RailPosition.Value.y));
+            scoopRig.SetPhysicalCollisionsEnabled(true);
+            scoopRig.Body.position = target;
+            scoopRig.Body.rotation = transform.rotation;
+            scoopRig.Body.linearVelocity = Vector3.zero;
+            scoopRig.Body.angularVelocity = Vector3.zero;
+            scoopRig.SetEntryLipsOpen(true, config.ScoopRimHeight, config.ScoopOpenRimHeight);
         }
 
         private void ServerResetMachine()
@@ -1039,6 +1107,7 @@ namespace PickAndPlaceShop
             roundHadPhysicalLift = false;
             chuteStableSeconds.Clear();
             chuteLastObservationTime.Clear();
+            ResetPhysicalScoopPose();
             SetState(ShopClawMachineState.Idle);
         }
 

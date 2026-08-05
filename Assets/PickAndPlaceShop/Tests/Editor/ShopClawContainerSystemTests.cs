@@ -282,5 +282,40 @@ namespace PickAndPlaceShop.Tests
             Assert.IsFalse(ShopClawRules.IsChuteSettled(
                 Vector3.zero, new Vector3(0f, 2f, 0f), 0.18f));
         }
+
+        [Test]
+        public void ChuteAwardWindow_IncludesCooldownForLateSleepingBodies()
+        {
+            Assert.IsTrue(ShopClawRules.CanAwardChutePrize(ShopClawMachineState.Release));
+            Assert.IsTrue(ShopClawRules.CanAwardChutePrize(ShopClawMachineState.Judge));
+            Assert.IsTrue(ShopClawRules.CanAwardChutePrize(ShopClawMachineState.Cooldown));
+            Assert.IsFalse(ShopClawRules.CanAwardChutePrize(ShopClawMachineState.Aiming));
+        }
+
+        [Test]
+        public void DisplayShelfAnchors_AreGeneratedFromShelfSurfacesNotWorldFloor()
+        {
+            GameObject root = new("Shared Display Shelves");
+            try
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    GameObject shelf = new("Shelf_0_" + i);
+                    shelf.transform.SetParent(root.transform, false);
+                    shelf.transform.localPosition = new Vector3(0f, 0.45f + i * 0.9f, 0f);
+                    shelf.transform.localScale = new Vector3(2f, 0.14f, 1.25f);
+                }
+                ShopDisplayShelfAnchors provider = root.AddComponent<ShopDisplayShelfAnchors>();
+                provider.EnsureAnchors();
+                Assert.AreEqual(6, provider.Anchors.Count);
+                Assert.IsTrue(provider.Anchors.All(anchor =>
+                    anchor.transform.parent == root.transform &&
+                    anchor.transform.localPosition.y >= 0.69f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
     }
 }

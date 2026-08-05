@@ -59,7 +59,8 @@ namespace PickAndPlaceShop
 
         public static bool CanAwardChutePrize(ShopClawMachineState state)
         {
-            return state == ShopClawMachineState.Release || state == ShopClawMachineState.Judge;
+            return state == ShopClawMachineState.Release || state == ShopClawMachineState.Judge ||
+                   state == ShopClawMachineState.Cooldown;
         }
 
         public static bool IsChuteSettled(Vector3 linearVelocity, Vector3 angularVelocity,
