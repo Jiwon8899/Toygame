@@ -18,6 +18,7 @@ namespace PickAndPlaceShop
         PausedForManualPlay,
         PausedForClosing,
         StoppedNoFunds,
+        StoppedSoldOut,
         StoppedStorageFull
     }
 
@@ -114,6 +115,9 @@ namespace PickAndPlaceShop
         [Range(1, 30)] [SerializeField] private int automationBufferSlots = 10;
         [Range(1, 30)] [SerializeField] private int automationNearFullSlots = 8;
         [SerializeField] private bool automatedSuccessCountsForDailyGoal;
+
+        [Header("Daily machine stock")]
+        [Range(1, 40)] [SerializeField] private int machineDailyCapsuleCapacity = 20;
 
         [Header("Narrative AI")]
         [SerializeField] private bool narrativeAIEnabled = true;
@@ -216,6 +220,7 @@ namespace PickAndPlaceShop
         public int AutomationBufferSlots => automationBufferSlots;
         public int AutomationNearFullSlots => Mathf.Min(automationBufferSlots, automationNearFullSlots);
         public bool AutomatedSuccessCountsForDailyGoal => automatedSuccessCountsForDailyGoal;
+        public int MachineDailyCapsuleCapacity => Mathf.Clamp(machineDailyCapsuleCapacity, 1, 40);
         public bool NarrativeAIEnabled => narrativeAIEnabled;
         public string NarrativeEndpoint => narrativeEndpoint;
         public string NarrativeModel => narrativeModel;

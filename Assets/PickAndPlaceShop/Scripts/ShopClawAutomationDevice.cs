@@ -110,6 +110,11 @@ namespace PickAndPlaceShop
                 State.Value = ShopAutomationState.PausedForManualPlay;
                 return;
             }
+            if (machine.AvailableCapsules <= 0)
+            {
+                State.Value = ShopAutomationState.StoppedSoldOut;
+                return;
+            }
 
             State.Value = ShopAutomationState.Running;
             SecondsUntilAttempt.Value = Mathf.Max(0f, SecondsUntilAttempt.Value - Time.unscaledDeltaTime);
@@ -121,6 +126,11 @@ namespace PickAndPlaceShop
         private void ServerAttempt()
         {
             ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (machine.AvailableCapsules <= 0)
+            {
+                State.Value = ShopAutomationState.StoppedSoldOut;
+                return;
+            }
             int cost = machine.Config != null ? machine.Config.AttemptCost : 0;
             if (game == null || game.Coins.Value < cost)
             {
@@ -134,13 +144,24 @@ namespace PickAndPlaceShop
             ShopLiveOperationsNetwork.Instance?.ServerRecordAutomation(0, cost);
             if (random.NextDouble() > Operations.AutomaticSuccessRate) return;
 
-            ShopProductRarity rarity = machine.Config.RarityWeights.Pick(random, false);
+            if (!machine.ServerTryPeekAutomationCapsule(out ShopProductRarity rarity))
+            {
+                State.Value = ShopAutomationState.StoppedSoldOut;
+                return;
+            }
             ShopProductDefinition product = PickProduct(rarity);
             if (product == null) return;
             if (!game.ServerTryAcquireItem(ShopContainerRules.SharedOwner, product, 0,
                     ShopAcquisitionSource.Automation, BufferOwner, out _))
             {
                 State.Value = ShopAutomationState.StoppedStorageFull;
+                Enabled.Value = false;
+                return;
+            }
+            if (!machine.ServerTryConsumeAutomationCapsule(rarity))
+            {
+                Debug.LogError("[Automation] Product was stored but the shared machine capsule could not be consumed.", this);
+                State.Value = ShopAutomationState.StoppedSoldOut;
                 Enabled.Value = false;
                 return;
             }
@@ -264,6 +285,7 @@ namespace PickAndPlaceShop
                 ShopAutomationState.Running => new Color(0.15f, 1f, 0.45f),
                 ShopAutomationState.StoppedStorageFull => new Color(1f, 0.16f, 0.08f),
                 ShopAutomationState.StoppedNoFunds => new Color(1f, 0.65f, 0.08f),
+                ShopAutomationState.StoppedSoldOut => new Color(0.55f, 0.35f, 0.85f),
                 _ => new Color(0.25f, 0.55f, 1f)
             };
             ShopBuildSafeMaterials.ApplyLitColor(indicator, color, true);
@@ -278,6 +300,7 @@ namespace PickAndPlaceShop
             ShopAutomationState.PausedForManualPlay => "수동 조작으로 일시 정지",
             ShopAutomationState.PausedForClosing => "마감 중 일시 정지",
             ShopAutomationState.StoppedNoFunds => "자금 부족 정지",
+            ShopAutomationState.StoppedSoldOut => "재고 소진 · 다음 날 리필",
             ShopAutomationState.StoppedStorageFull => "창고 만재 정지",
             ShopAutomationState.Off => "꺼짐",
             _ => "미설치"

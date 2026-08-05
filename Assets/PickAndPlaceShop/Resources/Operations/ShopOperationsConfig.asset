@@ -46,6 +46,7 @@ MonoBehaviour:
   automationBufferSlots: 10
   automationNearFullSlots: 8
   automatedSuccessCountsForDailyGoal: 0
+  machineDailyCapsuleCapacity: 20
   narrativeAIEnabled: 1
   narrativeEndpoint: https://api.anthropic.com/v1/messages
   narrativeModel: claude-haiku-4-5-20251001

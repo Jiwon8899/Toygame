@@ -48,6 +48,7 @@ namespace PickAndPlaceShop
     public sealed class ShopClawMachineSave
     {
         public int machineId;
+        public int remainingCapsules = -1;
         public List<ShopClawPrizeSave> prizes = new();
     }
 
@@ -160,7 +161,7 @@ namespace PickAndPlaceShop
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 13;
+        public const int CurrentVersion = 14;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 
@@ -196,6 +197,16 @@ namespace PickAndPlaceShop
                 }
                 EnsureCollections(data);
                 if (data.version < 5) MigrateToCatTheme(data);
+                if (data.version < 14 && data.clawMachines != null)
+                {
+                    foreach (ShopClawMachineSave machine in data.clawMachines)
+                    {
+                        if (machine == null) continue;
+                        machine.remainingCapsules = machine.prizes != null && machine.prizes.Count > 0
+                            ? machine.prizes.Count
+                            : -1;
+                    }
+                }
                 data.version = CurrentVersion;
                 return true;
             }

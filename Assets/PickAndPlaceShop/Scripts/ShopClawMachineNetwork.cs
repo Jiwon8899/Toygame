@@ -60,6 +60,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<float> LastJointBreakForce = new(0f);
         public NetworkVariable<bool> LastResultSuccess = new(false);
         public NetworkVariable<int> AwardedCount = new(0);
+        public NetworkVariable<int> RemainingCapsules = new(0);
         public NetworkVariable<FixedString64Bytes> LastAwardedName =
             new(new FixedString64Bytes(""));
         public NetworkVariable<int> LastAwardedRarity = new(0);
@@ -132,6 +133,11 @@ namespace PickAndPlaceShop
         private int loggedReleaseAttempt = -1;
         private GameObject spawnGuardRoot;
         private Collider chuteAwardVolume;
+        private ShopOperationsConfig operations;
+
+        private ShopOperationsConfig Operations => operations != null
+            ? operations
+            : operations = ShopOperationsConfig.Load();
 
         public ShopClawMachineConfig Config => config;
         public bool IsManuallyBusy => OccupantClientId.Value != ShopClawRules.NoOccupant ||
@@ -139,7 +145,9 @@ namespace PickAndPlaceShop
                                        State.Value != ShopClawMachineState.Cooldown);
         public Vector3 OperatorWorldPosition => operatorPoint != null ? operatorPoint.position : transform.position;
         public string InteractionPrompt => State.Value == ShopClawMachineState.Idle
-            ? (config != null ? config.DisplayName : "물리 인형뽑기") + " 조작 시작"
+            ? RemainingCapsules.Value <= 0
+                ? (config != null ? config.DisplayName : "물리 인형뽑기") + " · 재고 소진"
+                : (config != null ? config.DisplayName : "물리 인형뽑기") + " 조작 시작"
             : OccupantClientId.Value == ShopClawRules.NoOccupant ? "인형뽑기 초기화 중" : "인형뽑기 조작 중";
         public static bool LocalOperatorActive => LocalActiveMachine != null && LocalActiveMachine.localMode;
         public bool LocalGlassHidden => localMode && localGlassRenderers != null &&
@@ -152,6 +160,7 @@ namespace PickAndPlaceShop
         public ShopClawScoopRig ScoopRig => scoopRig;
         public float LastFloorPenetrationMillimeters => lastFloorPenetrationMillimeters;
         public int FloorContactSamples => floorContactSamples;
+        public int AvailableCapsules => Mathf.Max(0, RemainingCapsules.Value);
         public Vector3 ChuteWorldPosition => chuteDropPoint != null
             ? chuteDropPoint.position
             : transform.position;
@@ -300,6 +309,12 @@ namespace PickAndPlaceShop
             bool canReserve = ShopClawRules.CanReserve(
                 ShopNetworkGame.Instance != null ? ShopNetworkGame.Instance.Phase.Value : ShopPhase.Complete,
                 OccupantClientId.Value, sender, inRange, false);
+            if (RemainingCapsules.Value <= 0)
+            {
+                ShopNetworkGame.Instance?.ServerSetEvent("이 기계는 오늘 캡슐을 모두 사용했습니다. 다음 날 준비 시간에 20개가 리필됩니다.");
+                ResultMessage.Value = new FixedString128Bytes("재고 소진 · 다음 날 리필");
+                return;
+            }
             if (!canReserve)
             {
                 if (ShopNetworkGame.Instance != null)
@@ -348,6 +363,12 @@ namespace PickAndPlaceShop
                 State.Value != ShopClawMachineState.Aiming ||
                 OccupantClientId.Value == ShopClawRules.NoOccupant || ShopNetworkGame.Instance == null)
                 return false;
+
+            if (RemainingCapsules.Value <= 0)
+            {
+                ResultMessage.Value = new FixedString128Bytes("재고 소진 · 다음 날 리필");
+                return false;
+            }
 
             int coins = ShopNetworkGame.Instance.Coins.Value;
             bool freeTutorialAttempt = ShopTutorialRuntime.FreeScoopAttempt;
@@ -867,6 +888,7 @@ namespace PickAndPlaceShop
             }
             if (!awardLedger.TryAward(prize.NetworkObjectId, true, true, false)) return;
             if (!prize.ServerMarkAwarded()) return;
+            RemainingCapsules.Value = Mathf.Max(0, RemainingCapsules.Value - 1);
             awardedAttemptId = AttemptId.Value;
             roundAwardCount++;
             game.ServerRecordAcquired(1);
@@ -1143,14 +1165,20 @@ namespace PickAndPlaceShop
                     ServerRestorePrizes(saved);
                     return;
                 }
+                if (saved.remainingCapsules == 0)
+                {
+                    RemainingCapsules.Value = 0;
+                    Debug.Log("[ClawMachine] SOLD_OUT_SAVE_RESTORED machine=" + config.MachineId, this);
+                    return;
+                }
                 Debug.Log("[ClawMachine] EMPTY_SAVE_REFILL machine=" + config.MachineId, this);
             }
 
             prizeRandom = new System.Random(unchecked((config != null ? config.MachineId : 0) * 73856093 ^
                                                        observedDay * 19349663 ^ AttemptId.Value));
-            int count = hasPool
-                ? pool.MaxConcurrentPrizes
-                : Mathf.Max(6, prizeSpawnPoints != null ? prizeSpawnPoints.Length : 0);
+            int count = Operations != null
+                ? Operations.MachineDailyCapsuleCapacity
+                : hasPool ? pool.MaxConcurrentPrizes : Mathf.Max(6, prizeSpawnPoints != null ? prizeSpawnPoints.Length : 0);
             int attempts = hasPool ? pool.SpawnAttemptsPerPrize : 8;
             float clearance = hasPool ? pool.SpawnClearance : 0.035f;
             var occupied = new List<(Vector3 position, float radius)>();
@@ -1188,6 +1216,7 @@ namespace PickAndPlaceShop
                 activePrizes.Add(prize);
                 occupied.Add((spawnPosition, Mathf.Max(0.16f, definition.Size * 0.48f) + clearance));
             }
+            RemainingCapsules.Value = activePrizes.Count;
             Debug.Log("[ClawMachine] POOL_SPAWNED machine=" + (config != null ? config.MachineId : 0) +
                       " pool=" + (hasPool ? pool.PoolId : "legacy") + " count=" + activePrizes.Count +
                       " limit=" + count, this);
@@ -1196,8 +1225,10 @@ namespace PickAndPlaceShop
         private void ServerRestorePrizes(ShopClawMachineSave saved)
         {
             if (saved?.prizes == null) return;
+            int capacity = Operations != null ? Operations.MachineDailyCapsuleCapacity : int.MaxValue;
             foreach (ShopClawPrizeSave item in saved.prizes)
             {
+                if (activePrizes.Count >= capacity) break;
                 if (item == null) continue;
                 ShopClawPrizeDefinition definition = FindDefinitionByProductId(item.productId);
                 if (definition == null) continue;
@@ -1223,6 +1254,9 @@ namespace PickAndPlaceShop
                         (ShopProductRarity)Mathf.Clamp(item.rarity, 0, 3));
                 activePrizes.Add(prize);
             }
+            RemainingCapsules.Value = saved.remainingCapsules >= 0
+                ? Mathf.Min(capacity, saved.remainingCapsules)
+                : activePrizes.Count;
             Debug.Log("[ClawMachine] SAVE_RESTORED machine=" + config.MachineId +
                       " count=" + activePrizes.Count, this);
         }
@@ -1231,7 +1265,8 @@ namespace PickAndPlaceShop
         {
             var saved = new ShopClawMachineSave
             {
-                machineId = config != null ? config.MachineId : 0
+                machineId = config != null ? config.MachineId : 0,
+                remainingCapsules = RemainingCapsules.Value
             };
             foreach (ShopClawPrizeNetwork prize in activePrizes)
             {
@@ -1246,6 +1281,42 @@ namespace PickAndPlaceShop
                 });
             }
             return saved;
+        }
+
+        public bool ServerTryPeekAutomationCapsule(out ShopProductRarity rarity)
+        {
+            rarity = ShopProductRarity.Common;
+            if (!IsServer || RemainingCapsules.Value <= 0) return false;
+            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            {
+                if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
+                ShopProductRarity candidateRarity = (ShopProductRarity)Mathf.Clamp(
+                    prize.SpawnedRarity.Value, 0, (int)ShopProductRarity.UltraRare);
+                if (candidateRarity == ShopProductRarity.UltraRare) continue;
+                rarity = candidateRarity;
+                return true;
+            }
+            return false;
+        }
+
+        public bool ServerTryConsumeAutomationCapsule(ShopProductRarity expectedRarity)
+        {
+            if (!IsServer || RemainingCapsules.Value <= 0) return false;
+            ShopClawPrizeNetwork consumed = null;
+            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            {
+                if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
+                ShopProductRarity candidateRarity = (ShopProductRarity)Mathf.Clamp(
+                    prize.SpawnedRarity.Value, 0, (int)ShopProductRarity.UltraRare);
+                if (candidateRarity == ShopProductRarity.UltraRare || candidateRarity != expectedRarity) continue;
+                consumed = prize;
+                break;
+            }
+            if (consumed == null) return false;
+            if (!consumed.ServerMarkAwarded()) return false;
+            RemainingCapsules.Value = Mathf.Max(0, RemainingCapsules.Value - 1);
+            StartCoroutine(ServerDespawnAwardedPrize(consumed));
+            return true;
         }
 
         private ShopClawPrizeDefinition FindDefinitionByProductId(int productId)
@@ -1651,7 +1722,9 @@ namespace PickAndPlaceShop
                 ? new Color(1f, 0.3f, 0.18f)
                 : Color.white;
             if (costText != null)
-                costText.text = "1회 " + config.AttemptCost + "원   ·   가게 자금 " + coins + "원";
+                costText.text = "1회 " + config.AttemptCost + "원   ·   가게 자금 " + coins +
+                                "원   ·   남은 캡슐 " + RemainingCapsules.Value + " / " +
+                                (Operations != null ? Operations.MachineDailyCapsuleCapacity : RemainingCapsules.Value);
             if (instructionText != null)
             {
                 if (localInstructionAttempt != AttemptId.Value)

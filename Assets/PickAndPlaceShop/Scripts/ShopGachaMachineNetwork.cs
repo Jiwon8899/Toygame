@@ -31,6 +31,8 @@ namespace PickAndPlaceShop
         private readonly ShopAcquisitionAwardLedger awardLedger = new();
         private float stateElapsed;
         private int presentedAttempt = -1;
+        private int observedDay = -1;
+        private bool dailyRefillPending;
 
         public string MachineId => config != null ? config.MachineId : name;
         public int AttemptCost => config != null ? config.AttemptCost : 0;
@@ -69,6 +71,7 @@ namespace PickAndPlaceShop
                 if (NetworkManager.NetworkConfig.NetworkTopology == NetworkTopologyTypes.DistributedAuthority)
                     NetworkObject.SetOwnershipStatus(NetworkObject.OwnershipStatus.SessionOwner, true);
                 RemainingStock.Value = config != null ? config.DailyStock : 0;
+                observedDay = ShopNetworkGame.Instance != null ? ShopNetworkGame.Instance.Day.Value : 1;
                 State.Value = ShopGachaState.Idle;
                 OccupantClientId.Value = ShopClawRules.NoOccupant;
                 NetworkManager.OnClientDisconnectCallback += OnClientDisconnected;
@@ -134,7 +137,19 @@ namespace PickAndPlaceShop
 
         private void FixedUpdate()
         {
-            if (!IsServer || !IsSpawned || State.Value == ShopGachaState.Idle) return;
+            if (!IsServer || !IsSpawned) return;
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game != null && game.Day.Value != observedDay)
+            {
+                observedDay = game.Day.Value;
+                dailyRefillPending = true;
+            }
+            if (dailyRefillPending && State.Value == ShopGachaState.Idle)
+            {
+                RemainingStock.Value = config != null ? config.DailyStock : 0;
+                dailyRefillPending = false;
+            }
+            if (State.Value == ShopGachaState.Idle) return;
             stateElapsed += Time.fixedDeltaTime;
             float duration = DurationFor(State.Value);
             float progress = duration <= 0f ? 1f : Mathf.Clamp01(stateElapsed / duration);
