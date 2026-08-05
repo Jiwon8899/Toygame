@@ -138,7 +138,8 @@ namespace PickAndPlaceShop
             bool gameplayActive = observedGame != null &&
                                   UnityEngine.SceneManagement.SceneManager.GetActiveScene().name ==
                                   ShopLaunchContext.CompleteFlowScene;
-            if (hotbarCanvas != null) hotbarCanvas.enabled = gameplayActive;
+            if (hotbarCanvas != null)
+                hotbarCanvas.enabled = gameplayActive && !ShopInputModeManager.IsUiOpen;
             if (!gameplayActive || config == null) return;
             if (shelf == null)
             {
@@ -274,13 +275,20 @@ namespace PickAndPlaceShop
             SetVisualGhost(heldVisual, ghostCanPlace, ghostCanPlace);
             bool confirm = keyboard.spaceKey.wasPressedThisFrame ||
                            keyboard.eKey.wasPressedThisFrame && ghostCanPlace;
-            if (confirm && ghostCanPlace)
-            {
-                observedGame.RequestCurationPlacement(heldContainer, heldSlot, ghostPosition,
-                    heldYaw, heldSize);
-                CancelHolding();
-            }
+            if (confirm && ghostCanPlace) TryConfirmHeldPlacement();
             else if (keyboard.fKey.wasPressedThisFrame) CancelHolding();
+        }
+
+        // Shared by keyboard input and the development build verifier so the exact same
+        // placement transaction can be exercised even when a background player window does
+        // not accept synthetic keyboard state. Ordinary gameplay still enters here from E/Space.
+        public bool TryConfirmHeldPlacement()
+        {
+            if (heldVisual == null || observedGame == null || !ghostCanPlace) return false;
+            observedGame.RequestCurationPlacement(heldContainer, heldSlot, ghostPosition,
+                heldYaw, heldSize);
+            CancelHolding();
+            return true;
         }
 
         private void UpdatePlacedTarget(Keyboard keyboard)
@@ -308,20 +316,65 @@ namespace PickAndPlaceShop
             Transform player = FindLocalPlayer();
             if (player == null || Vector3.Distance(player.position, bounds.center) > 6f) return false;
             Camera camera = Camera.main;
-            Vector3 aim = camera != null ? camera.transform.position + camera.transform.forward * 3f
-                : player.position + player.forward * 2f;
-            float y = tiers[0];
-            float best = float.MaxValue;
+            Ray aimRay = camera != null
+                ? new Ray(camera.transform.position, camera.transform.forward)
+                : new Ray(player.position + Vector3.up * 1.2f, player.forward);
+            float bestScore = float.MaxValue;
+            bool found = false;
+
+            // The old implementation sampled an arbitrary point three metres in front of the
+            // camera. At the left/right shelves that point was often behind the fixture, then
+            // clamped to an occupied edge and E could never become a valid placement. Intersect
+            // the actual camera ray with each shelf tier instead and keep the closest valid hit.
             for (int i = 0; i < tiers.Count; i++)
             {
-                float distance = Mathf.Abs(tiers[i] - aim.y);
-                if (distance < best) { best = distance; y = tiers[i]; }
+                Plane tierPlane = new(Vector3.up, new Vector3(0f, tiers[i], 0f));
+                if (!tierPlane.Raycast(aimRay, out float enter) || enter < 0.15f || enter > 10f) continue;
+                Vector3 raw = aimRay.GetPoint(enter);
+                Vector3 candidate = ClampToShelf(raw, tiers[i], bounds);
+                if (!ServerPositionValid(candidate, heldSize, heldYaw, -1, out _)) continue;
+                float score = (raw - candidate).sqrMagnitude + enter * 0.01f;
+                if (score >= bestScore) continue;
+                bestScore = score;
+                position = candidate;
+                found = true;
             }
-            position = new Vector3(Mathf.Clamp(aim.x, bounds.min.x + heldSize.x * 0.5f,
-                bounds.max.x - heldSize.x * 0.5f), y,
-                Mathf.Clamp(aim.z, bounds.min.z + heldSize.z * 0.5f,
-                    bounds.max.z - heldSize.z * 0.5f));
-            return true;
+            if (found) return true;
+
+            // Near-horizontal views may not intersect a tier. Snap to the nearest free authored
+            // anchor so holding an item always gives E a reachable placement on every shelf.
+            Vector3 fallbackAim = aimRay.origin + aimRay.direction * 3f;
+            IReadOnlyList<ShopDisplaySlotAnchor> anchors = shelf.Anchors;
+            int nearestValidIndex = -1;
+            float nearestValidScore = float.MaxValue;
+            for (int i = 0; i < anchors.Count; i++)
+            {
+                Vector3 candidate = anchors[i].transform.position;
+                if (!ServerPositionValid(candidate, heldSize, heldYaw, -1, out _)) continue;
+                float score = (candidate - fallbackAim).sqrMagnitude;
+                if (score >= nearestValidScore) continue;
+                nearestValidScore = score;
+                nearestValidIndex = i;
+            }
+            if (nearestValidIndex >= 0)
+            {
+                position = anchors[nearestValidIndex].transform.position;
+                return true;
+            }
+            return false;
+        }
+
+        private Vector3 ClampToShelf(Vector3 raw, float tier, Bounds bounds)
+        {
+            float radians = heldYaw * Mathf.Deg2Rad;
+            float width = Mathf.Abs(Mathf.Cos(radians)) * heldSize.x +
+                          Mathf.Abs(Mathf.Sin(radians)) * heldSize.z;
+            float depth = Mathf.Abs(Mathf.Sin(radians)) * heldSize.x +
+                          Mathf.Abs(Mathf.Cos(radians)) * heldSize.z;
+            return new Vector3(
+                Mathf.Clamp(raw.x, bounds.min.x + width * 0.5f, bounds.max.x - width * 0.5f),
+                tier,
+                Mathf.Clamp(raw.z, bounds.min.z + depth * 0.5f, bounds.max.z - depth * 0.5f));
         }
 
         public bool ServerTryPlace(ulong requester, ShopContainerKind source, int sourceSlot,
@@ -751,7 +804,8 @@ namespace PickAndPlaceShop
             RectTransform stripRect = strip.GetComponent<RectTransform>();
             stripRect.anchorMin = stripRect.anchorMax = new Vector2(0.5f, 0f);
             stripRect.pivot = new Vector2(0.5f, 0f);
-            stripRect.anchoredPosition = new Vector2(0f, 18f);
+            // Keep the quick slots clear of the shared bottom interaction/help line.
+            stripRect.anchoredPosition = new Vector2(0f, 132f);
             stripRect.sizeDelta = new Vector2(590f, 116f);
             strip.GetComponent<Image>().color = new Color(0.02f, 0.04f, 0.06f, 0.88f);
 
@@ -855,6 +909,17 @@ namespace PickAndPlaceShop
             {
                 if (hotbarIcons[i] == null) continue;
                 int productId = manager?.GetHotbarProductId(i) ?? -1;
+                if (productId >= 0 && !TryFindPersonalProduct(productId, out _))
+                {
+                    manager?.SetHotbarProduct(i, -1);
+                    productId = -1;
+                    if (activeHotbarSlot == i)
+                    {
+                        CancelHolding();
+                        activeHotbarSlot = -1;
+                        manager?.SetSelectedHotbarSlot(-1);
+                    }
+                }
                 ShopProductDefinition product = ShopProductVisuals.Find(productId);
                 hotbarIcons[i].sprite = product != null ? product.Icon : null;
                 hotbarIcons[i].enabled = hotbarIcons[i].sprite != null;
