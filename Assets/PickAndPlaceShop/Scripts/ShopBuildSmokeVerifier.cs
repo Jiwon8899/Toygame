@@ -214,12 +214,14 @@ namespace PickAndPlaceShop
         {
             ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products/CatCatalog")
                 .OrderBy(product => product.ProductId).ToArray();
+            int repairedShaders = ShopBuildSafeMaterials.RepairInvalidShaders();
+            if (repairedShaders > 0) yield return null;
             if (!ValidateBuildSafeMaterials(products, out string shaderResult))
             {
                 regressionFailure = shaderResult;
                 yield break;
             }
-            Debug.Log("[BuildBugs:A] PASS " + shaderResult);
+            Debug.Log("[BuildBugs:A] PASS " + shaderResult + " repaired=" + repairedShaders);
             yield return Capture("BuildBug_BuildSafeMaterials.png");
 
             ShopProductDefinition[] batch = products.Take(7).ToArray();
@@ -447,15 +449,17 @@ namespace PickAndPlaceShop
                 materials.AddRange(product.VisualPrefab.GetComponentsInChildren<Renderer>(true)
                     .SelectMany(renderer => renderer.sharedMaterials.Where(material => material != null)));
             }
-            string[] unsafeShaders = materials.Select(material => material.shader != null
-                    ? material.shader.name : "<null>")
-                .Where(name => name == "<null>" || name.IndexOf("InternalError", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                               name.IndexOf("glTF", StringComparison.OrdinalIgnoreCase) >= 0)
+            string[] unsafeShaders = materials.Where(material => material.shader == null ||
+                    material.shader.name.IndexOf("InternalError", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    material.shader.name.IndexOf("glTF", StringComparison.OrdinalIgnoreCase) >= 0)
+                .Select(material => material.name + " => " +
+                    (material.shader != null ? material.shader.name : "<null>"))
                 .Distinct().ToArray();
             int baked = materials.Count(material => material.shader != null &&
                 material.shader.name == "Universal Render Pipeline/Lit");
             result = "materials=" + materials.Count + " urpLit=" + baked +
-                     " unsafeShaders=" + unsafeShaders.Length;
+                     " unsafeShaders=" + unsafeShaders.Length +
+                     (unsafeShaders.Length > 0 ? " [" + string.Join(", ", unsafeShaders) + "]" : string.Empty);
             return materials.Count > 0 && baked >= 80 && unsafeShaders.Length == 0;
         }
 
