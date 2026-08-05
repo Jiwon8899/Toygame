@@ -1432,13 +1432,13 @@ namespace PickAndPlaceShop
             ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products");
             List<ShopProductDefinition> matches = new();
             for (int i = 0; i < products.Length; i++)
-                if (products[i] != null && ShopProductLocalization.IsCatTheme(products[i].Category) &&
+                if (products[i] != null && !products[i].ExclusiveReward && ShopProductLocalization.IsCatTheme(products[i].Category) &&
                     products[i].Rarity == rarity)
                     matches.Add(products[i]);
             if (matches.Count == 0 && rarity == ShopProductRarity.UltraRare)
             {
                 for (int i = 0; i < products.Length; i++)
-                    if (products[i] != null && ShopProductLocalization.IsCatTheme(products[i].Category) &&
+                    if (products[i] != null && !products[i].ExclusiveReward && ShopProductLocalization.IsCatTheme(products[i].Category) &&
                         products[i].Rarity == ShopProductRarity.Rare)
                         matches.Add(products[i]);
             }

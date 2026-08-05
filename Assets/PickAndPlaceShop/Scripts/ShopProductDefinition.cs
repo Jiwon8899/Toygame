@@ -59,6 +59,7 @@ namespace PickAndPlaceShop
         [SerializeField] private Color tint = Color.white;
         [Min(1)] [SerializeField] private int maxStack = 10;
         [SerializeField] private bool placeholderArtwork;
+        [SerializeField] private bool exclusiveReward;
 
         public int ProductId => productId;
         public string DisplayName => displayName;
@@ -77,6 +78,7 @@ namespace PickAndPlaceShop
         public Color Tint => tint;
         public int MaxStack => Mathf.Max(1, maxStack);
         public bool PlaceholderArtwork => placeholderArtwork;
+        public bool ExclusiveReward => exclusiveReward;
 
 #if UNITY_EDITOR
         public void EditorConfigure(int id, string label, ShopProductCategory productCategory, int price,
@@ -102,6 +104,8 @@ namespace PickAndPlaceShop
 
         public void EditorSetPlaceholderArtwork(bool placeholder) =>
             placeholderArtwork = placeholder;
+
+        public void EditorSetExclusiveReward(bool exclusive) => exclusiveReward = exclusive;
 
         public void EditorConfigureVisual(GameObject prefab, Sprite sprite, Color color)
         {

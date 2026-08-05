@@ -40,6 +40,8 @@ namespace PickAndPlaceShop
         public NetworkVariable<bool> CurrentDrawHasCeiling = new(false);
         public NetworkVariable<int> DrawsSinceCeiling = new(0);
         public NetworkVariable<float> ScratchProgress = new(0f);
+        public NetworkVariable<int> SetNumber = new(1);
+        public NetworkVariable<float> RefillSecondsRemaining = new(0f);
 
         private readonly ShopAcquisitionAwardLedger awardLedger = new();
         private float stateElapsed;
@@ -56,7 +58,9 @@ namespace PickAndPlaceShop
         public string LastPrize => config != null ? config.LastPrize : "마지막상";
         public string CeilingPrize => config != null ? config.CeilingPrize : "천장 보너스";
         public int CeilingDraws => config != null ? config.CeilingDraws : 1;
-        public string InteractionPrompt => State.Value == ShopKujiState.Idle
+        public string InteractionPrompt => State.Value == ShopKujiState.Refilling
+            ? config.DisplayName + " 새 상자 개봉 중 " + Mathf.CeilToInt(RefillSecondsRemaining.Value) + "초"
+            : State.Value == ShopKujiState.Idle
             ? config.DisplayName + " 긁기 티켓 구매 (-" + EffectiveTicketPrice + " 가게 자금)"
             : State.Value == ShopKujiState.AwaitingScratch || State.Value == ShopKujiState.Scratching
                 ? config.DisplayName + " 마우스로 긁는 중"
@@ -88,19 +92,11 @@ namespace PickAndPlaceShop
                 // topology; clients can request a draw but cannot own or mutate its results.
                 if (NetworkManager.NetworkConfig.NetworkTopology == NetworkTopologyTypes.DistributedAuthority)
                     NetworkObject.SetOwnershipStatus(NetworkObject.OwnershipStatus.SessionOwner, true);
-                ShopKujiStock stock = config != null ? config.InitialStock : default;
-                StockS.Value = stock.S;
-                StockA.Value = stock.A;
-                StockB.Value = stock.B;
-                StockC.Value = stock.C;
-                StockD.Value = stock.D;
-                State.Value = ShopKujiState.Idle;
-                OccupantClientId.Value = ShopClawRules.NoOccupant;
-                LastPrizeAwarded.Value = false;
-                CurrentDrawHasLastPrize.Value = false;
-                CurrentDrawHasCeiling.Value = false;
-                DrawsSinceCeiling.Value = 0;
-                ScratchProgress.Value = 0f;
+                if (ShopProgressionManager.Instance != null &&
+                    ShopProgressionManager.Instance.TryConsumeKujiStationSave(PoolId, out ShopKujiStationSave saved))
+                    RestoreSaveState(saved);
+                else
+                    ResetSet(false);
                 NetworkManager.OnClientDisconnectCallback += OnClientDisconnected;
             }
         }
@@ -122,6 +118,12 @@ namespace PickAndPlaceShop
             ulong sender = rpcParams.Receive.SenderClientId;
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (config == null || game == null) return;
+            if (State.Value == ShopKujiState.Refilling)
+            {
+                game.ServerSetEvent(config.DisplayName + " 새 상자 개봉 중 · " +
+                                    Mathf.CeilToInt(RefillSecondsRemaining.Value) + "초 남음");
+                return;
+            }
             if (!ShopClawRules.CanOperateDuring(game.Phase.Value))
             {
                 game.ServerSetEvent("쿠지는 준비 또는 영업 시간에 구매할 수 있습니다.");
@@ -192,6 +194,13 @@ namespace PickAndPlaceShop
         private void FixedUpdate()
         {
             if (!IsServer || !IsSpawned || State.Value == ShopKujiState.Idle) return;
+            if (State.Value == ShopKujiState.Refilling)
+            {
+                RefillSecondsRemaining.Value = Mathf.Max(0f,
+                    RefillSecondsRemaining.Value - Time.fixedDeltaTime);
+                if (RefillSecondsRemaining.Value <= 0f) ResetSet(true);
+                return;
+            }
             if (State.Value == ShopKujiState.AwaitingScratch || State.Value == ShopKujiState.Scratching)
             {
                 scratchElapsed += Time.fixedDeltaTime;
@@ -226,7 +235,8 @@ namespace PickAndPlaceShop
                     CurrentDrawHasLastPrize.Value = false;
                     CurrentDrawHasCeiling.Value = false;
                     ScratchProgress.Value = 0f;
-                    SetState(ShopKujiState.Idle);
+                    if (TotalRemaining <= 0) BeginRefill();
+                    else SetState(ShopKujiState.Idle);
                     break;
             }
         }
@@ -251,7 +261,11 @@ namespace PickAndPlaceShop
                 config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)
             };
             if (CurrentDrawHasLastPrize.Value)
+            {
                 rewardProducts.Add(config.LastPrizeDefinition);
+                ShopDifferentiationController.Instance?.ServerRecordLastOne(
+                    PoolId, SetNumber.Value, OccupantClientId.Value, config.LastPrizeDefinition);
+            }
             if (CurrentDrawHasCeiling.Value)
                 rewardProducts.Add(config.CeilingPrizeDefinition);
             int storedRewards = 0;
@@ -402,6 +416,67 @@ namespace PickAndPlaceShop
             }
         }
 
+        private void BeginRefill()
+        {
+            Vector2 range = ShopDifferentiationConfig.Load()?.KujiRefillSeconds ?? new Vector2(5f, 8f);
+            RefillSecondsRemaining.Value = Random.Range(range.x, range.y);
+            SetState(ShopKujiState.Refilling);
+            ShopNetworkGame.Instance?.ServerSetEvent(config.DisplayName + " 세트 #" + SetNumber.Value +
+                                                     " 소진 · 새 상자 개봉 중");
+        }
+
+        private void ResetSet(bool advanceNumber)
+        {
+            ShopKujiStock stock = config != null ? config.InitialStock : default;
+            ApplyStock(stock);
+            if (advanceNumber) SetNumber.Value = Mathf.Max(1, SetNumber.Value + 1);
+            else SetNumber.Value = Mathf.Max(1, SetNumber.Value);
+            State.Value = ShopKujiState.Idle;
+            OccupantClientId.Value = ShopClawRules.NoOccupant;
+            LastPrizeAwarded.Value = false;
+            CurrentDrawHasLastPrize.Value = false;
+            CurrentDrawHasCeiling.Value = false;
+            ScratchProgress.Value = 0f;
+            RefillSecondsRemaining.Value = 0f;
+            if (advanceNumber)
+                ShopNetworkGame.Instance?.ServerSetEvent(config.DisplayName + " 새 세트 #" +
+                                                         SetNumber.Value + " 판매 시작");
+        }
+
+        private void RestoreSaveState(ShopKujiStationSave saved)
+        {
+            StockS.Value = Mathf.Max(0, saved.stockS);
+            StockA.Value = Mathf.Max(0, saved.stockA);
+            StockB.Value = Mathf.Max(0, saved.stockB);
+            StockC.Value = Mathf.Max(0, saved.stockC);
+            StockD.Value = Mathf.Max(0, saved.stockD);
+            SetNumber.Value = Mathf.Max(1, saved.setNumber);
+            DrawsSinceCeiling.Value = Mathf.Max(0, saved.drawsSinceCeiling);
+            LastPrizeAwarded.Value = saved.lastPrizeAwarded;
+            RefillSecondsRemaining.Value = Mathf.Max(0f, saved.refillSecondsRemaining);
+            State.Value = saved.refilling && RefillSecondsRemaining.Value > 0f
+                ? ShopKujiState.Refilling : ShopKujiState.Idle;
+            OccupantClientId.Value = ShopClawRules.NoOccupant;
+            CurrentDrawHasLastPrize.Value = false;
+            CurrentDrawHasCeiling.Value = false;
+            ScratchProgress.Value = 0f;
+        }
+
+        public ShopKujiStationSave CaptureSaveState() => new()
+        {
+            poolId = PoolId,
+            setNumber = SetNumber.Value,
+            stockS = StockS.Value,
+            stockA = StockA.Value,
+            stockB = StockB.Value,
+            stockC = StockC.Value,
+            stockD = StockD.Value,
+            drawsSinceCeiling = DrawsSinceCeiling.Value,
+            lastPrizeAwarded = LastPrizeAwarded.Value,
+            refilling = State.Value == ShopKujiState.Refilling,
+            refillSecondsRemaining = RefillSecondsRemaining.Value
+        };
+
         private void UpdateInformationText()
         {
             if (informationText == null || config == null) return;
@@ -417,7 +492,14 @@ namespace PickAndPlaceShop
                   " / C " + StockC.Value + " / D " + StockD.Value +
                   "\n마지막상 " + (LastPrizeAwarded.Value ? "지급 완료" : "남은 티켓 소진 시 지급")
                 : "\nS " + StockS.Value + " / A " + StockA.Value + " / B " + StockB.Value;
-            informationText.text = config.DisplayName + "\n티켓 " + EffectiveTicketPrice +
+            if (State.Value == ShopKujiState.Refilling)
+            {
+                informationText.text = config.DisplayName + " · 세트 #" + SetNumber.Value +
+                                       "\n새 상자 개봉 중 " + Mathf.CeilToInt(RefillSecondsRemaining.Value) + "초";
+                return;
+            }
+            informationText.text = config.DisplayName + " · 세트 #" + SetNumber.Value +
+                                   "\n티켓 " + EffectiveTicketPrice +
                                    (EffectiveTicketPrice < config.TicketPrice ? " (할인)" : string.Empty) +
                                    " | 전체 " + TotalRemaining + detail +
                                    "\n천장 " + DrawsSinceCeiling.Value + "/" + config.CeilingDraws + result;

@@ -157,11 +157,11 @@ namespace PickAndPlaceShop
             ShopProductDefinition[] all = Resources.LoadAll<ShopProductDefinition>("Products");
             List<ShopProductDefinition> candidates = new();
             for (int i = 0; i < all.Length; i++)
-                if (all[i] != null && ShopProductLocalization.IsCatTheme(all[i].Category) &&
+                if (all[i] != null && !all[i].ExclusiveReward && ShopProductLocalization.IsCatTheme(all[i].Category) &&
                     all[i].Rarity == rarity) candidates.Add(all[i]);
             if (candidates.Count == 0)
                 for (int i = 0; i < all.Length; i++)
-                    if (all[i] != null && ShopProductLocalization.IsCatTheme(all[i].Category) &&
+                    if (all[i] != null && !all[i].ExclusiveReward && ShopProductLocalization.IsCatTheme(all[i].Category) &&
                         all[i].Rarity != ShopProductRarity.UltraRare) candidates.Add(all[i]);
             return candidates.Count == 0 ? null : candidates[random.Next(candidates.Count)];
         }

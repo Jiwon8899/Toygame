@@ -84,6 +84,8 @@ namespace PickAndPlaceShop
         public NetworkVariable<FixedString128Bytes> LastEvent =
             new(new FixedString128Bytes("Open a claw machine and collect stock together."));
         public NetworkVariable<int> UpcycleDecorMask = new(0);
+        public NetworkVariable<int> LastOneAwards = new(0);
+        public NetworkVariable<FixedString512Bytes> RecentLastOneRecords = new(new FixedString512Bytes("기록 없음"));
 
         public NetworkVariable<int> CampaignRevenue = new(0);
         public NetworkVariable<int> CampaignSold = new(0);

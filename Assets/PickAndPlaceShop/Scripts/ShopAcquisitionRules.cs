@@ -38,7 +38,8 @@ namespace PickAndPlaceShop
         Scratching,
         RevealingTicket,
         Result,
-        Cooldown
+        Cooldown,
+        Refilling
     }
 
     [Serializable]

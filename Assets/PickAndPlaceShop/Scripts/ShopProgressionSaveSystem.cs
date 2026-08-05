@@ -50,6 +50,22 @@ namespace PickAndPlaceShop
     }
 
     [Serializable]
+    public sealed class ShopKujiStationSave
+    {
+        public string poolId;
+        public int setNumber = 1;
+        public int stockS;
+        public int stockA;
+        public int stockB;
+        public int stockC;
+        public int stockD;
+        public int drawsSinceCeiling;
+        public bool lastPrizeAwarded;
+        public bool refilling;
+        public float refillSecondsRemaining;
+    }
+
+    [Serializable]
     public sealed class ShopProgressionSaveData
     {
         public int version = ShopProgressionSaveStore.CurrentVersion;
@@ -80,6 +96,7 @@ namespace PickAndPlaceShop
         public List<ShopProgressGoalSave> weeklyGoals = new();
         public List<ShopContainerItemSave> containerItems = new();
         public List<ShopClawMachineSave> clawMachines = new();
+        public List<ShopKujiStationSave> kujiStations = new();
         public int livePhase;
         public float livePhaseSecondsRemaining;
         public int trendCategory;
@@ -102,6 +119,8 @@ namespace PickAndPlaceShop
         public int tutorialStep;
         public bool tutorialCompleted;
         public int upcycleDecorMask;
+        public int lastOneAwards;
+        public string recentLastOneRecords;
     }
 
     public static class ShopProgressionSaveStore
@@ -205,6 +224,7 @@ namespace PickAndPlaceShop
             data.weeklyGoals ??= new List<ShopProgressGoalSave>();
             data.containerItems ??= new List<ShopContainerItemSave>();
             data.clawMachines ??= new List<ShopClawMachineSave>();
+            data.kujiStations ??= new List<ShopKujiStationSave>();
             data.customerProfiles ??= new List<ShopCustomerProfileSave>();
             data.onlineOrders ??= new List<ShopOnlineOrderSave>();
             data.automationMachines ??= new List<ShopAutomationMachineSave>();

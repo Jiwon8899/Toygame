@@ -17,24 +17,24 @@ MonoBehaviour:
   ticketPrice: 140
   initialStock:
     S: 1
-    A: 2
-    B: 3
-    C: 6
-    D: 8
+    A: 4
+    B: 8
+    C: 12
+    D: 15
   sPrize: "\uD06C\uB9BC\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
   aPrize: "\uCE58\uC988\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
   bPrize: "\uC18C\uD48D \uB0E5\uC774"
   cPrize: "\uB098\uBE44 \uB0E5\uC774"
-  dPrize: "\uD2A4\uB9BD \uB0E5\uC774"
-  lastPrize: "\uD06C\uB9BC\uB0E5 \uAE30\uC9C0\uAC1C \uC778\uD615"
+  dPrize: "\uB098\uBE44 \uB0E5\uC774"
+  lastPrize: "\uB9C8\uC9C0\uB9C9\uC0C1 \uD669\uAE08 \uB85C\uBD07"
   ceilingDraws: 6
   ceilingPrize: "\uC2A4\uB178\uC6B0\uBCFC \uB0E5\uC774"
   sPrizeDefinition: {fileID: 11400000, guid: 490672d40103a024abd9fd3f23519926, type: 2}
   aPrizeDefinition: {fileID: 11400000, guid: 3b7a56cc2d80c904c9163aeb30ae9a2a, type: 2}
   bPrizeDefinition: {fileID: 11400000, guid: db484a5ab0cd8fc4baa9a4decc4e5d35, type: 2}
   cPrizeDefinition: {fileID: 11400000, guid: fefe921d1e2ed9f468ac8b41a06bea14, type: 2}
-  dPrizeDefinition: {fileID: 11400000, guid: 2aed368d285bb3d4cba66f8e51d2d6c7, type: 2}
-  lastPrizeDefinition: {fileID: 11400000, guid: 490672d40103a024abd9fd3f23519926, type: 2}
+  dPrizeDefinition: {fileID: 11400000, guid: fefe921d1e2ed9f468ac8b41a06bea14, type: 2}
+  lastPrizeDefinition: {fileID: 11400000, guid: 43f5f0efbd103bf4383a730a1c9d6470, type: 2}
   ceilingPrizeDefinition: {fileID: 11400000, guid: a9f0ff077446d5d4683615bd588b19ed, type: 2}
   commonCatalog:
   - {fileID: 11400000, guid: fefe921d1e2ed9f468ac8b41a06bea14, type: 2}

@@ -29,6 +29,7 @@ namespace PickAndPlaceShop
         private readonly List<ShopProgressGoalSave> weeklyGoals = new();
         private readonly List<ShopContainerItemSave> pendingContainerItems = new();
         private readonly List<ShopClawMachineSave> pendingClawMachines = new();
+        private readonly List<ShopKujiStationSave> pendingKujiStations = new();
 
         private int currentDay = 1;
         private int teamFunds;
@@ -504,11 +505,18 @@ namespace PickAndPlaceShop
             boundGame.CampaignClawSuccesses.Value = clawSuccesses;
             boundGame.Day.Value = Mathf.Max(1, currentDay);
             if (loadedSaveData != null)
+            {
                 boundGame.ServerRestoreUpgradeState(loadedSaveData.playerUpgradeLevel,
                     loadedSaveData.operationsUpgradeLevel, loadedSaveData.facilityUpgradeLevel,
                     loadedSaveData.clawUpgradeLevel, loadedSaveData.gachaUpgradeLevel,
                     loadedSaveData.kujiUpgradeLevel, loadedSaveData.staffHiredMask,
                     loadedSaveData.staffAttendanceMask);
+                boundGame.UpcycleDecorMask.Value = Mathf.Max(0, loadedSaveData.upcycleDecorMask);
+                boundGame.LastOneAwards.Value = Mathf.Max(0, loadedSaveData.lastOneAwards);
+                boundGame.RecentLastOneRecords.Value = new Unity.Collections.FixedString512Bytes(
+                    string.IsNullOrWhiteSpace(loadedSaveData.recentLastOneRecords)
+                        ? "기록 없음" : loadedSaveData.recentLastOneRecords);
+            }
             observedGameFunds = teamFunds;
             observedGameReputation = reputation;
             observedGameDay = boundGame.Day.Value;
@@ -730,6 +738,7 @@ namespace PickAndPlaceShop
                 weeklyGoals = CloneGoals(weeklyGoals),
                 containerItems = CaptureContainerItems(),
                 clawMachines = CaptureClawMachines(),
+                kujiStations = CaptureKujiStations(),
                 playerUpgradeLevel = boundGame != null ? boundGame.PlayerUpgradeLevel.Value : 0,
                 operationsUpgradeLevel = boundGame != null ? boundGame.ShopUpgradeLevel.Value : 0,
                 facilityUpgradeLevel = boundGame != null ? boundGame.FacilityUpgradeLevel.Value : 0,
@@ -740,7 +749,9 @@ namespace PickAndPlaceShop
                 staffAttendanceMask = boundGame != null ? boundGame.StaffAttendanceMask.Value : 0,
                 tutorialStep = tutorialStep,
                 tutorialCompleted = tutorialCompleted,
-                upcycleDecorMask = boundGame != null ? boundGame.UpcycleDecorMask.Value : 0
+                upcycleDecorMask = boundGame != null ? boundGame.UpcycleDecorMask.Value : 0,
+                lastOneAwards = boundGame != null ? boundGame.LastOneAwards.Value : 0,
+                recentLastOneRecords = boundGame != null ? boundGame.RecentLastOneRecords.Value.ToString() : string.Empty
             };
         }
 
@@ -780,10 +791,17 @@ namespace PickAndPlaceShop
             if (save.containerItems != null) pendingContainerItems.AddRange(save.containerItems);
             pendingClawMachines.Clear();
             if (save.clawMachines != null) pendingClawMachines.AddRange(save.clawMachines);
+            pendingKujiStations.Clear();
+            if (save.kujiStations != null) pendingKujiStations.AddRange(save.kujiStations);
             tutorialStep = Mathf.Clamp(save.tutorialStep, 0, ShopTutorialRuntime.StepCount);
             tutorialCompleted = save.tutorialCompleted;
             if (boundGame != null && boundGame.IsServer)
+            {
                 boundGame.UpcycleDecorMask.Value = Mathf.Max(0, save.upcycleDecorMask);
+                boundGame.LastOneAwards.Value = Mathf.Max(0, save.lastOneAwards);
+                boundGame.RecentLastOneRecords.Value = new Unity.Collections.FixedString512Bytes(
+                    string.IsNullOrWhiteSpace(save.recentLastOneRecords) ? "기록 없음" : save.recentLastOneRecords);
+            }
         }
 
         public bool TryConsumeClawMachineSave(int machineId, out ShopClawMachineSave saved)
@@ -793,6 +811,19 @@ namespace PickAndPlaceShop
                 if (pendingClawMachines[i] == null || pendingClawMachines[i].machineId != machineId) continue;
                 saved = pendingClawMachines[i];
                 pendingClawMachines.RemoveAt(i);
+                return true;
+            }
+            saved = null;
+            return false;
+        }
+
+        public bool TryConsumeKujiStationSave(string poolId, out ShopKujiStationSave saved)
+        {
+            for (int i = 0; i < pendingKujiStations.Count; i++)
+            {
+                if (pendingKujiStations[i] == null || pendingKujiStations[i].poolId != poolId) continue;
+                saved = pendingKujiStations[i];
+                pendingKujiStations.RemoveAt(i);
                 return true;
             }
             saved = null;
@@ -859,6 +890,19 @@ namespace PickAndPlaceShop
             {
                 if (machine == null || !machine.IsSpawned || !machine.IsServer) continue;
                 result.Add(machine.CaptureSaveState());
+            }
+            return result;
+        }
+
+        private static List<ShopKujiStationSave> CaptureKujiStations()
+        {
+            var result = new List<ShopKujiStationSave>();
+            foreach (ShopKujiStationNetwork station in
+                     FindObjectsByType<ShopKujiStationNetwork>(FindObjectsInactive.Include,
+                         FindObjectsSortMode.None))
+            {
+                if (station == null || !station.IsSpawned || !station.IsServer) continue;
+                result.Add(station.CaptureSaveState());
             }
             return result;
         }

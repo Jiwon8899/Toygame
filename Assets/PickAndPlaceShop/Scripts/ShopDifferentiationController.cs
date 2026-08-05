@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -76,6 +77,47 @@ namespace PickAndPlaceShop
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null || !game.IsServer) return;
             if (action == ShopAction.CapsuleRecycler) ServerCraftNextDecoration(game);
+        }
+
+        public void ServerRecordLastOne(string poolId, int setNumber, ulong clientId,
+            ShopProductDefinition reward)
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || !game.IsServer) return;
+            game.LastOneAwards.Value++;
+            string playerName = "플레이어 " + clientId;
+            if (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out NetworkClient client) &&
+                client.PlayerObject != null)
+                playerName = client.PlayerObject.name;
+            string line = playerName + "님이 [세트 #" + setNumber + "]의 " +
+                          (reward != null ? reward.DisplayName : "라스트원상") + "을 뽑았습니다!";
+            string previous = game.RecentLastOneRecords.Value.ToString();
+            if (previous == "기록 없음") previous = string.Empty;
+            string combined = string.IsNullOrEmpty(previous) ? line : line + "\n" + previous;
+            if (combined.Length > 480) combined = combined.Substring(0, 480);
+            game.RecentLastOneRecords.Value = new Unity.Collections.FixedString512Bytes(combined);
+            game.ServerSetEvent(line);
+        }
+
+        public void AppendStatus(StringBuilder text)
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (text == null || game == null) return;
+            text.AppendLine();
+            text.AppendLine("<color=#FFD45B><b>쿠지 라스트원상</b></color>");
+            text.AppendLine("획득 " + game.LastOneAwards.Value + "회 · 칭호 " + LastOneTitle(game.LastOneAwards.Value));
+            text.AppendLine(game.RecentLastOneRecords.Value.ToString());
+        }
+
+        public string LastOneTitle(int count)
+        {
+            int[] thresholds = config != null ? config.LastOneTitleThresholds : System.Array.Empty<int>();
+            string[] labels = { "입문 집사", "라스트원상 헌터", "세트 수호자", "전설의 집사" };
+            string result = "도전자";
+            for (int i = 0; i < thresholds.Length && i < labels.Length; i++)
+                if (count >= thresholds[i]) result = labels[i];
+            return result;
         }
 
         private void ServerCraftNextDecoration(ShopNetworkGame game)
