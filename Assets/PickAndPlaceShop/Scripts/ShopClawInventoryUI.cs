@@ -91,6 +91,10 @@ namespace PickAndPlaceShop
         private Text storageCount;
         private Text displayCount;
         private Text feedback;
+        private Image personalPanelImage;
+        private Image storagePanelImage;
+        private Image displayPanelImage;
+        private readonly Dictionary<ShopContainerKind, Color> panelColors = new();
         private Font uiFont;
         private ShopNetworkGame observedGame;
         private ShopContainerSlotView dragSource;
@@ -160,7 +164,7 @@ namespace PickAndPlaceShop
 
         private void OnContainerChanged(NetworkListEvent<ShopContainerItem> _) => dirty = true;
 
-        private void SetOpen(bool open)
+        public void SetOpen(bool open)
         {
             isOpen = open;
             if (panel != null) panel.SetActive(open);
@@ -196,38 +200,52 @@ namespace PickAndPlaceShop
             panelRect.anchoredPosition = Vector2.zero;
 
             Text title = CreateText("Title", panel.transform,
-                "상품 관리 · 드래그해서 개인 가방 / 공용 창고 / 공용 진열 간 이동",
+                "상품 관리",
                 38, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.98f, 0.83f, 0.32f));
             SetRect(title.rectTransform, new Vector2(32f, -20f), new Vector2(1500f, 54f));
-            Text help = CreateText("Help", panel.transform,
-                "I 닫기 · 같은 상품 위에 놓으면 최대 10개까지 합치기 · 실패한 이동은 원래 위치 유지",
-                21, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.68f, 0.78f, 0.9f));
-            SetRect(help.rectTransform, new Vector2(34f, -72f), new Vector2(1450f, 38f));
+            Color personalColor = new(0.035f, 0.1f, 0.18f, 0.98f);
+            Color storageColor = new(0.18f, 0.09f, 0.035f, 0.98f);
+            Color displayColor = new(0.045f, 0.14f, 0.095f, 0.98f);
+            GameObject personalPanel = CreatePanel("PersonalInventoryPanel", panel.transform,
+                new Vector2(520f, 665f), personalColor);
+            SetRect(personalPanel.GetComponent<RectTransform>(), new Vector2(28f, -102f), new Vector2(520f, 665f));
+            personalPanelImage = personalPanel.GetComponent<Image>();
+            panelColors[ShopContainerKind.PersonalInventory] = personalColor;
+            personalCount = CreateText("PersonalCount", personalPanel.transform, "개인 인벤토리 (0/10)",
+                25, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.62f, 0.86f, 1f));
+            SetRect(personalCount.rectTransform, new Vector2(18f, -14f), new Vector2(480f, 44f));
+            BuildGrid(personalPanel.transform, personalSlots, ShopContainerKind.PersonalInventory,
+                ShopNetworkGame.MaxClawInventorySlots, new Vector2(18f, -76f), 5);
 
-            personalCount = CreateText("PersonalCount", panel.transform, "개인 가방 0 / 10",
-                27, FontStyle.Bold, TextAnchor.MiddleLeft, Color.white);
-            SetRect(personalCount.rectTransform, new Vector2(36f, -118f), new Vector2(860f, 38f));
-            BuildGrid(panel.transform, personalSlots, ShopContainerKind.PersonalInventory,
-                ShopNetworkGame.MaxClawInventorySlots, new Vector2(36f, -164f), 5,
-                new Vector2(168f, 188f), new Vector2(180f, 200f));
+            GameObject storagePanel = CreatePanel("SharedStoragePanel", panel.transform,
+                new Vector2(720f, 665f), storageColor);
+            SetRect(storagePanel.GetComponent<RectTransform>(), new Vector2(570f, -102f), new Vector2(720f, 665f));
+            storagePanelImage = storagePanel.GetComponent<Image>();
+            panelColors[ShopContainerKind.SharedStorage] = storageColor;
+            storageCount = CreateText("StorageCount", storagePanel.transform, "공용 창고 (0/30)",
+                25, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(1f, 0.72f, 0.36f));
+            SetRect(storageCount.rectTransform, new Vector2(18f, -14f), new Vector2(680f, 44f));
+            BuildGrid(storagePanel.transform, storageSlots, ShopContainerKind.SharedStorage,
+                MaximumStorageSlots, new Vector2(18f, -76f), 6);
 
-            displayCount = CreateText("DisplayCount", panel.transform, "공용 진열 0 / 4",
-                27, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(1f, 0.82f, 0.4f));
-            SetRect(displayCount.rectTransform, new Vector2(36f, -575f), new Vector2(860f, 38f));
-            BuildGrid(panel.transform, displaySlots, ShopContainerKind.SharedDisplay,
-                MaximumDisplaySlots, new Vector2(36f, -622f), 5,
-                new Vector2(168f, 108f), new Vector2(180f, 118f));
-
-            storageCount = CreateText("StorageCount", panel.transform, "공용 창고 0 / 30",
-                27, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.55f, 0.88f, 1f));
-            SetRect(storageCount.rectTransform, new Vector2(946f, -118f), new Vector2(800f, 38f));
-            BuildGrid(panel.transform, storageSlots, ShopContainerKind.SharedStorage,
-                MaximumStorageSlots, new Vector2(946f, -164f), 10,
-                new Vector2(74f, 84f), new Vector2(78f, 90f), true);
+            GameObject displayPanel = CreatePanel("SharedDisplayPanel", panel.transform,
+                new Vector2(470f, 665f), displayColor);
+            SetRect(displayPanel.GetComponent<RectTransform>(), new Vector2(1312f, -102f), new Vector2(470f, 665f));
+            displayPanelImage = displayPanel.GetComponent<Image>();
+            panelColors[ShopContainerKind.SharedDisplay] = displayColor;
+            displayCount = CreateText("DisplayCount", displayPanel.transform, "공용 진열 (0/4)",
+                25, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.52f, 1f, 0.7f));
+            SetRect(displayCount.rectTransform, new Vector2(18f, -14f), new Vector2(430f, 44f));
+            BuildGrid(displayPanel.transform, displaySlots, ShopContainerKind.SharedDisplay,
+                MaximumDisplaySlots, new Vector2(18f, -76f), 4);
 
             feedback = CreateText("Feedback", panel.transform, string.Empty, 22, FontStyle.Bold,
-                TextAnchor.MiddleLeft, new Color(0.7f, 1f, 0.82f));
-            SetRect(feedback.rectTransform, new Vector2(946f, -810f), new Vector2(800f, 42f));
+                TextAnchor.MiddleCenter, new Color(0.7f, 1f, 0.82f));
+            SetRect(feedback.rectTransform, new Vector2(32f, -782f), new Vector2(1746f, 42f));
+            Text help = CreateText("Help", panel.transform,
+                "I 닫기 · 드래그로 패널 간 이동 · 같은 상품은 최대 10개 합치기 · 실패한 이동은 원래 위치 유지",
+                21, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.68f, 0.78f, 0.9f));
+            SetRect(help.rectTransform, new Vector2(32f, -832f), new Vector2(1746f, 38f));
 
             dragIcon = new GameObject("DraggedIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage))
                 .GetComponent<RawImage>();
@@ -238,9 +256,10 @@ namespace PickAndPlaceShop
         }
 
         private void BuildGrid(Transform parent, List<ShopContainerSlotView> target,
-            ShopContainerKind container, int count, Vector2 origin, int columns,
-            Vector2 size, Vector2 step, bool compact = false)
+            ShopContainerKind container, int count, Vector2 origin, int columns)
         {
+            Vector2 size = new(92f, 104f);
+            Vector2 step = new(102f, 114f);
             for (int i = 0; i < count; i++)
             {
                 int row = i / columns;
@@ -252,14 +271,14 @@ namespace PickAndPlaceShop
                     .GetComponent<RawImage>();
                 icon.transform.SetParent(slot.transform, false);
                 icon.raycastTarget = false;
-                float padding = compact ? 5f : 8f;
+                const float padding = 6f;
                 SetRect(icon.rectTransform, new Vector2(padding, -padding),
-                    new Vector2(size.x - padding * 2f, size.y - (compact ? 28f : 42f) - padding),
+                    new Vector2(size.x - padding * 2f, size.y - 32f - padding),
                     new Vector2(0f, 1f), new Vector2(0f, 1f));
                 Text label = CreateText("Label", slot.transform, (i + 1) + ". 빈 칸",
-                    compact ? 13 : 17, FontStyle.Bold, TextAnchor.MiddleCenter,
+                    13, FontStyle.Bold, TextAnchor.MiddleCenter,
                     new Color(0.78f, 0.82f, 0.9f));
-                SetRect(label.rectTransform, new Vector2(3f, 3f), new Vector2(size.x - 6f, compact ? 25f : 38f),
+                SetRect(label.rectTransform, new Vector2(3f, 3f), new Vector2(size.x - 6f, 27f),
                     Vector2.zero, Vector2.zero);
                 ShopContainerSlotView view = slot.AddComponent<ShopContainerSlotView>();
                 view.Configure(this, container, i, slot.GetComponent<Image>(), icon, label);
@@ -280,14 +299,16 @@ namespace PickAndPlaceShop
                 storageCapacity);
             RefreshContainer(displaySlots, ShopContainerRules.SharedOwner, ShopContainerKind.SharedDisplay,
                 displayCapacity);
-            personalCount.text = "개인 가방 " + TotalQuantity(owner, ShopContainerKind.PersonalInventory) +
-                                 "개 · " + UsedSlots(owner, ShopContainerKind.PersonalInventory) + "/10칸";
-            storageCount.text = "공용 창고 " + TotalQuantity(ShopContainerRules.SharedOwner,
-                ShopContainerKind.SharedStorage) + "개 · " + UsedSlots(ShopContainerRules.SharedOwner,
-                ShopContainerKind.SharedStorage) + "/" + storageCapacity + "칸";
-            displayCount.text = "공용 진열 " + TotalQuantity(ShopContainerRules.SharedOwner,
-                ShopContainerKind.SharedDisplay) + "개 · " + UsedSlots(ShopContainerRules.SharedOwner,
-                ShopContainerKind.SharedDisplay) + "/" + displayCapacity + "칸";
+            personalCount.text = "개인 인벤토리 (" + UsedSlots(owner, ShopContainerKind.PersonalInventory) +
+                                 "/10) · 상품 " + TotalQuantity(owner, ShopContainerKind.PersonalInventory) + "개";
+            storageCount.text = "공용 창고 (" + UsedSlots(ShopContainerRules.SharedOwner,
+                ShopContainerKind.SharedStorage) + "/" + storageCapacity + ") · 상품 " +
+                                TotalQuantity(ShopContainerRules.SharedOwner,
+                                    ShopContainerKind.SharedStorage) + "개";
+            displayCount.text = "공용 진열 (" + UsedSlots(ShopContainerRules.SharedOwner,
+                ShopContainerKind.SharedDisplay) + "/" + displayCapacity + ") · 상품 " +
+                                TotalQuantity(ShopContainerRules.SharedOwner,
+                                    ShopContainerKind.SharedDisplay) + "개";
         }
 
         private void RefreshContainer(List<ShopContainerSlotView> views, ulong owner,
@@ -325,6 +346,7 @@ namespace PickAndPlaceShop
             MoveDrag(screenPosition);
             foreach (ShopContainerSlotView slot in allSlots)
                 if (slot.ActiveSlot) slot.SetHighlight(true, CanDrop(slot));
+            ResetPanelHighlights();
             feedback.text = "놓을 슬롯을 선택하세요.";
         }
 
@@ -351,13 +373,42 @@ namespace PickAndPlaceShop
             dragSource = null;
             if (dragIcon != null) dragIcon.gameObject.SetActive(false);
             foreach (ShopContainerSlotView slot in allSlots) slot.SetHighlight(false, false);
+            ResetPanelHighlights();
         }
 
         public void Hover(ShopContainerSlotView slot, bool entered)
         {
             if (dragSource == null || slot == null || !slot.ActiveSlot) return;
             slot.SetHighlight(entered, CanDrop(slot));
+            if (entered) SetPanelHighlight(slot.Container, CanDrop(slot));
+            else ResetPanelHighlights();
         }
+
+        private void SetPanelHighlight(ShopContainerKind container, bool valid)
+        {
+            ResetPanelHighlights();
+            Image image = PanelImage(container);
+            if (image != null) image.color = valid
+                ? new Color(0.09f, 0.36f, 0.24f, 1f)
+                : new Color(0.42f, 0.1f, 0.12f, 1f);
+        }
+
+        private void ResetPanelHighlights()
+        {
+            foreach (KeyValuePair<ShopContainerKind, Color> pair in panelColors)
+            {
+                Image image = PanelImage(pair.Key);
+                if (image != null) image.color = pair.Value;
+            }
+        }
+
+        private Image PanelImage(ShopContainerKind container) => container switch
+        {
+            ShopContainerKind.PersonalInventory => personalPanelImage,
+            ShopContainerKind.SharedStorage => storagePanelImage,
+            ShopContainerKind.SharedDisplay => displayPanelImage,
+            _ => null
+        };
 
         private bool CanDrop(ShopContainerSlotView destination)
         {
