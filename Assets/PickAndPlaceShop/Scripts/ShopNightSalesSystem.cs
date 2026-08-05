@@ -309,14 +309,22 @@ namespace PickAndPlaceShop
             {
                 if (product == null) continue;
                 int price = GetSalePrice(product);
+                int available = ledger.GetAvailable(product.ProductId);
                 var offer = new ShopProductOffer(product.ProductId, product.Category, price,
                     product.Rarity, product.Condition, product.GiftWrappable,
-                    ledger.GetAvailable(product.ProductId) > 0);
+                    available > 0);
                 if (ShopProductScoring.TryScore(offer, customer.Preference, out float score) && score > bestScore)
                 {
                     bestScore = score;
                     productId = product.ProductId;
                     productName = product.DisplayName;
+                }
+
+                if (Debug.isDebugBuild && available > 0)
+                {
+                    Debug.Log($"[SalesFlow:Offer] customer={customer.NetworkObjectId} " +
+                              $"product={product.ProductId}:{product.DisplayName} category={product.Category} " +
+                              $"price={price} budget={customer.Budget.Value} available={available}", this);
                 }
             }
 
@@ -326,6 +334,9 @@ namespace PickAndPlaceShop
                 Debug.Log($"[CustomerMatch] customer={customer.NetworkObjectId} " +
                           $"preference={customer.Preference.PreferredCategory} product={productId} " +
                           $"score={bestScore:0.00} reserved={reserved} displayed={ledger.TotalStock()}");
+                Debug.Log($"[SalesFlow:Match] customer={customer.NetworkObjectId} " +
+                          $"preferred={customer.Preference.PreferredCategory} selected={productId} " +
+                          $"reserved={reserved} budget={customer.Budget.Value}", this);
             }
 
             return reserved;
@@ -355,6 +366,8 @@ namespace PickAndPlaceShop
             if (!IsServer || customer == null || queue.Contains(customer)) return;
             queue.Add(customer);
             QueueCount.Value = queue.Count;
+            if (Debug.isDebugBuild)
+                Debug.Log($"[SalesFlow:Queue] customer={customer.NetworkObjectId} position={queue.Count - 1}", this);
             ShopNetworkGame.Instance.ServerSetEvent(CustomerTypeLabel(customer.CustomerType.Value) + " 손님이 계산 줄에 섰습니다.");
         }
 
@@ -521,6 +534,11 @@ namespace PickAndPlaceShop
             activeCustomers[networkObject.NetworkObjectId] = customer;
             VisitCount.Value++;
             CustomersInStore.Value = activeCustomers.Count;
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log($"[SalesFlow:Spawn] customer={networkObject.NetworkObjectId} " +
+                          $"budget={budget} preferred={profile.PreferredCategory} spawn={position}", this);
+            }
         }
 
         private IEnumerator ServerCheckoutRoutine(ShopCustomerNetwork customer, float durationMultiplier)
@@ -529,6 +547,9 @@ namespace PickAndPlaceShop
             queue.Remove(customer);
             QueueCount.Value = queue.Count;
             customer.ServerBeginCheckout(checkoutPoint != null ? checkoutPoint.position : transform.position);
+            if (Debug.isDebugBuild)
+                Debug.Log($"[SalesFlow:CheckoutBegin] customer={customer.NetworkObjectId} " +
+                          $"product={customer.DesiredProductId.Value}", this);
             ShopNetworkGame.Instance.ServerSetEvent("계산 중입니다...");
             yield return new WaitForSeconds(GetScaledCheckoutDuration() * Mathf.Max(1f, durationMultiplier));
 
@@ -600,6 +621,9 @@ namespace PickAndPlaceShop
                 UpdateTopProduct();
                 SyncStockVariables();
                 customer.ServerCompleteCheckout(satisfaction);
+                if (Debug.isDebugBuild)
+                    Debug.Log($"[SalesFlow:Purchase] customer={customer.NetworkObjectId} product={productId} " +
+                              $"price={price} satisfaction={satisfaction} total={PurchaseCustomerCount.Value}", this);
                 ShopNetworkGame.Instance.ServerSetEvent((product != null ? product.DisplayName : "상품") +
                     " 판매 완료! 가게 자금 +" + price);
             }
@@ -728,6 +752,14 @@ namespace PickAndPlaceShop
                 ShopContainerItem item = game.ItemContainers[i];
                 if (item.Container != ShopContainerKind.SharedDisplay || item.Quantity <= 0) continue;
                 ledger.AddStock(item.ProductId, item.Quantity);
+                if (Debug.isDebugBuild)
+                {
+                    ShopProductDefinition product = FindProduct(item.ProductId);
+                    Debug.Log($"[SalesFlow:Display] product={item.ProductId}:" +
+                              $"{(product != null ? product.DisplayName : item.DisplayName.ToString())} " +
+                              $"category={(product != null ? product.Category.ToString() : "missing-definition")} " +
+                              $"quantity={item.Quantity}", this);
+                }
             }
         }
 

@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Customer_Student
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopCustomerArchetypeDefinition
   customerType: 0
-  budgetMin: 80
-  budgetMax: 180
-  preferredPrice: 100
+  budgetMin: 180
+  budgetMax: 300
+  preferredPrice: 220
   priceSensitivity: 1
   patienceSeconds: 15
   spawnWeight: 1

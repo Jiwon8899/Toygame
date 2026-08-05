@@ -158,6 +158,7 @@ namespace PickAndPlaceShop
                     if (MoveTo(target))
                     {
                         target = ShopNightSalesSystem.Instance.ServerGetBrowsePoint(NetworkObjectId);
+                        TraceSalesFlow("Browse", target);
                         SetState(ShopCustomerState.Browse);
                     }
                     break;
@@ -165,6 +166,7 @@ namespace PickAndPlaceShop
                     if (MoveTo(target) && stateElapsed >= 1.25f)
                     {
                         target = ShopNightSalesSystem.Instance.ServerGetInspectPoint(NetworkObjectId);
+                        TraceSalesFlow("Inspect", target);
                         SetState(ShopCustomerState.InspectProduct);
                     }
                     break;
@@ -179,6 +181,7 @@ namespace PickAndPlaceShop
                             matchScore = score;
                             queueEnteredAt = Time.time;
                             ShopNightSalesSystem.Instance.ServerJoinQueue(this);
+                            TraceSalesFlow("Pickup", transform.position);
                             SetState(ShopCustomerState.Queue);
                         }
                         else
@@ -271,6 +274,12 @@ namespace PickAndPlaceShop
         {
             State.Value = next;
             stateElapsed = 0f;
+        }
+
+        private void TraceSalesFlow(string stage, Vector3 position)
+        {
+            if (!Debug.isDebugBuild) return;
+            Debug.Log($"[SalesFlow:{stage}] customer={NetworkObjectId} state={State.Value} position={position}", this);
         }
 
         private bool MoveTo(Vector3 destination)
