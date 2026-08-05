@@ -45,6 +45,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> TotalRevenue = new(0);
         public NetworkVariable<int> SatisfactionTotal = new(0);
         public NetworkVariable<int> SatisfactionSamples = new(0);
+        public NetworkVariable<int> QueueWaitMillisecondsTotal = new(0);
         public NetworkVariable<int> ReputationDelta = new(0);
         public NetworkVariable<FixedString64Bytes> TopProductName = new(new FixedString64Bytes("없음"));
         public NetworkVariable<bool> SpawnEnabled = new(false);
@@ -356,6 +357,19 @@ namespace PickAndPlaceShop
             return false;
         }
 
+        public int ServerDisplayedCategoryCount()
+        {
+            if (products == null) return 0;
+            var categories = new HashSet<ShopProductCategory>();
+            for (int i = 0; i < products.Length; i++)
+            {
+                ShopProductDefinition product = products[i];
+                if (product != null && ledger.GetStock(product.ProductId) > 0)
+                    categories.Add(product.Category);
+            }
+            return categories.Count;
+        }
+
         public void ServerRefreshDisplayLedger()
         {
             if (!IsServer) return;
@@ -417,6 +431,7 @@ namespace PickAndPlaceShop
             ReleaseCustomerPoints(customer.NetworkObjectId);
             QueueCount.Value = queue.Count;
             GiveUpCount.Value++;
+            QueueWaitMillisecondsTotal.Value += Mathf.RoundToInt(customer.QueueWaitSeconds * 1000f);
             SatisfactionTotal.Value += 25;
             SatisfactionSamples.Value++;
             ReputationDelta.Value--;
@@ -487,6 +502,7 @@ namespace PickAndPlaceShop
             CurrentRevenue.Value = 0;
             SatisfactionTotal.Value = 0;
             SatisfactionSamples.Value = 0;
+            QueueWaitMillisecondsTotal.Value = 0;
             ReputationDelta.Value = 0;
             TopProductName.Value = new FixedString64Bytes("없음");
             productSales.Clear();
@@ -507,6 +523,16 @@ namespace PickAndPlaceShop
             {
                 game.ServerRecordNightSummary(TotalRevenue.Value, TotalSaleQuantity.Value, GiveUpCount.Value,
                     SatisfactionTotal.Value, SatisfactionSamples.Value);
+                ShopDifferentiationController.Instance?.ServerGenerateDailyReview(
+                    game.Day.Value,
+                    SatisfactionSamples.Value > 0
+                        ? QueueWaitMillisecondsTotal.Value / 1000f / SatisfactionSamples.Value : 0f,
+                    ServerDisplayedCategoryCount(),
+                    SatisfactionSamples.Value > 0
+                        ? Mathf.RoundToInt(SatisfactionTotal.Value / (float)SatisfactionSamples.Value) : 0,
+                    ShopLiveOperationsNetwork.Instance != null
+                        ? ShopLiveOperationsNetwork.Instance.CurrentTrendCategory
+                        : ShopProductCategory.Other);
                 foreach (KeyValuePair<int, int> sale in productSales)
                 {
                     ShopProductDefinition product = FindProduct(sale.Key);
@@ -614,6 +640,7 @@ namespace PickAndPlaceShop
                 TotalRevenue.Value += price;
                 TotalSaleQuantity.Value++;
                 PurchaseCustomerCount.Value++;
+                QueueWaitMillisecondsTotal.Value += Mathf.RoundToInt(customer.QueueWaitSeconds * 1000f);
                 SatisfactionTotal.Value += satisfaction;
                 SatisfactionSamples.Value++;
                 ReputationDelta.Value += reputation;

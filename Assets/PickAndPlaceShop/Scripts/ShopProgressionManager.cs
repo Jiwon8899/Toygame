@@ -516,6 +516,10 @@ namespace PickAndPlaceShop
                 boundGame.RecentLastOneRecords.Value = new Unity.Collections.FixedString512Bytes(
                     string.IsNullOrWhiteSpace(loadedSaveData.recentLastOneRecords)
                         ? "기록 없음" : loadedSaveData.recentLastOneRecords);
+                boundGame.ReviewHistory.Value = new Unity.Collections.FixedString4096Bytes(
+                    string.IsNullOrWhiteSpace(loadedSaveData.reviewHistory)
+                        ? "아직 등록된 리뷰가 없습니다." : loadedSaveData.reviewHistory);
+                boundGame.LatestReviewDay.Value = Mathf.Max(0, loadedSaveData.latestReviewDay);
             }
             observedGameFunds = teamFunds;
             observedGameReputation = reputation;
@@ -751,7 +755,9 @@ namespace PickAndPlaceShop
                 tutorialCompleted = tutorialCompleted,
                 upcycleDecorMask = boundGame != null ? boundGame.UpcycleDecorMask.Value : 0,
                 lastOneAwards = boundGame != null ? boundGame.LastOneAwards.Value : 0,
-                recentLastOneRecords = boundGame != null ? boundGame.RecentLastOneRecords.Value.ToString() : string.Empty
+                recentLastOneRecords = boundGame != null ? boundGame.RecentLastOneRecords.Value.ToString() : string.Empty,
+                reviewHistory = boundGame != null ? boundGame.ReviewHistory.Value.ToString() : string.Empty,
+                latestReviewDay = boundGame != null ? boundGame.LatestReviewDay.Value : 0
             };
         }
 
@@ -801,6 +807,10 @@ namespace PickAndPlaceShop
                 boundGame.LastOneAwards.Value = Mathf.Max(0, save.lastOneAwards);
                 boundGame.RecentLastOneRecords.Value = new Unity.Collections.FixedString512Bytes(
                     string.IsNullOrWhiteSpace(save.recentLastOneRecords) ? "기록 없음" : save.recentLastOneRecords);
+                boundGame.ReviewHistory.Value = new Unity.Collections.FixedString4096Bytes(
+                    string.IsNullOrWhiteSpace(save.reviewHistory)
+                        ? "아직 등록된 리뷰가 없습니다." : save.reviewHistory);
+                boundGame.LatestReviewDay.Value = Mathf.Max(0, save.latestReviewDay);
             }
         }
 

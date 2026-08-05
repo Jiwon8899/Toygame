@@ -121,11 +121,13 @@ namespace PickAndPlaceShop
         public int upcycleDecorMask;
         public int lastOneAwards;
         public string recentLastOneRecords;
+        public string reviewHistory;
+        public int latestReviewDay;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 9;
+        public const int CurrentVersion = 10;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 

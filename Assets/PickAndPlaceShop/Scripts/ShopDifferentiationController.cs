@@ -13,6 +13,8 @@ namespace PickAndPlaceShop
         private ShopDifferentiationConfig config;
         private GameObject facilitiesRoot;
         private readonly List<GameObject> upcycleDecorations = new();
+        private TextMesh reviewBoardText;
+        private string lastReviewSnapshot;
 
         public int EmptyCapsuleCount
         {
@@ -58,6 +60,7 @@ namespace PickAndPlaceShop
             if (config == null || ShopNetworkGame.Instance == null) return;
             if (facilitiesRoot == null) BuildFacilities();
             RefreshUpcycleDecorations();
+            RefreshReviewBoard();
         }
 
         public bool ServerCollectEmptyCapsule()
@@ -77,6 +80,92 @@ namespace PickAndPlaceShop
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null || !game.IsServer) return;
             if (action == ShopAction.CapsuleRecycler) ServerCraftNextDecoration(game);
+            else if (action == ShopAction.ReviewBoard)
+                game.ServerSetEvent(game.ReviewHistory.Value.ToString());
+        }
+
+        public void ServerGenerateDailyReview(int day, float averageWaitSeconds,
+            int displayedCategoryCount, int averageSatisfaction, ShopProductCategory trendCategory)
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || !game.IsServer || day <= game.LatestReviewDay.Value) return;
+
+            int stars = Mathf.Clamp(Mathf.CeilToInt(Mathf.Clamp(averageSatisfaction, 0, 100) / 20f), 1, 5);
+            string fallback = BuildReviewFallback(day, averageWaitSeconds, displayedCategoryCount,
+                averageSatisfaction, trendCategory);
+            CommitReview(day, stars, averageWaitSeconds, displayedCategoryCount,
+                averageSatisfaction, trendCategory, fallback);
+
+            ShopNarrativeAIService service = ShopNarrativeAIService.Instance;
+            if (service == null) return;
+            string prompt = "고양이 소품샵의 하루 손님 리뷰를 한국어 한 문장으로 작성하세요. " +
+                            "평균 대기시간=" + averageWaitSeconds.ToString("0.0") + "초, " +
+                            "진열 카테고리=" + displayedCategoryCount + "개, " +
+                            "평균 만족도=" + averageSatisfaction + "점, " +
+                            "오늘의 유행=" + ShopProductLocalization.CategoryLabel(trendCategory) +
+                            ". 수치나 판정을 바꾸지 말고 실제로 두드러진 장점 또는 단점을 언급하세요.";
+            service.Request("daily-review:" + day, prompt, result =>
+            {
+                if (ShopNetworkGame.Instance == null || !ShopNetworkGame.Instance.IsServer ||
+                    ShopNetworkGame.Instance.LatestReviewDay.Value != day) return;
+                ShopLiveOperationsNetwork live = ShopLiveOperationsNetwork.Instance;
+                if (result.IsApiSuccess && result.HasText)
+                {
+                    CommitReview(day, stars, averageWaitSeconds, displayedCategoryCount,
+                        averageSatisfaction, trendCategory, result.Text);
+                    if (live != null)
+                    {
+                        if (result.Kind == ShopNarrativeResultKind.Api) live.NarrativeApiCallsToday.Value++;
+                        else live.NarrativeCacheHitsToday.Value++;
+                    }
+                }
+                else if (live != null)
+                {
+                    live.NarrativeFallbacksToday.Value++;
+                    if (result.Kind == ShopNarrativeResultKind.Timeout ||
+                        result.Kind == ShopNarrativeResultKind.RequestFailed ||
+                        result.Kind == ShopNarrativeResultKind.InvalidResponse)
+                        live.NarrativeFailuresToday.Value++;
+                }
+            });
+        }
+
+        private void CommitReview(int day, int stars, float waitSeconds, int categoryCount,
+            int satisfaction, ShopProductCategory trendCategory, string sentence)
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || !game.IsServer) return;
+            string clean = (sentence ?? string.Empty).Replace('\n', ' ').Replace('\r', ' ').Trim();
+            if (clean.Length > 100) clean = clean.Substring(0, 100);
+            string line = "[" + day + "일차 " + new string('★', stars) + new string('☆', 5 - stars) +
+                          " | 대기 " + waitSeconds.ToString("0.0") + "초 · 진열 " + categoryCount +
+                          "종 · 만족 " + satisfaction + " · 유행 " +
+                          ShopProductLocalization.CategoryLabel(trendCategory) + "] " + clean;
+            string current = game.ReviewHistory.Value.ToString();
+            var reviews = new List<string>();
+            if (!string.IsNullOrWhiteSpace(current) && current != "아직 등록된 리뷰가 없습니다.")
+                reviews.AddRange(current.Split(new[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries));
+            string prefix = "[" + day + "일차 ";
+            reviews.RemoveAll(value => value.StartsWith(prefix, System.StringComparison.Ordinal));
+            reviews.Insert(0, line);
+            int capacity = config != null ? config.ReviewHistoryCapacity : 5;
+            if (reviews.Count > capacity) reviews.RemoveRange(capacity, reviews.Count - capacity);
+            game.ReviewHistory.Value = new Unity.Collections.FixedString4096Bytes(string.Join("\n", reviews));
+            game.LatestReviewDay.Value = day;
+        }
+
+        private static string BuildReviewFallback(int day, float waitSeconds, int categoryCount,
+            int satisfaction, ShopProductCategory trendCategory)
+        {
+            if (waitSeconds >= 25f)
+                return "계산 줄이 길어서 기다림이 아쉬웠지만 고양이 굿즈 구경은 즐거웠어요.";
+            if (categoryCount <= 1)
+                return "진열 종류가 조금 더 다양해지면 다시 오래 둘러보고 싶어요.";
+            if (satisfaction >= 85)
+                return "유행 상품과 다양한 진열을 편하게 둘러볼 수 있어 아주 만족스러웠어요.";
+            if (satisfaction >= 60)
+                return "분위기가 편안하고 상품을 고르는 재미가 있는 소품샵이에요.";
+            return "귀여운 상품은 좋았지만 대기와 진열 구성이 조금 더 나아지면 좋겠어요.";
         }
 
         public void ServerRecordLastOne(string poolId, int setNumber, ulong clientId,
@@ -150,9 +239,25 @@ namespace PickAndPlaceShop
             BuildFacility("빈 캡슐 회수함", config.CapsuleRecyclerPosition,
                 new Color(0.12f, 0.62f, 0.58f), ShopAction.CapsuleRecycler,
                 "빈 캡슐 회수함 / 업사이클 장식 제작");
+            BuildReviewBoard();
         }
 
-        private void BuildFacility(string objectName, Vector3 position, Color color,
+        private void BuildReviewBoard()
+        {
+            GameObject board = BuildFacility("손님 리뷰 게시판", config.ReviewBoardPosition,
+                new Color(0.28f, 0.16f, 0.10f), ShopAction.ReviewBoard,
+                "최근 손님 리뷰 보기");
+            board.transform.localScale = new Vector3(2.8f, 1.9f, 0.24f);
+            Transform label = board.transform.Find("손님 리뷰 게시판_Label");
+            if (label == null) return;
+            reviewBoardText = label.GetComponent<TextMesh>();
+            label.localPosition = new Vector3(0f, 0f, -0.65f);
+            reviewBoardText.characterSize = 0.055f;
+            reviewBoardText.fontSize = 42;
+            reviewBoardText.anchor = TextAnchor.MiddleCenter;
+        }
+
+        private GameObject BuildFacility(string objectName, Vector3 position, Color color,
             ShopAction action, string prompt)
         {
             GameObject root = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -175,6 +280,16 @@ namespace PickAndPlaceShop
             label.characterSize = 0.12f;
             label.fontSize = 48;
             label.color = Color.white;
+            return root;
+        }
+
+        private void RefreshReviewBoard()
+        {
+            if (reviewBoardText == null || ShopNetworkGame.Instance == null) return;
+            string reviews = ShopNetworkGame.Instance.ReviewHistory.Value.ToString();
+            if (reviews == lastReviewSnapshot) return;
+            lastReviewSnapshot = reviews;
+            reviewBoardText.text = "손님 리뷰\n\n" + reviews;
         }
 
         private void RefreshUpcycleDecorations()

@@ -86,6 +86,9 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> UpcycleDecorMask = new(0);
         public NetworkVariable<int> LastOneAwards = new(0);
         public NetworkVariable<FixedString512Bytes> RecentLastOneRecords = new(new FixedString512Bytes("기록 없음"));
+        public NetworkVariable<FixedString4096Bytes> ReviewHistory =
+            new(new FixedString4096Bytes("아직 등록된 리뷰가 없습니다."));
+        public NetworkVariable<int> LatestReviewDay = new(0);
 
         public NetworkVariable<int> CampaignRevenue = new(0);
         public NetworkVariable<int> CampaignSold = new(0);

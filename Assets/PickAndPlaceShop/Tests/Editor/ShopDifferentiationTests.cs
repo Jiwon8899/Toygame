@@ -78,5 +78,19 @@ namespace PickAndPlaceShop.Tests
             ShopCustomerProfileSave profile = new() { customerId = "cat_01", purchaseCount = 6 };
             Assert.That(profile.purchaseCount, Is.GreaterThanOrEqualTo(config.VipPurchaseThreshold));
         }
+
+        [Test]
+        public void ReviewRating_IsSystemOwnedAndHistoryIsSaveable()
+        {
+            Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(10));
+            ShopProgressionSaveData save = new()
+            {
+                latestReviewDay = 10,
+                reviewHistory = "[10일차 ★★★★★ | 대기 2.0초 · 진열 5종 · 만족 94] 만족스러웠어요."
+            };
+            Assert.That(save.latestReviewDay, Is.EqualTo(10));
+            Assert.That(save.reviewHistory, Does.Contain("대기 2.0초"));
+            Assert.That(save.reviewHistory, Does.Contain("★★★★★"));
+        }
     }
 }
