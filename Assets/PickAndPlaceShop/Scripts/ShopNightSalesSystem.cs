@@ -31,7 +31,7 @@ namespace PickAndPlaceShop
         [Min(1f)] [SerializeField] private float baseSpawnIntervalSeconds = 7f;
         [Range(1, 5)] [SerializeField] private int absoluteMaximumCustomers = 5;
         [Range(1f, 2f)] [SerializeField] private float checkoutDurationSeconds = 1.5f;
-        [SerializeField] private bool debugLabelsVisible = true;
+        [SerializeField] private bool debugLabelsVisible;
 
         public NetworkVariable<int> CustomersInStore = new(0);
         public NetworkVariable<int> QueueCount = new(0);
@@ -48,7 +48,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> ReputationDelta = new(0);
         public NetworkVariable<FixedString64Bytes> TopProductName = new(new FixedString64Bytes("없음"));
         public NetworkVariable<bool> SpawnEnabled = new(false);
-        public NetworkVariable<bool> DebugLabelsEnabled = new(true);
+        public NetworkVariable<bool> DebugLabelsEnabled = new(false);
         public NetworkVariable<int> PlushStock = new(0);
         public NetworkVariable<int> CapsuleStock = new(0);
         public NetworkVariable<int> RareStock = new(0);
@@ -106,6 +106,8 @@ namespace PickAndPlaceShop
         private void Awake()
         {
             Instance = this;
+            ShopProductDefinition[] catalog = Resources.LoadAll<ShopProductDefinition>("Products");
+            if (catalog != null && catalog.Length > 0) products = catalog;
         }
 
         public override void OnNetworkSpawn()
@@ -116,7 +118,9 @@ namespace PickAndPlaceShop
             if (NetworkManager.NetworkConfig.NetworkTopology == NetworkTopologyTypes.DistributedAuthority)
                 NetworkObject.SetOwnershipStatus(NetworkObject.OwnershipStatus.SessionOwner, true);
 
-            DebugLabelsEnabled.Value = debugLabelsVisible;
+            // World-space state labels are diagnostics, not player UI. They previously piled
+            // up over moving customers and looked like duplicated gameplay text.
+            DebugLabelsEnabled.Value = false;
             RebuildLedgerFromNetworkStock();
             SyncStockVariables();
         }
@@ -239,8 +243,7 @@ namespace PickAndPlaceShop
         {
             if (!IsServer || ShopNetworkGame.Instance == null ||
                 (ShopNetworkGame.Instance.Phase.Value != ShopPhase.Setup &&
-                 ShopNetworkGame.Instance.Phase.Value != ShopPhase.Open) ||
-                ledger.TotalStock() >= ShopNetworkGame.Instance.SharedDisplayCapacity) return false;
+                 ShopNetworkGame.Instance.Phase.Value != ShopPhase.Open)) return false;
 
             ShopProductDefinition selected = null;
             int selectedQuantity = -1;
@@ -263,7 +266,7 @@ namespace PickAndPlaceShop
             if (selected == null || !ShopNetworkGame.Instance.ServerTryMoveItem(
                     ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
                     ShopContainerKind.SharedDisplay, out ShopContainerItem moved, selected.ProductId)) return false;
-            ledger.AddStock(moved.ProductId, 1);
+            RebuildLedgerFromNetworkStock();
             SyncStockVariables();
             ShopNetworkGame.Instance.ServerSetEvent("진열 알바가 " + moved.DisplayName + " 1개를 진열했습니다.");
             return true;
@@ -279,13 +282,6 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            if (ledger.TotalStock() >= game.SharedDisplayCapacity)
-            {
-                game.ServerSetEvent("현재 확장 단계의 진열 한도(" +
-                                    game.SharedDisplayCapacity + ")에 도달했습니다.");
-                return;
-            }
-
             if (!game.ServerTryMoveItem(ownerClientId, ShopContainerKind.PersonalInventory,
                     ShopContainerKind.SharedDisplay, out ShopContainerItem moved) &&
                 !game.ServerTryMoveItem(ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
@@ -295,7 +291,7 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            ledger.AddStock(moved.ProductId, 1);
+            RebuildLedgerFromNetworkStock();
             SyncStockVariables();
             game.ServerSetEvent(moved.DisplayName + " 상품 1개를 진열했습니다.");
             ShopTutorialRuntime.Report(ShopTutorialAction.ProductDisplayed);
@@ -337,6 +333,13 @@ namespace PickAndPlaceShop
                     return true;
             }
             return false;
+        }
+
+        public void ServerRefreshDisplayLedger()
+        {
+            if (!IsServer) return;
+            RebuildLedgerFromNetworkStock();
+            SyncStockVariables();
         }
 
         public void ServerJoinQueue(ShopCustomerNetwork customer)
@@ -436,6 +439,9 @@ namespace PickAndPlaceShop
         private void ServerBeginOpenSession()
         {
             if (!IsServer || sessionActive) return;
+            // Containers are the authoritative inventory. Rebuild immediately before opening
+            // so restored saves and drag/drop changes can never diverge from customer offers.
+            RebuildLedgerFromNetworkStock();
             sessionActive = true;
             checkoutBusy = false;
             operatingRemaining = operatingDurationSeconds;
@@ -705,14 +711,15 @@ namespace PickAndPlaceShop
             foreach (ShopProductDefinition product in products)
             {
                 if (product == null) continue;
-                int amount = product.ProductId switch
-                {
-                    0 => PlushStock.Value,
-                    1 => CapsuleStock.Value,
-                    2 => RareStock.Value,
-                    _ => 0
-                };
-                ledger.SetStock(product.ProductId, amount);
+                ledger.SetStock(product.ProductId, 0);
+            }
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null) return;
+            for (int i = 0; i < game.ItemContainers.Count; i++)
+            {
+                ShopContainerItem item = game.ItemContainers[i];
+                if (item.Container != ShopContainerKind.SharedDisplay || item.Quantity <= 0) continue;
+                ledger.AddStock(item.ProductId, item.Quantity);
             }
         }
 

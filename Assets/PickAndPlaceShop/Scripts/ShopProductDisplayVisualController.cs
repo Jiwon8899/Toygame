@@ -11,6 +11,7 @@ namespace PickAndPlaceShop
         private readonly List<GameObject> visuals = new();
         private ShopNetworkGame observed;
         private bool dirty = true;
+        public static int ActiveVisualCount => instance != null ? instance.visuals.Count : 0;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -41,28 +42,32 @@ namespace PickAndPlaceShop
             dirty = false;
             foreach (GameObject visual in visuals) if (visual != null) Destroy(visual);
             visuals.Clear();
-            ShopProductVisualConfig config = Resources.Load<ShopProductVisualConfig>(
-                "Products/ShopProductVisualConfig");
-            float spacing = config != null ? config.ShelfSpacing : 0.42f;
-            int columns = config != null ? config.ShelfColumns : 5;
-            Vector3 offset = config != null ? config.ShelfOffset : new Vector3(0f, 0.78f, 0f);
-            Vector3 rotation = config != null ? config.ShelfRotation : new Vector3(0f, 24f, 0f);
-            Vector3 anchor = ShopNightSalesSystem.Instance.DisplayWorkPosition + offset;
+            ShopDisplayShelfAnchors provider = FindFirstObjectByType<ShopDisplayShelfAnchors>();
+            if (provider == null)
+            {
+                ShopShelfVisual shelf = FindFirstObjectByType<ShopShelfVisual>();
+                if (shelf != null) provider = shelf.gameObject.AddComponent<ShopDisplayShelfAnchors>();
+            }
+            if (provider == null) return;
+            provider.EnsureAnchors();
+            IReadOnlyList<ShopDisplaySlotAnchor> anchors = provider.Anchors;
             int index = 0;
-            for (int i = 0; i < observed.ItemContainers.Count && index < 10; i++)
+            for (int i = 0; i < observed.ItemContainers.Count && index < anchors.Count; i++)
             {
                 ShopContainerItem item = observed.ItemContainers[i];
                 if (item.Container != ShopContainerKind.SharedDisplay || item.Quantity <= 0) continue;
                 ShopProductDefinition product = ShopProductVisuals.Find(item.ProductId);
-                GameObject visual = ShopProductVisuals.Instantiate(product, transform);
-                if (visual == null) continue;
-                int row = index / columns;
-                int column = index % columns;
-                visual.transform.position = anchor + new Vector3(
-                    (column - (columns - 1) * 0.5f) * spacing, row * 0.34f, 0f);
-                visual.transform.rotation = Quaternion.Euler(rotation + new Vector3(0f, index * 11f, 0f));
-                visuals.Add(visual);
-                index++;
+                for (int quantity = 0; quantity < item.Quantity && index < anchors.Count; quantity++)
+                {
+                    Transform anchor = anchors[index].transform;
+                    GameObject visual = ShopProductVisuals.Instantiate(product, anchor);
+                    if (visual == null) break;
+                    visual.name = $"Displayed_{item.ProductId}_{index:00}";
+                    visual.transform.SetLocalPositionAndRotation(Vector3.zero,
+                        Quaternion.Euler(0f, (index * 37f) % 55f - 27f, 0f));
+                    visuals.Add(visual);
+                    index++;
+                }
             }
         }
 

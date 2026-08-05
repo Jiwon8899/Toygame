@@ -11,6 +11,14 @@ namespace PickAndPlaceShop
             itemVisuals = visuals;
         }
 
+        public void UseProductVisuals()
+        {
+            enabled = false;
+            if (itemVisuals == null) return;
+            for (int i = 0; i < itemVisuals.Length; i++)
+                if (itemVisuals[i] != null) itemVisuals[i].SetActive(false);
+        }
+
         private void Update()
         {
             int activeCount = ShopNetworkGame.Instance != null ? ShopNetworkGame.Instance.Displayed.Value : 0;

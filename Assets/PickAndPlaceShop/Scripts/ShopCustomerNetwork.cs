@@ -43,6 +43,7 @@ namespace PickAndPlaceShop
         [Header("Collision movement")]
         [SerializeField] private CharacterController characterController;
         [Min(0.1f)] [SerializeField] private float obstacleAvoidanceSeconds = 0.55f;
+        [Min(0.25f)] [SerializeField] private float arrivalDistance = 0.72f;
 
         private float movementSpeed;
         private float patienceSeconds;
@@ -56,6 +57,8 @@ namespace PickAndPlaceShop
         private Animator visualAnimator;
         private Vector3 lastVisualPosition;
         private float visualSpeed;
+        private float visualStationarySeconds;
+        private bool visualMoving;
         private float avoidanceTimer;
         private float avoidanceSign = 1f;
 
@@ -275,7 +278,8 @@ namespace PickAndPlaceShop
             Vector3 before = transform.position;
             Vector3 remaining = destination - before;
             remaining.y = 0f;
-            if (remaining.sqrMagnitude <= 0.04f) return true;
+            float arrivalSqr = arrivalDistance * arrivalDistance;
+            if (remaining.sqrMagnitude <= arrivalSqr) return true;
 
             if (characterController == null || !characterController.enabled)
             {
@@ -311,7 +315,7 @@ namespace PickAndPlaceShop
 
             Vector3 flatRemaining = destination - transform.position;
             flatRemaining.y = 0f;
-            return flatRemaining.sqrMagnitude <= 0.04f;
+            return flatRemaining.sqrMagnitude <= arrivalSqr;
         }
 
         private void HandleAppearanceChanged(int previous, int current)
@@ -361,6 +365,8 @@ namespace PickAndPlaceShop
             visualAnimator.applyRootMotion = false;
             visualAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             visualAnimator.SetBool(MovingParameter, false);
+            visualMoving = false;
+            visualStationarySeconds = 0f;
         }
 
         private void UpdateVisualAnimation()
@@ -368,11 +374,27 @@ namespace PickAndPlaceShop
             float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
             Vector3 displacement = transform.position - lastVisualPosition;
             displacement.y = 0f;
-            visualSpeed = displacement.magnitude / deltaTime;
+            float measuredSpeed = displacement.magnitude / deltaTime;
+            if (IsServer && characterController != null && characterController.enabled)
+            {
+                Vector3 controllerVelocity = characterController.velocity;
+                controllerVelocity.y = 0f;
+                measuredSpeed = controllerVelocity.magnitude;
+            }
+            visualSpeed = Mathf.MoveTowards(visualSpeed, measuredSpeed, deltaTime * 8f);
             lastVisualPosition = transform.position;
+            if (measuredSpeed >= 0.12f)
+            {
+                visualMoving = true;
+                visualStationarySeconds = 0f;
+            }
+            else if (measuredSpeed <= 0.025f)
+            {
+                visualStationarySeconds += deltaTime;
+                if (visualStationarySeconds >= 0.08f) visualMoving = false;
+            }
 
-            if (visualAnimator != null)
-                visualAnimator.SetBool(MovingParameter, visualSpeed > 0.08f);
+            if (visualAnimator != null) visualAnimator.SetBool(MovingParameter, visualMoving);
         }
     }
 }
