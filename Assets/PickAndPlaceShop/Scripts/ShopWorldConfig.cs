@@ -22,6 +22,10 @@ namespace PickAndPlaceShop
         [SerializeField] private Vector2 pedestrianPauseSeconds = new(0.4f, 1.4f);
         [Min(0.5f)] [SerializeField] private float pedestrianLaneSpacing = 1.45f;
 
+        [Header("Imported city collision")]
+        [Range(0.8f, 1f)] [SerializeField] private float buildingColliderScale = 0.96f;
+        [Range(0.8f, 1f)] [SerializeField] private float vehicleColliderScale = 0.92f;
+
         public float FallRecoveryHeight => fallRecoveryHeight;
         public float SafePointHeightOffset => safePointHeightOffset;
         public float SafetyPollInterval => Mathf.Max(0.05f, safetyPollInterval);
@@ -35,6 +39,8 @@ namespace PickAndPlaceShop
             Mathf.Max(0f, Mathf.Min(pedestrianPauseSeconds.x, pedestrianPauseSeconds.y)),
             Mathf.Max(0f, Mathf.Max(pedestrianPauseSeconds.x, pedestrianPauseSeconds.y)));
         public float PedestrianLaneSpacing => Mathf.Max(0.5f, pedestrianLaneSpacing);
+        public float BuildingColliderScale => Mathf.Clamp(buildingColliderScale, 0.8f, 1f);
+        public float VehicleColliderScale => Mathf.Clamp(vehicleColliderScale, 0.8f, 1f);
 
         public static ShopWorldConfig Load() => Resources.Load<ShopWorldConfig>(ResourcePath);
     }

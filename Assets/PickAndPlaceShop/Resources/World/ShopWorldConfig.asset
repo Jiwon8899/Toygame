@@ -23,3 +23,5 @@ MonoBehaviour:
   pedestrianPauseChance: 0.28
   pedestrianPauseSeconds: {x: 0.4, y: 1.4}
   pedestrianLaneSpacing: 1.45
+  buildingColliderScale: 0.96
+  vehicleColliderScale: 0.92
