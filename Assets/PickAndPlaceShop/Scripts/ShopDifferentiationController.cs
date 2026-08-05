@@ -97,6 +97,8 @@ namespace PickAndPlaceShop
             }
             else if (action == ShopAction.ConsignmentCorner) ServerAcceptConsignment(game, requester);
             else if (action == ShopAction.ConsignmentReject) ServerRejectConsignment(game);
+            else if (action == ShopAction.CurationDesk)
+                ShopCurationSystem.Instance?.ServerAutoArrange();
         }
 
         private void ServerUpdateConsignment()
@@ -423,6 +425,9 @@ namespace PickAndPlaceShop
                 new Color(0.34f, 0.23f, 0.52f), ShopAction.AppraisalDesk,
                 "보유 상품 1개 감정하기");
             BuildConsignmentCorner();
+            BuildFacility("진열 자동 정렬", config.CurationDeskPosition,
+                new Color(0.15f, 0.44f, 0.65f), ShopAction.CurationDesk,
+                "공용 진열 상품 자동 정렬");
         }
 
         private void BuildConsignmentCorner()

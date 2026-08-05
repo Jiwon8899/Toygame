@@ -522,6 +522,7 @@ namespace PickAndPlaceShop
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, loadedSaveData.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, loadedSaveData.appraisalSequence);
                 RestoreConsignment(boundGame, loadedSaveData);
+                RestoreCuration(boundGame, loadedSaveData);
             }
             observedGameFunds = teamFunds;
             observedGameReputation = reputation;
@@ -745,6 +746,7 @@ namespace PickAndPlaceShop
                 containerItems = CaptureContainerItems(),
                 clawMachines = CaptureClawMachines(),
                 kujiStations = CaptureKujiStations(),
+                curationPlacements = CaptureCurationPlacements(),
                 playerUpgradeLevel = boundGame != null ? boundGame.PlayerUpgradeLevel.Value : 0,
                 operationsUpgradeLevel = boundGame != null ? boundGame.ShopUpgradeLevel.Value : 0,
                 facilityUpgradeLevel = boundGame != null ? boundGame.FacilityUpgradeLevel.Value : 0,
@@ -769,7 +771,13 @@ namespace PickAndPlaceShop
                 consignmentOfferPrice1 = boundGame != null ? boundGame.ConsignmentOfferPrice1.Value : 0,
                 consignmentOfferPrice2 = boundGame != null ? boundGame.ConsignmentOfferPrice2.Value : 0,
                 consignmentSecondsRemaining = boundGame != null ? boundGame.ConsignmentSecondsRemaining.Value : 0f,
-                consignmentOfferSerial = boundGame != null ? boundGame.ConsignmentOfferSerial.Value : 0
+                consignmentOfferSerial = boundGame != null ? boundGame.ConsignmentOfferSerial.Value : 0,
+                curationNextPlacementId = boundGame != null ? boundGame.CurationNextPlacementId.Value : 1,
+                curationClusterScore = boundGame != null ? boundGame.CurationClusterScore.Value : 0,
+                curationSymmetryScore = boundGame != null ? boundGame.CurationSymmetryScore.Value : 0,
+                curationRarityScore = boundGame != null ? boundGame.CurationRarityScore.Value : 0,
+                curationDensityScore = boundGame != null ? boundGame.CurationDensityScore.Value : 0,
+                curationAutomatic = boundGame != null && boundGame.CurationAutomatic.Value
             };
         }
 
@@ -825,6 +833,7 @@ namespace PickAndPlaceShop
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, save.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, save.appraisalSequence);
                 RestoreConsignment(boundGame, save);
+                RestoreCuration(boundGame, save);
             }
         }
 
@@ -840,6 +849,38 @@ namespace PickAndPlaceShop
             game.ConsignmentOfferPrice2.Value = Mathf.Max(0, save.consignmentOfferPrice2);
             game.ConsignmentSecondsRemaining.Value = Mathf.Max(0f, save.consignmentSecondsRemaining);
             game.ConsignmentOfferSerial.Value = Mathf.Max(0, save.consignmentOfferSerial);
+        }
+
+        private static void RestoreCuration(ShopNetworkGame game, ShopProgressionSaveData save)
+        {
+            if (game == null || save == null) return;
+            game.CurationPlacements.Clear();
+            if (save.curationPlacements != null)
+            {
+                for (int i = 0; i < save.curationPlacements.Count; i++)
+                {
+                    ShopCurationPlacementSave source = save.curationPlacements[i];
+                    if (source == null) continue;
+                    game.CurationPlacements.Add(new ShopCurationPlacement
+                    {
+                        PlacementId = source.placementId,
+                        ProductId = source.productId,
+                        Position = source.position,
+                        Size = source.size,
+                        Yaw = source.yaw,
+                        Rarity = (ShopProductRarity)Mathf.Clamp(source.rarity, 0, 3),
+                        AppraisalGrade = (ShopAppraisalGrade)Mathf.Clamp(source.appraisalGrade, 0, 4),
+                        InstanceId = source.instanceId,
+                        Automatic = source.automatic
+                    });
+                }
+            }
+            game.CurationNextPlacementId.Value = Mathf.Max(1, save.curationNextPlacementId);
+            game.CurationClusterScore.Value = Mathf.Clamp(save.curationClusterScore, 0, 100);
+            game.CurationSymmetryScore.Value = Mathf.Clamp(save.curationSymmetryScore, 0, 100);
+            game.CurationRarityScore.Value = Mathf.Clamp(save.curationRarityScore, 0, 100);
+            game.CurationDensityScore.Value = Mathf.Clamp(save.curationDensityScore, 0, 100);
+            game.CurationAutomatic.Value = save.curationAutomatic;
         }
 
         public bool TryConsumeClawMachineSave(int machineId, out ShopClawMachineSave saved)
@@ -945,6 +986,30 @@ namespace PickAndPlaceShop
             {
                 if (station == null || !station.IsSpawned || !station.IsServer) continue;
                 result.Add(station.CaptureSaveState());
+            }
+            return result;
+        }
+
+        private static List<ShopCurationPlacementSave> CaptureCurationPlacements()
+        {
+            var result = new List<ShopCurationPlacementSave>();
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || !game.IsServer) return result;
+            for (int i = 0; i < game.CurationPlacements.Count; i++)
+            {
+                ShopCurationPlacement source = game.CurationPlacements[i];
+                result.Add(new ShopCurationPlacementSave
+                {
+                    placementId = source.PlacementId,
+                    productId = source.ProductId,
+                    position = source.Position,
+                    size = source.Size,
+                    yaw = source.Yaw,
+                    rarity = (int)source.Rarity,
+                    appraisalGrade = (int)source.AppraisalGrade,
+                    instanceId = source.InstanceId,
+                    automatic = source.Automatic
+                });
             }
             return result;
         }

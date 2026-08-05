@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace PickAndPlaceShop
 {
     public sealed class ShopContainerSlotView : MonoBehaviour, IBeginDragHandler, IDragHandler,
-        IEndDragHandler, IDropHandler, IPointerEnterHandler, IPointerExitHandler
+        IEndDragHandler, IDropHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
     {
         private ShopClawInventoryUI owner;
         private Image background;
@@ -73,6 +73,11 @@ namespace PickAndPlaceShop
         public void OnDrop(PointerEventData eventData) => owner?.DropOn(this);
         public void OnPointerEnter(PointerEventData eventData) => owner?.Hover(this, true);
         public void OnPointerExit(PointerEventData eventData) => owner?.Hover(this, false);
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (!eventData.dragging && eventData.button == PointerEventData.InputButton.Left &&
+                ActiveSlot && Item.HasValue) owner?.SelectForCuration(this);
+        }
     }
 
     [DefaultExecutionOrder(200)]
@@ -386,6 +391,16 @@ namespace PickAndPlaceShop
             else ResetPanelHighlights();
         }
 
+        public void SelectForCuration(ShopContainerSlotView slot)
+        {
+            if (slot == null || !slot.Item.HasValue ||
+                slot.Container != ShopContainerKind.PersonalInventory &&
+                slot.Container != ShopContainerKind.SharedStorage) return;
+            ShopCurationSystem.Instance?.BeginHolding(slot.Container, slot.SlotIndex, slot.Item.Value);
+            feedback.text = "상품을 들었습니다. 선반 앞으로 이동해 배치하세요.";
+            SetOpen(false);
+        }
+
         private void SetPanelHighlight(ShopContainerKind container, bool valid)
         {
             ResetPanelHighlights();
@@ -419,7 +434,7 @@ namespace PickAndPlaceShop
             if (!destination.Item.HasValue) return true;
             ShopContainerItem source = dragSource.Item.Value;
             ShopContainerItem target = destination.Item.Value;
-            return source.ProductId != target.ProductId || target.Quantity < target.MaxStack;
+            return !ShopContainerRules.CanStack(source, target) || target.Quantity < target.MaxStack;
         }
 
         private GameObject CreatePanel(string name, Transform parent, Vector2 size, Color color)

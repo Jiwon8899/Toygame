@@ -68,6 +68,20 @@ namespace PickAndPlaceShop
     }
 
     [Serializable]
+    public sealed class ShopCurationPlacementSave
+    {
+        public int placementId;
+        public int productId;
+        public Vector3 position;
+        public Vector3 size;
+        public float yaw;
+        public int rarity;
+        public int appraisalGrade;
+        public ulong instanceId;
+        public bool automatic;
+    }
+
+    [Serializable]
     public sealed class ShopProgressionSaveData
     {
         public int version = ShopProgressionSaveStore.CurrentVersion;
@@ -99,6 +113,7 @@ namespace PickAndPlaceShop
         public List<ShopContainerItemSave> containerItems = new();
         public List<ShopClawMachineSave> clawMachines = new();
         public List<ShopKujiStationSave> kujiStations = new();
+        public List<ShopCurationPlacementSave> curationPlacements = new();
         public int livePhase;
         public float livePhaseSecondsRemaining;
         public int trendCategory;
@@ -135,11 +150,17 @@ namespace PickAndPlaceShop
         public int consignmentOfferPrice2;
         public float consignmentSecondsRemaining;
         public int consignmentOfferSerial;
+        public int curationNextPlacementId = 1;
+        public int curationClusterScore;
+        public int curationSymmetryScore;
+        public int curationRarityScore;
+        public int curationDensityScore;
+        public bool curationAutomatic;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 12;
+        public const int CurrentVersion = 13;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 
@@ -239,6 +260,7 @@ namespace PickAndPlaceShop
             data.containerItems ??= new List<ShopContainerItemSave>();
             data.clawMachines ??= new List<ShopClawMachineSave>();
             data.kujiStations ??= new List<ShopKujiStationSave>();
+            data.curationPlacements ??= new List<ShopCurationPlacementSave>();
             data.customerProfiles ??= new List<ShopCustomerProfileSave>();
             data.onlineOrders ??= new List<ShopOnlineOrderSave>();
             data.automationMachines ??= new List<ShopAutomationMachineSave>();

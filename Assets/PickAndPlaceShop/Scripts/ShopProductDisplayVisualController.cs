@@ -27,21 +27,31 @@ namespace PickAndPlaceShop
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (observed != game)
             {
-                if (observed != null) observed.ItemContainers.OnListChanged -= Changed;
+                if (observed != null)
+                {
+                    observed.ItemContainers.OnListChanged -= Changed;
+                    observed.CurationPlacements.OnListChanged -= PlacementChanged;
+                }
                 observed = game;
-                if (observed != null) observed.ItemContainers.OnListChanged += Changed;
+                if (observed != null)
+                {
+                    observed.ItemContainers.OnListChanged += Changed;
+                    observed.CurationPlacements.OnListChanged += PlacementChanged;
+                }
                 dirty = true;
             }
             if (dirty && observed != null && ShopNightSalesSystem.Instance != null) Rebuild();
         }
 
         private void Changed(NetworkListEvent<ShopContainerItem> _) => dirty = true;
+        private void PlacementChanged(NetworkListEvent<ShopCurationPlacement> _) => dirty = true;
 
         private void Rebuild()
         {
             dirty = false;
             foreach (GameObject visual in visuals) if (visual != null) Destroy(visual);
             visuals.Clear();
+            if (observed != null && observed.CurationPlacements.Count > 0) return;
             ShopDisplayShelfAnchors provider = FindFirstObjectByType<ShopDisplayShelfAnchors>();
             if (provider == null)
             {
@@ -73,7 +83,11 @@ namespace PickAndPlaceShop
 
         private void OnDestroy()
         {
-            if (observed != null) observed.ItemContainers.OnListChanged -= Changed;
+            if (observed != null)
+            {
+                observed.ItemContainers.OnListChanged -= Changed;
+                observed.CurationPlacements.OnListChanged -= PlacementChanged;
+            }
             if (instance == this) instance = null;
         }
     }

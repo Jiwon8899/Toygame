@@ -11,6 +11,7 @@ namespace PickAndPlaceShop
         Gameplay,
         Claw,
         UI,
+        Photo,
         Menu
     }
 

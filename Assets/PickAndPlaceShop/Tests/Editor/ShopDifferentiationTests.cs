@@ -129,5 +129,39 @@ namespace PickAndPlaceShop.Tests
                 (int)ShopAcquisitionSource.Automation));
             Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(12));
         }
+
+        [Test]
+        public void Curation_UsesDataDrivenScoresAndPersistsExactPlacement()
+        {
+            ShopDifferentiationConfig config = ShopDifferentiationConfig.Load();
+            Assert.That(config, Is.Not.Null);
+            Assert.That(config.MaximumCurationPlacements, Is.EqualTo(30));
+            Assert.That(config.AutomaticLayoutScore, Is.EqualTo(45));
+            Assert.That(config.CurationScoreWeights.x + config.CurationScoreWeights.y +
+                        config.CurationScoreWeights.z + config.CurationScoreWeights.w,
+                Is.EqualTo(1f).Within(0.001f));
+            Assert.That(config.CurationGrade(44), Is.EqualTo("C"));
+            Assert.That(config.CurationGrade(45), Is.EqualTo("B"));
+            Assert.That(config.CurationGrade(65), Is.EqualTo("A"));
+            Assert.That(config.CurationGrade(85), Is.EqualTo("S"));
+
+            ShopProgressionSaveData save = new();
+            save.curationPlacements.Add(new ShopCurationPlacementSave
+            {
+                placementId = 7,
+                productId = 2001,
+                position = new UnityEngine.Vector3(5.3f, 1.59f, 3.12f),
+                size = new UnityEngine.Vector3(0.3f, 0.4f, 0.3f),
+                yaw = 35f,
+                rarity = (int)ShopProductRarity.Rare,
+                appraisalGrade = (int)ShopAppraisalGrade.A,
+                instanceId = 99,
+                automatic = false
+            });
+            Assert.That(save.curationPlacements[0].position.x, Is.EqualTo(5.3f));
+            Assert.That(save.curationPlacements[0].yaw, Is.EqualTo(35f));
+            Assert.That(save.curationPlacements[0].automatic, Is.False);
+            Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(13));
+        }
     }
 }

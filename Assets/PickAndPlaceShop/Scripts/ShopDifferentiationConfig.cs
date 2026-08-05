@@ -55,6 +55,10 @@ namespace PickAndPlaceShop
         [SerializeField] private Vector2 idealDensityPercent = new(30f, 90f);
         [SerializeField] private int automaticLayoutScore = 45;
         [SerializeField] private float shelfPlacementRotationSpeed = 90f;
+        [SerializeField, Min(1)] private int maximumCurationPlacements = 30;
+        [SerializeField] private Vector4 curationScoreWeights = new(0.25f, 0.25f, 0.25f, 0.25f);
+        [SerializeField] private Vector3Int curationGradeThresholds = new(45, 65, 85);
+        [SerializeField] private Vector3 curationDeskPosition = new(10.5f, 0f, 7.2f);
 
         public ShopProductDefinition EmptyCapsuleProduct => emptyCapsuleProduct;
         public int CapsuleRecyclerSlots => Mathf.Max(1, capsuleRecyclerSlots);
@@ -102,6 +106,12 @@ namespace PickAndPlaceShop
         public Vector2 IdealDensityPercent => idealDensityPercent;
         public int AutomaticLayoutScore => Mathf.Clamp(automaticLayoutScore, 0, 100);
         public float ShelfPlacementRotationSpeed => Mathf.Max(1f, shelfPlacementRotationSpeed);
+        public int MaximumCurationPlacements => Mathf.Max(1, maximumCurationPlacements);
+        public Vector4 CurationScoreWeights => curationScoreWeights;
+        public string CurationGrade(int score) => score >= curationGradeThresholds.z ? "S"
+            : score >= curationGradeThresholds.y ? "A"
+            : score >= curationGradeThresholds.x ? "B" : "C";
+        public Vector3 CurationDeskPosition => curationDeskPosition;
 
         public static ShopDifferentiationConfig Load() => Resources.Load<ShopDifferentiationConfig>(ResourcePath);
 

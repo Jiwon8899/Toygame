@@ -67,6 +67,13 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> RareInventory = new(0);
         public NetworkList<int> ClawInventoryVisuals = new();
         public NetworkList<ShopContainerItem> ItemContainers = new();
+        public NetworkList<ShopCurationPlacement> CurationPlacements = new();
+        public NetworkVariable<int> CurationNextPlacementId = new(1);
+        public NetworkVariable<int> CurationClusterScore = new(0);
+        public NetworkVariable<int> CurationSymmetryScore = new(0);
+        public NetworkVariable<int> CurationRarityScore = new(0);
+        public NetworkVariable<int> CurationDensityScore = new(0);
+        public NetworkVariable<bool> CurationAutomatic = new(false);
         public NetworkVariable<int> Displayed = new(0);
         public NetworkVariable<int> SoldToday = new(0);
         public NetworkVariable<int> RareSoldToday = new(0);
@@ -241,6 +248,33 @@ namespace PickAndPlaceShop
         {
             if (!IsSpawned) return;
             MoveContainerSlotRpc(sourceContainer, sourceSlot, destinationContainer, destinationSlot);
+        }
+
+        public void RequestCurationPlacement(ShopContainerKind sourceContainer, int sourceSlot,
+            Vector3 position, float yaw, Vector3 size)
+        {
+            if (!IsSpawned) return;
+            CurationPlacementRpc(sourceContainer, sourceSlot, position, yaw, size);
+        }
+
+        public void RequestCurationRemoval(int placementId)
+        {
+            if (!IsSpawned) return;
+            CurationRemovalRpc(placementId);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void CurationPlacementRpc(ShopContainerKind sourceContainer, int sourceSlot,
+            Vector3 position, float yaw, Vector3 size, RpcParams rpcParams = default)
+        {
+            ShopCurationSystem.Instance?.ServerTryPlace(rpcParams.Receive.SenderClientId,
+                sourceContainer, sourceSlot, position, yaw, size);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void CurationRemovalRpc(int placementId, RpcParams rpcParams = default)
+        {
+            ShopCurationSystem.Instance?.ServerTryRemove(rpcParams.Receive.SenderClientId, placementId);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -1006,6 +1040,59 @@ namespace PickAndPlaceShop
             return true;
         }
 
+        public bool ServerTryMoveOwnedSlotToDisplay(ulong requester, ShopContainerKind source,
+            int sourceSlot, int displayCapacity, out ShopContainerItem moved)
+        {
+            moved = default;
+            if (!IsServer || source != ShopContainerKind.PersonalInventory &&
+                source != ShopContainerKind.SharedStorage) return false;
+            ulong owner = source == ShopContainerKind.PersonalInventory
+                ? requester : ShopContainerRules.SharedOwner;
+            int sourceIndex = FindContainerSlot(owner, source, sourceSlot);
+            if (sourceIndex < 0) return false;
+            ShopContainerItem sourceItem = ItemContainers[sourceIndex];
+            if (!TryAddExistingToContainer(ShopContainerRules.SharedOwner,
+                    ShopContainerKind.SharedDisplay, sourceItem, Mathf.Max(1, displayCapacity), out moved))
+                return false;
+            sourceItem.Quantity--;
+            if (sourceItem.Quantity <= 0) ItemContainers.RemoveAt(sourceIndex);
+            else ItemContainers[sourceIndex] = sourceItem;
+            SyncLegacyContainerCounts();
+            ShopNightSalesSystem.Instance?.ServerRefreshDisplayLedger();
+            return true;
+        }
+
+        public bool ServerTryReturnCurationPlacement(ulong requester, ShopCurationPlacement placement)
+        {
+            if (!IsServer) return false;
+            int displayIndex = -1;
+            for (int i = 0; i < ItemContainers.Count; i++)
+            {
+                ShopContainerItem candidate = ItemContainers[i];
+                if (candidate.Container != ShopContainerKind.SharedDisplay ||
+                    candidate.ProductId != placement.ProductId || candidate.Quantity <= 0) continue;
+                if (placement.InstanceId != 0 && candidate.InstanceId != placement.InstanceId) continue;
+                displayIndex = i;
+                break;
+            }
+            if (displayIndex < 0) return false;
+            ShopContainerItem source = ItemContainers[displayIndex];
+            source.Quantity = 1;
+            bool stored = TryAddExistingToContainer(requester, ShopContainerKind.PersonalInventory,
+                source, ShopContainerRules.PersonalCapacity, out _);
+            if (!stored)
+                stored = TryAddExistingToContainer(ShopContainerRules.SharedOwner,
+                    ShopContainerKind.SharedStorage, source, SharedStorageCapacity, out _);
+            if (!stored) return false;
+            ShopContainerItem remaining = ItemContainers[displayIndex];
+            remaining.Quantity--;
+            if (remaining.Quantity <= 0) ItemContainers.RemoveAt(displayIndex);
+            else ItemContainers[displayIndex] = remaining;
+            SyncLegacyContainerCounts();
+            ShopNightSalesSystem.Instance?.ServerRefreshDisplayLedger();
+            return true;
+        }
+
         public bool ServerTryMoveSlot(ulong requester, ShopContainerKind sourceContainer,
             int sourceSlot, ShopContainerKind destinationContainer, int destinationSlot,
             out string message)
@@ -1286,6 +1373,7 @@ namespace PickAndPlaceShop
             remaining.Quantity--;
             if (remaining.Quantity <= 0) ItemContainers.RemoveAt(index);
             else ItemContainers[index] = remaining;
+            ShopCurationSystem.Instance?.ServerRemoveSoldPlacement(consumed);
             SyncLegacyContainerCounts();
             return true;
         }

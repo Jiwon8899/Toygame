@@ -424,7 +424,11 @@ namespace PickAndPlaceShop
             if (customer == null || Config == null) return 0;
             float waitScore = Mathf.Clamp01(1f - customer.QueueWaitSeconds /
                 Mathf.Max(1f, customer.PatienceSeconds));
-            float varietyScore = Mathf.Clamp01(displayedVariety / 5f);
+            float varietyScore = ShopCurationSystem.Instance != null &&
+                                 ShopNetworkGame.Instance != null &&
+                                 ShopNetworkGame.Instance.CurationPlacements.Count > 0
+                ? Mathf.Clamp01(ShopCurationSystem.Instance.CurrentScoreAverage / 100f)
+                : Mathf.Clamp01(displayedVariety / 5f);
             float rarityScore = rareDisplayed ? 1f : 0f;
             float totalWeight = Mathf.Max(0.01f, Config.SatisfactionWaitWeight +
                 Config.SatisfactionVarietyWeight + Config.SatisfactionRarityWeight);

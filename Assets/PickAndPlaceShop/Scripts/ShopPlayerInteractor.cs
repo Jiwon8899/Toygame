@@ -61,6 +61,14 @@ namespace PickAndPlaceShop
                 return;
             }
 
+            if (ShopCurationSystem.IsHoldingLocal || ShopCurationSystem.IsTargetingPlacedLocal)
+            {
+                LocalPrompt = ShopCurationSystem.IsHoldingLocal
+                    ? "Q/E 회전 · E/Space 배치 · F 취소"
+                    : "[E] 진열 상품 다시 들기";
+                return;
+            }
+
             if (playerCamera == null || !playerCamera.isActiveAndEnabled)
             {
                 playerCamera = Camera.main;
