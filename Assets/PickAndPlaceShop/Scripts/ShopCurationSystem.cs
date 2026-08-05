@@ -99,6 +99,8 @@ namespace PickAndPlaceShop
         private ShopContainerItem? hotbarAssignmentCandidate;
         private int activeHotbarSlot = -1;
         private float nextHotbarRefresh;
+        private bool coordinatorReportOpen;
+        private int coordinatorReportOpenedFrame = -1;
 
         public int CurrentScoreAverage => observedGame == null ? 0 : Mathf.RoundToInt(
             (observedGame.CurationClusterScore.Value + observedGame.CurationSymmetryScore.Value +
@@ -124,6 +126,7 @@ namespace PickAndPlaceShop
         private void OnDestroy()
         {
             DetachGame();
+            CloseCoordinatorReport();
             CancelHolding();
             ExitPhotoMode();
             if (Instance == this) Instance = null;
@@ -154,6 +157,13 @@ namespace PickAndPlaceShop
 
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null || ShopLocalPauseState.IsPaused) return;
+            if (coordinatorReportOpen)
+            {
+                if (Time.frameCount > coordinatorReportOpenedFrame &&
+                    (keyboard.eKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
+                    CloseCoordinatorReport();
+                return;
+            }
             if (HandleHotbarInput(keyboard)) return;
             if (photoMode) { UpdatePhotoMode(keyboard); return; }
             if (keyboard.pKey.wasPressedThisFrame) { EnterPhotoMode(); return; }
@@ -208,6 +218,25 @@ namespace PickAndPlaceShop
         {
             if (item.Container == ShopContainerKind.PersonalInventory)
                 hotbarAssignmentCandidate = item;
+        }
+
+        public void ShowCoordinatorReport()
+        {
+            if ((ShopProgressionManager.Instance?.ExpansionLevel ?? 1) < 4 || scoreCanvas == null) return;
+            UpdateScorePanel();
+            coordinatorReportOpen = true;
+            coordinatorReportOpenedFrame = Time.frameCount;
+            scoreCanvas.enabled = true;
+            if (helpText != null) helpText.text = "진열 코디네이터: 네 가지 점수를 함께 보고 진열을 조정해 보세요. · E/Esc 닫기";
+            ShopInputModeManager.Push(this, ShopInputMode.UI);
+        }
+
+        private void CloseCoordinatorReport()
+        {
+            if (!coordinatorReportOpen) return;
+            coordinatorReportOpen = false;
+            if (scoreCanvas != null) scoreCanvas.enabled = false;
+            ShopInputModeManager.Pop(this);
         }
 
         public void CancelHolding()
@@ -684,6 +713,7 @@ namespace PickAndPlaceShop
             helpText = CreateText(panel.transform, font, 18, TextAnchor.MiddleLeft);
             helpText.rectTransform.offsetMin = new Vector2(18f, 7f);
             helpText.rectTransform.offsetMax = new Vector2(-18f, -68f);
+            scoreCanvas.enabled = false;
 
             GameObject photoObject = new("Photo Mode Canvas", typeof(Canvas), typeof(CanvasScaler));
             photoObject.transform.SetParent(transform, false);

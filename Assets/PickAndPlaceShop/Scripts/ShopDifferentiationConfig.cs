@@ -59,6 +59,7 @@ namespace PickAndPlaceShop
         [SerializeField] private Vector4 curationScoreWeights = new(0.25f, 0.25f, 0.25f, 0.25f);
         [SerializeField] private Vector3Int curationGradeThresholds = new(45, 65, 85);
         [SerializeField] private Vector3 curationDeskPosition = new(10.5f, 0f, 7.2f);
+        [SerializeField] private Vector3 curationCoordinatorPosition = new(10.15f, 0f, -0.55f);
 
         public ShopProductDefinition EmptyCapsuleProduct => emptyCapsuleProduct;
         public int CapsuleRecyclerSlots => Mathf.Max(1, capsuleRecyclerSlots);
@@ -112,6 +113,7 @@ namespace PickAndPlaceShop
             : score >= curationGradeThresholds.y ? "A"
             : score >= curationGradeThresholds.x ? "B" : "C";
         public Vector3 CurationDeskPosition => curationDeskPosition;
+        public Vector3 CurationCoordinatorPosition => curationCoordinatorPosition;
 
         public static ShopDifferentiationConfig Load() => Resources.Load<ShopDifferentiationConfig>(ResourcePath);
 

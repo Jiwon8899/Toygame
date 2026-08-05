@@ -23,6 +23,7 @@ namespace PickAndPlaceShop
         private GameObject capsuleRecyclerFacility;
         private GameObject appraisalFacility;
         private GameObject curationDeskFacility;
+        private GameObject curationCoordinatorNpc;
         private GameObject consignmentFacility;
         private GameObject consignmentRejectFacility;
 
@@ -96,7 +97,7 @@ namespace PickAndPlaceShop
             if (action == ShopAction.CapsuleRecycler && expansion < 3 ||
                 action == ShopAction.AppraisalDesk && expansion < 4 ||
                 (action == ShopAction.ConsignmentCorner || action == ShopAction.ConsignmentReject) && expansion < 5 ||
-                action == ShopAction.CurationDesk && expansion < 4)
+                (action == ShopAction.CurationDesk || action == ShopAction.CurationCoordinator) && expansion < 4)
             {
                 game.ServerSetEvent("이 시설은 가게 확장 후 이용할 수 있습니다.");
                 return;
@@ -114,6 +115,8 @@ namespace PickAndPlaceShop
             else if (action == ShopAction.ConsignmentReject) ServerRejectConsignment(game);
             else if (action == ShopAction.CurationDesk)
                 ShopCurationSystem.Instance?.ServerAutoArrange();
+            else if (action == ShopAction.CurationCoordinator)
+                game.ServerSetEvent("진열 코디네이터가 현재 선반 평가를 안내합니다.");
         }
 
         private void ServerUpdateConsignment()
@@ -444,7 +447,58 @@ namespace PickAndPlaceShop
             curationDeskFacility = BuildFacility("진열 자동 정렬", config.CurationDeskPosition,
                 new Color(0.15f, 0.44f, 0.65f), ShopAction.CurationDesk,
                 "공용 진열 상품 자동 정렬");
+            BuildCurationCoordinator();
             RefreshFacilityUnlocks();
+        }
+
+        private void BuildCurationCoordinator()
+        {
+            curationCoordinatorNpc = new GameObject("진열 코디네이터 NPC");
+            curationCoordinatorNpc.transform.SetParent(facilitiesRoot.transform, false);
+            curationCoordinatorNpc.transform.position = config.CurationCoordinatorPosition;
+            curationCoordinatorNpc.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+
+            ShopWorkforceConfig workforce = ShopWorkforceConfig.Load();
+            GameObject[] appearances = workforce != null ? workforce.AppearancePrefabs : null;
+            GameObject appearance = appearances != null && appearances.Length > 1
+                ? appearances[1]
+                : appearances != null && appearances.Length > 0 ? appearances[0] : null;
+            if (appearance != null)
+            {
+                GameObject visual = Instantiate(appearance, curationCoordinatorNpc.transform);
+                visual.name = "Coordinator Appearance";
+                visual.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                foreach (Collider collider in visual.GetComponentsInChildren<Collider>(true)) Destroy(collider);
+                foreach (Rigidbody body in visual.GetComponentsInChildren<Rigidbody>(true)) Destroy(body);
+                Animator animator = visual.GetComponentInChildren<Animator>(true);
+                if (animator != null)
+                {
+                    animator.applyRootMotion = false;
+                    foreach (AnimatorControllerParameter parameter in animator.parameters)
+                        if (parameter.name == "Moving" && parameter.type == AnimatorControllerParameterType.Bool)
+                            animator.SetBool(parameter.name, false);
+                }
+            }
+
+            CapsuleCollider interaction = curationCoordinatorNpc.AddComponent<CapsuleCollider>();
+            interaction.center = Vector3.up;
+            interaction.height = 2f;
+            interaction.radius = 0.48f;
+            interaction.isTrigger = true;
+            curationCoordinatorNpc.AddComponent<ShopInteractable>().Configure(
+                ShopAction.CurationCoordinator, "진열 코디네이터에게 선반 평가 듣기");
+
+            GameObject labelHost = new("Coordinator Label");
+            labelHost.transform.SetParent(curationCoordinatorNpc.transform, false);
+            labelHost.transform.localPosition = new Vector3(0f, 2.15f, 0f);
+            TextMesh label = labelHost.AddComponent<TextMesh>();
+            label.text = "진열 코디네이터";
+            label.anchor = TextAnchor.MiddleCenter;
+            label.alignment = TextAlignment.Center;
+            label.characterSize = 0.075f;
+            label.fontSize = 46;
+            label.color = new Color(0.68f, 0.94f, 1f);
+            labelHost.AddComponent<ShopWorldFacingText>();
         }
 
         private void BuildConsignmentCorner()
@@ -554,6 +608,7 @@ namespace PickAndPlaceShop
             if (capsuleRecyclerFacility != null) capsuleRecyclerFacility.SetActive(level >= 3);
             if (appraisalFacility != null) appraisalFacility.SetActive(level >= 4);
             if (curationDeskFacility != null) curationDeskFacility.SetActive(level >= 4);
+            if (curationCoordinatorNpc != null) curationCoordinatorNpc.SetActive(level >= 4);
             if (consignmentFacility != null) consignmentFacility.SetActive(level >= 5);
             if (consignmentRejectFacility != null) consignmentRejectFacility.SetActive(level >= 5);
             if (consignmentVisualRoot != null) consignmentVisualRoot.gameObject.SetActive(level >= 5);
@@ -598,6 +653,7 @@ namespace PickAndPlaceShop
             label.characterSize = 0.12f;
             label.fontSize = 48;
             label.color = Color.white;
+            labelHost.AddComponent<ShopWorldFacingText>();
             return root;
         }
 

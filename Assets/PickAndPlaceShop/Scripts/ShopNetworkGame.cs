@@ -29,7 +29,8 @@ namespace PickAndPlaceShop
         ConsignmentCorner,
         ReviewBoard,
         CurationDesk,
-        ConsignmentReject
+        ConsignmentReject,
+        CurationCoordinator
     }
 
     public enum ShopUpgradeCategory
@@ -398,6 +399,7 @@ namespace PickAndPlaceShop
                 case ShopAction.ConsignmentReject:
                 case ShopAction.ReviewBoard:
                 case ShopAction.CurationDesk:
+                case ShopAction.CurationCoordinator:
                     ShopDifferentiationController.Instance?.ServerHandleInteraction(action, sender);
                     break;
             }

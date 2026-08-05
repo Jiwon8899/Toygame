@@ -56,3 +56,4 @@ MonoBehaviour:
   curationScoreWeights: {x: 0.25, y: 0.25, z: 0.25, w: 0.25}
   curationGradeThresholds: {x: 45, y: 65, z: 85}
   curationDeskPosition: {x: 10.5, y: 0, z: 7.2}
+  curationCoordinatorPosition: {x: 10.15, y: 0, z: -0.55}
