@@ -30,6 +30,16 @@ MonoBehaviour:
   - 1.05
   - 1.2
   - 1.4
+  appraisalCurationMultipliers:
+  - 1
+  - 1.02
+  - 1.08
+  - 1.15
+  appraisalGradeWeights:
+  - {x: 60, y: 28, z: 10, w: 2}
+  - {x: 45, y: 32, z: 18, w: 5}
+  - {x: 25, y: 35, z: 28, w: 12}
+  - {x: 10, y: 25, z: 40, w: 25}
   consignmentPosition: {x: 12.7, y: 0, z: 6.1}
   consignmentVisitSeconds: 90
   missingCollectionWeight: 0.75

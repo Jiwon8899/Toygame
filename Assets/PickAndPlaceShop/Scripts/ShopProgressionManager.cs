@@ -520,6 +520,7 @@ namespace PickAndPlaceShop
                     string.IsNullOrWhiteSpace(loadedSaveData.reviewHistory)
                         ? "아직 등록된 리뷰가 없습니다." : loadedSaveData.reviewHistory);
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, loadedSaveData.latestReviewDay);
+                boundGame.AppraisalSequence.Value = Mathf.Max(0, loadedSaveData.appraisalSequence);
             }
             observedGameFunds = teamFunds;
             observedGameReputation = reputation;
@@ -757,7 +758,8 @@ namespace PickAndPlaceShop
                 lastOneAwards = boundGame != null ? boundGame.LastOneAwards.Value : 0,
                 recentLastOneRecords = boundGame != null ? boundGame.RecentLastOneRecords.Value.ToString() : string.Empty,
                 reviewHistory = boundGame != null ? boundGame.ReviewHistory.Value.ToString() : string.Empty,
-                latestReviewDay = boundGame != null ? boundGame.LatestReviewDay.Value : 0
+                latestReviewDay = boundGame != null ? boundGame.LatestReviewDay.Value : 0,
+                appraisalSequence = boundGame != null ? boundGame.AppraisalSequence.Value : 0
             };
         }
 
@@ -811,6 +813,7 @@ namespace PickAndPlaceShop
                     string.IsNullOrWhiteSpace(save.reviewHistory)
                         ? "아직 등록된 리뷰가 없습니다." : save.reviewHistory);
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, save.latestReviewDay);
+                boundGame.AppraisalSequence.Value = Mathf.Max(0, save.appraisalSequence);
             }
         }
 
@@ -859,7 +862,9 @@ namespace PickAndPlaceShop
                     UnitPrice = Mathf.Max(0, saved.unitPrice),
                     Rarity = (ShopProductRarity)Mathf.Clamp(saved.rarity, 0, 3),
                     DisplayName = new Unity.Collections.FixedString64Bytes(
-                        string.IsNullOrWhiteSpace(saved.displayName) ? "상품" : saved.displayName)
+                        string.IsNullOrWhiteSpace(saved.displayName) ? "상품" : saved.displayName),
+                    InstanceId = saved.instanceId,
+                    AppraisalGrade = (ShopAppraisalGrade)Mathf.Clamp(saved.appraisalGrade, 0, 4)
                 });
             }
             game.SyncLegacyContainerCounts();
@@ -885,7 +890,9 @@ namespace PickAndPlaceShop
                     maxStack = item.MaxStack,
                     unitPrice = item.UnitPrice,
                     rarity = (int)item.Rarity,
-                    displayName = item.DisplayName.ToString()
+                    displayName = item.DisplayName.ToString(),
+                    instanceId = item.InstanceId,
+                    appraisalGrade = (int)item.AppraisalGrade
                 });
             }
             return result;

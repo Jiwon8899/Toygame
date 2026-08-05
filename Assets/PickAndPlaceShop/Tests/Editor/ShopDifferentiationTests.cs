@@ -92,5 +92,27 @@ namespace PickAndPlaceShop.Tests
             Assert.That(save.reviewHistory, Does.Contain("대기 2.0초"));
             Assert.That(save.reviewHistory, Does.Contain("★★★★★"));
         }
+
+        [Test]
+        public void AppraisedItem_IsUniqueNonStackingAndUsesDataPriceMultiplier()
+        {
+            ShopProductDefinition product = AssetDatabase.LoadAssetAtPath<ShopProductDefinition>(
+                "Assets/PickAndPlaceShop/Resources/Products/Arcade/Product_kuji_moon_rabbit_a.asset");
+            Assert.That(product, Is.Not.Null);
+            ShopContainerItem normal = new(1, ShopContainerKind.PersonalInventory, 0, product, 0);
+            ShopContainerItem another = new(1, ShopContainerKind.PersonalInventory, 1, product, 0);
+            Assert.That(ShopContainerRules.CanStack(normal, another), Is.True);
+
+            ShopDifferentiationConfig config = ShopDifferentiationConfig.Load();
+            ShopAppraisalGrade grade = config.AppraisalGradeFor(product.Rarity, 0.99f);
+            ShopContainerItem appraised = normal;
+            appraised.AppraisalGrade = grade;
+            appraised.InstanceId = 42;
+            appraised.MaxStack = 1;
+            Assert.That(appraised.IsAppraised, Is.True);
+            Assert.That(ShopContainerRules.CanStack(appraised, normal), Is.False);
+            Assert.That(config.AppraisalPriceMultiplier(ShopAppraisalGrade.S), Is.EqualTo(1.4f));
+            Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(11));
+        }
     }
 }

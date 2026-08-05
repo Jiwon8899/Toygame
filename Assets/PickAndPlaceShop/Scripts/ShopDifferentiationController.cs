@@ -82,6 +82,12 @@ namespace PickAndPlaceShop
             if (action == ShopAction.CapsuleRecycler) ServerCraftNextDecoration(game);
             else if (action == ShopAction.ReviewBoard)
                 game.ServerSetEvent(game.ReviewHistory.Value.ToString());
+            else if (action == ShopAction.AppraisalDesk)
+            {
+                game.ServerTryAppraiseFirstOwned(requester, config, out _, out string message);
+                game.ServerSetEvent(message);
+                ShopProgressionManager.Instance?.SaveNow();
+            }
         }
 
         public void ServerGenerateDailyReview(int day, float averageWaitSeconds,
@@ -240,6 +246,9 @@ namespace PickAndPlaceShop
                 new Color(0.12f, 0.62f, 0.58f), ShopAction.CapsuleRecycler,
                 "빈 캡슐 회수함 / 업사이클 장식 제작");
             BuildReviewBoard();
+            BuildFacility("굿즈 감정소", config.AppraisalPosition,
+                new Color(0.34f, 0.23f, 0.52f), ShopAction.AppraisalDesk,
+                "보유 상품 1개 감정하기");
         }
 
         private void BuildReviewBoard()

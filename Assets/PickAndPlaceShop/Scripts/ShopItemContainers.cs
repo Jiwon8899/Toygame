@@ -15,6 +15,15 @@ namespace PickAndPlaceShop
         ConsignmentDisplay = 5
     }
 
+    public enum ShopAppraisalGrade : byte
+    {
+        None = 0,
+        C = 1,
+        B = 2,
+        A = 3,
+        S = 4
+    }
+
     [Serializable]
     public struct ShopContainerItem : INetworkSerializable, IEquatable<ShopContainerItem>
     {
@@ -28,6 +37,10 @@ namespace PickAndPlaceShop
         public int UnitPrice;
         public ShopProductRarity Rarity;
         public FixedString64Bytes DisplayName;
+        public ulong InstanceId;
+        public ShopAppraisalGrade AppraisalGrade;
+
+        public bool IsAppraised => AppraisalGrade != ShopAppraisalGrade.None;
 
         public ShopContainerItem(ulong ownerClientId, ShopContainerKind container, int slotIndex,
             ShopProductDefinition product, int visualPrefabIndex)
@@ -42,6 +55,8 @@ namespace PickAndPlaceShop
             UnitPrice = product != null ? product.SalePrice : 100;
             Rarity = product != null ? product.Rarity : ShopProductRarity.Common;
             DisplayName = new FixedString64Bytes(product != null ? product.DisplayName : "Prize");
+            InstanceId = 0;
+            AppraisalGrade = ShopAppraisalGrade.None;
         }
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
@@ -60,6 +75,10 @@ namespace PickAndPlaceShop
             serializer.SerializeValue(ref rarity);
             if (serializer.IsReader) Rarity = (ShopProductRarity)rarity;
             serializer.SerializeValue(ref DisplayName);
+            serializer.SerializeValue(ref InstanceId);
+            byte appraisalGrade = (byte)AppraisalGrade;
+            serializer.SerializeValue(ref appraisalGrade);
+            if (serializer.IsReader) AppraisalGrade = (ShopAppraisalGrade)appraisalGrade;
         }
 
         public bool Equals(ShopContainerItem other)
@@ -68,7 +87,8 @@ namespace PickAndPlaceShop
                    SlotIndex == other.SlotIndex && ProductId == other.ProductId &&
                    VisualPrefabIndex == other.VisualPrefabIndex && Quantity == other.Quantity &&
                    MaxStack == other.MaxStack && UnitPrice == other.UnitPrice &&
-                   Rarity == other.Rarity && DisplayName.Equals(other.DisplayName);
+                   Rarity == other.Rarity && DisplayName.Equals(other.DisplayName) &&
+                   InstanceId == other.InstanceId && AppraisalGrade == other.AppraisalGrade;
         }
 
         public override bool Equals(object obj) => obj is ShopContainerItem other && Equals(other);
@@ -141,11 +161,16 @@ namespace PickAndPlaceShop
             {
                 ShopContainerItem item = items[i];
                 if (BelongsTo(item, owner, container) && item.ProductId == productId &&
-                    item.Quantity > 0 && item.Quantity < Mathf.Max(1, item.MaxStack))
+                    !item.IsAppraised && item.Quantity > 0 &&
+                    item.Quantity < Mathf.Max(1, item.MaxStack))
                     return true;
             }
             return UsedCount(items, owner, container) < capacity;
         }
+
+        public static bool CanStack(in ShopContainerItem first, in ShopContainerItem second) =>
+            !first.IsAppraised && !second.IsAppraised && first.InstanceId == 0 &&
+            second.InstanceId == 0 && first.ProductId == second.ProductId;
 
         public static int FindFirst(NetworkList<ShopContainerItem> items, ulong owner,
             ShopContainerKind container, int productId = int.MinValue)

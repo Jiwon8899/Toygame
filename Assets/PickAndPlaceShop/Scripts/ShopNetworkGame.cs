@@ -89,6 +89,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<FixedString4096Bytes> ReviewHistory =
             new(new FixedString4096Bytes("아직 등록된 리뷰가 없습니다."));
         public NetworkVariable<int> LatestReviewDay = new(0);
+        public NetworkVariable<int> AppraisalSequence = new(0);
 
         public NetworkVariable<int> CampaignRevenue = new(0);
         public NetworkVariable<int> CampaignSold = new(0);
@@ -1035,7 +1036,7 @@ namespace PickAndPlaceShop
             }
 
             ShopContainerItem destination = ItemContainers[destinationIndex];
-            if (source.ProductId == destination.ProductId)
+            if (ShopContainerRules.CanStack(source, destination))
             {
                 int available = Mathf.Max(0, destination.MaxStack - destination.Quantity);
                 int moved = Mathf.Min(source.Quantity, available);
@@ -1135,7 +1136,8 @@ namespace PickAndPlaceShop
             if (sourceIndex < 0 || destinationIndex < 0) return false;
             ShopContainerItem source = ItemContainers[sourceIndex];
             ShopContainerItem destination = ItemContainers[destinationIndex];
-            if (source.ProductId != destination.ProductId || destination.Quantity >= destination.MaxStack)
+            if (!ShopContainerRules.CanStack(source, destination) ||
+                destination.Quantity >= destination.MaxStack)
                 return false;
             int moved = Mathf.Min(source.Quantity, destination.MaxStack - destination.Quantity);
             if (moved <= 0) return false;
@@ -1266,6 +1268,97 @@ namespace PickAndPlaceShop
             return true;
         }
 
+        public bool ServerTryPeekDisplayedProduct(int productId, out ShopContainerItem item)
+        {
+            item = default;
+            if (!IsServer) return false;
+            int index = ShopContainerRules.FindFirst(ItemContainers, ShopContainerRules.SharedOwner,
+                ShopContainerKind.SharedDisplay, productId);
+            if (index < 0) return false;
+            item = ItemContainers[index];
+            return true;
+        }
+
+        public bool ServerTryAppraiseFirstOwned(ulong requester, ShopDifferentiationConfig config,
+            out ShopContainerItem appraised, out string message)
+        {
+            appraised = default;
+            message = string.Empty;
+            if (!IsServer || config == null)
+            {
+                message = "호스트에서만 감정할 수 있습니다.";
+                return false;
+            }
+
+            int sourceIndex = -1;
+            int destinationSlot = -1;
+            for (int pass = 0; pass < 2 && sourceIndex < 0; pass++)
+            {
+                ShopContainerKind container = pass == 0
+                    ? ShopContainerKind.PersonalInventory : ShopContainerKind.SharedStorage;
+                ulong owner = pass == 0 ? requester : ShopContainerRules.SharedOwner;
+                int capacity = CapacityFor(container);
+                for (int i = 0; i < ItemContainers.Count; i++)
+                {
+                    ShopContainerItem candidate = ItemContainers[i];
+                    if (!ShopContainerRules.BelongsTo(candidate, owner, container) ||
+                        candidate.Quantity <= 0 || candidate.IsAppraised) continue;
+                    int free = candidate.Quantity > 1
+                        ? ShopContainerRules.FindFreeSlot(ItemContainers, owner, container, capacity)
+                        : candidate.SlotIndex;
+                    if (free < 0) continue;
+                    sourceIndex = i;
+                    destinationSlot = free;
+                    break;
+                }
+            }
+            if (sourceIndex < 0)
+            {
+                message = "감정할 일반 상품이 없거나 감정품을 분리할 빈 슬롯이 없습니다.";
+                return false;
+            }
+
+            ShopContainerItem source = ItemContainers[sourceIndex];
+            int fee = config.AppraisalFee(source.Rarity);
+            if (Coins.Value < fee)
+            {
+                message = "감정 수수료 " + fee + "원이 필요합니다.";
+                return false;
+            }
+
+            int sequence = AppraisalSequence.Value + 1;
+            uint hash = 2166136261u;
+            hash = (hash ^ (uint)source.ProductId) * 16777619u;
+            hash = (hash ^ (uint)Day.Value) * 16777619u;
+            hash = (hash ^ (uint)sequence) * 16777619u;
+            hash = (hash ^ (uint)requester) * 16777619u;
+            float roll = (hash & 0x00FFFFFFu) / 16777215f;
+            ShopAppraisalGrade grade = config.AppraisalGradeFor(source.Rarity, roll);
+
+            appraised = source;
+            appraised.Quantity = 1;
+            appraised.MaxStack = 1;
+            appraised.SlotIndex = destinationSlot;
+            appraised.AppraisalGrade = grade;
+            appraised.InstanceId = ((ulong)(uint)Mathf.Max(1, Day.Value) << 32) | (uint)sequence;
+            appraised.UnitPrice = Mathf.Max(1, Mathf.RoundToInt(
+                Mathf.Max(1, source.UnitPrice) * config.AppraisalPriceMultiplier(grade)));
+
+            Coins.Value -= fee;
+            AppraisalSequence.Value = sequence;
+            if (source.Quantity > 1)
+            {
+                source.Quantity--;
+                ItemContainers[sourceIndex] = source;
+                ItemContainers.Add(appraised);
+            }
+            else ItemContainers[sourceIndex] = appraised;
+            SyncLegacyContainerCounts();
+            message = appraised.DisplayName + " 감정 완료: " + grade + "등급 · 판매가 " +
+                      appraised.UnitPrice + "원 (수수료 " + fee + "원)";
+            return true;
+        }
+
         public int ServerReturnAllDisplayedToStorage()
         {
             if (!IsServer) return 0;
@@ -1318,7 +1411,8 @@ namespace PickAndPlaceShop
             {
                 ShopContainerItem existing = ItemContainers[i];
                 if (!ShopContainerRules.BelongsTo(existing, owner, container) ||
-                    existing.ProductId != source.ProductId || existing.Quantity >= existing.MaxStack) continue;
+                    !ShopContainerRules.CanStack(existing, source) ||
+                    existing.Quantity >= existing.MaxStack) continue;
                 existing.Quantity++;
                 ItemContainers[i] = existing;
                 added = existing;

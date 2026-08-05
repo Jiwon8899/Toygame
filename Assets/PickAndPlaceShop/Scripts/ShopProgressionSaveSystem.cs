@@ -30,6 +30,8 @@ namespace PickAndPlaceShop
         public int unitPrice;
         public int rarity;
         public string displayName;
+        public ulong instanceId;
+        public int appraisalGrade;
     }
 
     [Serializable]
@@ -123,11 +125,12 @@ namespace PickAndPlaceShop
         public string recentLastOneRecords;
         public string reviewHistory;
         public int latestReviewDay;
+        public int appraisalSequence;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 10;
+        public const int CurrentVersion = 11;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 

@@ -599,6 +599,14 @@ namespace PickAndPlaceShop
 
             ShopProductDefinition product = FindProduct(customer.DesiredProductId.Value);
             int price = product != null ? GetSalePrice(product) : 0;
+            if (product != null && ShopNetworkGame.Instance.ServerTryPeekDisplayedProduct(
+                    customer.DesiredProductId.Value, out ShopContainerItem displayedItem) &&
+                displayedItem.IsAppraised)
+            {
+                float trendFactor = product.SalePrice > 0
+                    ? price / (float)product.SalePrice : 1f;
+                price = Mathf.RoundToInt(displayedItem.UnitPrice * trendFactor);
+            }
             if (product != null && ShopLiveOperationsNetwork.Instance != null)
                 price = Mathf.RoundToInt(price * ShopLiveOperationsNetwork.Instance
                     .RegularPriceMultiplier(customer.CustomerId));

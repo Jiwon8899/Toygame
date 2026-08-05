@@ -51,7 +51,9 @@ namespace PickAndPlaceShop
             ShopProductDefinition product = ShopProductVisuals.Find(value.ProductId);
             icon.texture = product != null && product.Icon != null ? product.Icon.texture : null;
             icon.color = icon.texture != null ? Color.white : new Color(0.25f, 0.28f, 0.35f, 1f);
-            label.text = value.DisplayName + (value.Quantity > 1 ? " x" + value.Quantity : string.Empty);
+            label.text = value.DisplayName +
+                         (value.IsAppraised ? " [감정 " + value.AppraisalGrade + "]" : string.Empty) +
+                         (value.Quantity > 1 ? " x" + value.Quantity : string.Empty);
         }
 
         public void SetHighlight(bool highlighted, bool valid)

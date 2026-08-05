@@ -31,6 +31,14 @@ namespace PickAndPlaceShop
         [SerializeField] private Vector3 appraisalPosition = new(12.7f, 0f, 0.2f);
         [SerializeField] private int[] appraisalFees = { 20, 40, 80, 140 };
         [SerializeField] private float[] appraisalPriceMultipliers = { 1f, 1.05f, 1.2f, 1.4f };
+        [SerializeField] private float[] appraisalCurationMultipliers = { 1f, 1.02f, 1.08f, 1.15f };
+        [SerializeField] private Vector4[] appraisalGradeWeights =
+        {
+            new(60f, 28f, 10f, 2f),
+            new(45f, 32f, 18f, 5f),
+            new(25f, 35f, 28f, 12f),
+            new(10f, 25f, 40f, 25f)
+        };
 
         [Header("위탁 판매")]
         [SerializeField] private Vector3 consignmentPosition = new(12.7f, 0f, 6.1f);
@@ -57,7 +65,24 @@ namespace PickAndPlaceShop
         public Vector3 ReviewBoardPosition => reviewBoardPosition;
         public Vector3 AppraisalPosition => appraisalPosition;
         public int AppraisalFee(ShopProductRarity rarity) => ValueAt(appraisalFees, (int)rarity, 20);
-        public float AppraisalPriceMultiplier(int grade) => ValueAt(appraisalPriceMultipliers, grade, 1f);
+        public float AppraisalPriceMultiplier(ShopAppraisalGrade grade) =>
+            ValueAt(appraisalPriceMultipliers, Mathf.Max(0, (int)grade - 1), 1f);
+        public float AppraisalCurationMultiplier(ShopAppraisalGrade grade) =>
+            ValueAt(appraisalCurationMultipliers, Mathf.Max(0, (int)grade - 1), 1f);
+        public ShopAppraisalGrade AppraisalGradeFor(ShopProductRarity rarity, float roll01)
+        {
+            int count = appraisalGradeWeights != null ? appraisalGradeWeights.Length : 0;
+            int index = Mathf.Clamp((int)rarity, 0, Mathf.Max(0, count - 1));
+            Vector4 weights = appraisalGradeWeights != null && appraisalGradeWeights.Length > 0
+                ? appraisalGradeWeights[index] : new Vector4(60f, 28f, 10f, 2f);
+            float total = Mathf.Max(0f, weights.x) + Mathf.Max(0f, weights.y) +
+                          Mathf.Max(0f, weights.z) + Mathf.Max(0f, weights.w);
+            float roll = Mathf.Clamp01(roll01) * Mathf.Max(0.001f, total);
+            if ((roll -= Mathf.Max(0f, weights.x)) <= 0f) return ShopAppraisalGrade.C;
+            if ((roll -= Mathf.Max(0f, weights.y)) <= 0f) return ShopAppraisalGrade.B;
+            if ((roll -= Mathf.Max(0f, weights.z)) <= 0f) return ShopAppraisalGrade.A;
+            return ShopAppraisalGrade.S;
+        }
         public Vector3 ConsignmentPosition => consignmentPosition;
         public float ConsignmentVisitSeconds => Mathf.Max(1f, consignmentVisitSeconds);
         public float MissingCollectionWeight => Mathf.Clamp01(missingCollectionWeight);
