@@ -320,7 +320,15 @@ namespace PickAndPlaceShop
                 }
             }
 
-            return productId >= 0 && ledger.TryReserve(customer.NetworkObjectId, productId);
+            bool reserved = productId >= 0 && ledger.TryReserve(customer.NetworkObjectId, productId);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log($"[CustomerMatch] customer={customer.NetworkObjectId} " +
+                          $"preference={customer.Preference.PreferredCategory} product={productId} " +
+                          $"score={bestScore:0.00} reserved={reserved} displayed={ledger.TotalStock()}");
+            }
+
+            return reserved;
         }
 
         public bool ServerIsCategoryDisplayed(ShopProductCategory category)
