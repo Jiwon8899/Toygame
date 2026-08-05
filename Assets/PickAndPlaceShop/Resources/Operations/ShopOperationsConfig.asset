@@ -52,6 +52,9 @@ MonoBehaviour:
   negotiationMinimumBonus: 0.1
   negotiationMaximumBonus: 0.3
   negotiationMarkerCyclesPerSecond: 0.75
+  closingFadeSeconds: 0.45
+  closingItemInterval: 0.4
+  closingRevenueCountSeconds: 0.8
   narrativeAIEnabled: 1
   narrativeEndpoint: https://api.anthropic.com/v1/messages
   narrativeModel: claude-haiku-4-5-20251001

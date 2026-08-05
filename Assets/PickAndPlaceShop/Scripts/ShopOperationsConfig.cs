@@ -126,6 +126,11 @@ namespace PickAndPlaceShop
         [Range(0f, 0.5f)] [SerializeField] private float negotiationMaximumBonus = 0.30f;
         [Range(0.2f, 3f)] [SerializeField] private float negotiationMarkerCyclesPerSecond = 0.75f;
 
+        [Header("Closing summary presentation")]
+        [Range(0.1f, 1.5f)] [SerializeField] private float closingFadeSeconds = 0.45f;
+        [Range(0.1f, 1f)] [SerializeField] private float closingItemInterval = 0.4f;
+        [Range(0.2f, 2f)] [SerializeField] private float closingRevenueCountSeconds = 0.8f;
+
         [Header("Narrative AI")]
         [SerializeField] private bool narrativeAIEnabled = true;
         [SerializeField] private string narrativeEndpoint = "https://api.anthropic.com/v1/messages";
@@ -234,6 +239,9 @@ namespace PickAndPlaceShop
         public float NegotiationMaximumBonus => Mathf.Max(NegotiationMinimumBonus,
             Mathf.Clamp(negotiationMaximumBonus, 0f, 0.5f));
         public float NegotiationMarkerCyclesPerSecond => Mathf.Clamp(negotiationMarkerCyclesPerSecond, 0.2f, 3f);
+        public float ClosingFadeSeconds => Mathf.Clamp(closingFadeSeconds, 0.1f, 1.5f);
+        public float ClosingItemInterval => Mathf.Clamp(closingItemInterval, 0.1f, 1f);
+        public float ClosingRevenueCountSeconds => Mathf.Clamp(closingRevenueCountSeconds, 0.2f, 2f);
         public bool NarrativeAIEnabled => narrativeAIEnabled;
         public string NarrativeEndpoint => narrativeEndpoint;
         public string NarrativeModel => narrativeModel;

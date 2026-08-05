@@ -97,15 +97,9 @@ namespace PickAndPlaceShop
 
             if (summaryText != null)
             {
-                bool show = night != null && game.Phase.Value == ShopPhase.Summary;
-                summaryText.gameObject.SetActive(show);
-                if (show)
-                {
-                    summaryText.text = "오늘의 영업 정산\n" +
-                        "방문 손님 " + night.VisitCount.Value + "명  |  구매 손님 " + night.PurchaseCustomerCount.Value + "명  |  구매 포기 " + night.GiveUpCount.Value + "명\n" +
-                        "총판매 " + night.TotalSaleQuantity.Value + "개  |  총매출 " + night.TotalRevenue.Value.ToString("N0") + "원  |  평균 만족도 " + night.AverageSatisfaction + "점\n" +
-                        "평판 변화 " + Signed(night.ReputationDelta.Value) + "  |  최다 판매 상품 " + night.TopProductName.Value;
-                }
+                // The animated closing presenter owns summary visibility. Keeping the old
+                // text panel active underneath caused duplicate, unreadable settlement UI.
+                summaryText.gameObject.SetActive(false);
             }
         }
 
