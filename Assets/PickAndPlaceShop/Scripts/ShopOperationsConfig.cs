@@ -119,6 +119,13 @@ namespace PickAndPlaceShop
         [Header("Daily machine stock")]
         [Range(1, 40)] [SerializeField] private int machineDailyCapsuleCapacity = 20;
 
+        [Header("Optional checkout negotiation")]
+        [Range(1, 5)] [SerializeField] private int negotiationAttemptsPerSale = 3;
+        [Range(0.05f, 0.45f)] [SerializeField] private float negotiationSuccessHalfWidth = 0.22f;
+        [Range(0f, 0.5f)] [SerializeField] private float negotiationMinimumBonus = 0.10f;
+        [Range(0f, 0.5f)] [SerializeField] private float negotiationMaximumBonus = 0.30f;
+        [Range(0.2f, 3f)] [SerializeField] private float negotiationMarkerCyclesPerSecond = 0.75f;
+
         [Header("Narrative AI")]
         [SerializeField] private bool narrativeAIEnabled = true;
         [SerializeField] private string narrativeEndpoint = "https://api.anthropic.com/v1/messages";
@@ -221,6 +228,12 @@ namespace PickAndPlaceShop
         public int AutomationNearFullSlots => Mathf.Min(automationBufferSlots, automationNearFullSlots);
         public bool AutomatedSuccessCountsForDailyGoal => automatedSuccessCountsForDailyGoal;
         public int MachineDailyCapsuleCapacity => Mathf.Clamp(machineDailyCapsuleCapacity, 1, 40);
+        public int NegotiationAttemptsPerSale => Mathf.Clamp(negotiationAttemptsPerSale, 1, 5);
+        public float NegotiationSuccessHalfWidth => Mathf.Clamp(negotiationSuccessHalfWidth, 0.05f, 0.45f);
+        public float NegotiationMinimumBonus => Mathf.Clamp(negotiationMinimumBonus, 0f, 0.5f);
+        public float NegotiationMaximumBonus => Mathf.Max(NegotiationMinimumBonus,
+            Mathf.Clamp(negotiationMaximumBonus, 0f, 0.5f));
+        public float NegotiationMarkerCyclesPerSecond => Mathf.Clamp(negotiationMarkerCyclesPerSecond, 0.2f, 3f);
         public bool NarrativeAIEnabled => narrativeAIEnabled;
         public string NarrativeEndpoint => narrativeEndpoint;
         public string NarrativeModel => narrativeModel;

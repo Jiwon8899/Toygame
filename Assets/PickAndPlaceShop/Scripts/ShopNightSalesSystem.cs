@@ -42,6 +42,10 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> PurchaseCustomerCount = new(0);
         public NetworkVariable<int> GiveUpCount = new(0);
         public NetworkVariable<int> TotalSaleQuantity = new(0);
+        public NetworkVariable<bool> NegotiationActive = new(false);
+        public NetworkVariable<ulong> NegotiationOwner = new(ShopClawRules.NoOccupant);
+        public NetworkVariable<int> NegotiationBasePrice = new(0);
+        public NetworkVariable<int> NegotiationAttemptsRemaining = new(0);
         public NetworkVariable<int> TotalRevenue = new(0);
         public NetworkVariable<int> SatisfactionTotal = new(0);
         public NetworkVariable<int> SatisfactionSamples = new(0);
@@ -66,6 +70,7 @@ namespace PickAndPlaceShop
         private int restockCursor;
         private bool sessionActive;
         private bool checkoutBusy;
+        private ShopCustomerNetwork negotiationCustomer;
 
         public Vector3 ExitPosition => exitPoint != null ? exitPoint.position : transform.position;
         public Vector3 EntrancePosition => entrancePoint != null ? entrancePoint.position : transform.position;
@@ -222,6 +227,86 @@ namespace PickAndPlaceShop
             }
 
             StartCoroutine(ServerCheckoutRoutine(queue[0], 1f));
+        }
+
+        public void ServerBeginNegotiation(ulong requester)
+        {
+            if (!IsServer || ShopNetworkGame.Instance == null) return;
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game.Phase.Value != ShopPhase.Open)
+            {
+                game.ServerSetEvent("흥정은 영업 중 계산을 기다리는 손님에게만 시도할 수 있습니다.");
+                return;
+            }
+            if (checkoutBusy || NegotiationActive.Value)
+            {
+                game.ServerSetEvent("앞 손님의 계산이 진행 중입니다.");
+                return;
+            }
+            while (queue.Count > 0 && (queue[0] == null || !queue[0].IsSpawned)) queue.RemoveAt(0);
+            if (queue.Count == 0)
+            {
+                game.ServerSetEvent("흥정할 손님이 계산대에 없습니다.");
+                QueueCount.Value = 0;
+                return;
+            }
+
+            negotiationCustomer = queue[0];
+            queue.RemoveAt(0);
+            QueueCount.Value = queue.Count;
+            checkoutBusy = true;
+            negotiationCustomer.ServerBeginCheckout(CheckoutPosition);
+            ShopProductDefinition product = FindProduct(negotiationCustomer.DesiredProductId.Value);
+            NegotiationBasePrice.Value = product != null ? GetSalePrice(product) : 0;
+            NegotiationOwner.Value = requester;
+            NegotiationAttemptsRemaining.Value = ShopOperationsConfig.Load()?.NegotiationAttemptsPerSale ?? 3;
+            NegotiationActive.Value = true;
+            game.ServerSetEvent("흥정 시작 · 중앙의 성공 구간에서 E를 눌러 주세요.");
+        }
+
+        public void ServerResolveNegotiation(ulong requester, float markerPosition)
+        {
+            if (!IsServer || !NegotiationActive.Value || requester != NegotiationOwner.Value ||
+                negotiationCustomer == null || !negotiationCustomer.IsSpawned) return;
+            ShopOperationsConfig settings = ShopOperationsConfig.Load();
+            float halfWidth = settings != null ? settings.NegotiationSuccessHalfWidth : 0.22f;
+            float distance = Mathf.Abs(Mathf.Clamp01(markerPosition) - 0.5f);
+            if (distance <= halfWidth)
+            {
+                float quality = 1f - distance / Mathf.Max(0.001f, halfWidth);
+                float minimum = settings != null ? settings.NegotiationMinimumBonus : 0.10f;
+                float maximum = settings != null ? settings.NegotiationMaximumBonus : 0.30f;
+                float bonus = Mathf.Lerp(minimum, maximum, quality);
+                ShopCustomerNetwork customer = negotiationCustomer;
+                ClearNegotiation(false);
+                StartCoroutine(ServerCheckoutRoutine(customer, 1f, 1f + bonus));
+                ShopNetworkGame.Instance.ServerSetEvent("흥정 성공! 판매가가 " +
+                    Mathf.RoundToInt(bonus * 100f) + "% 올랐습니다.");
+                return;
+            }
+
+            NegotiationAttemptsRemaining.Value = Mathf.Max(0, NegotiationAttemptsRemaining.Value - 1);
+            if (NegotiationAttemptsRemaining.Value > 0)
+            {
+                ShopNetworkGame.Instance.ServerSetEvent("흥정 실패 · 남은 기회 " +
+                    NegotiationAttemptsRemaining.Value + "회");
+                return;
+            }
+
+            ShopCustomerNetwork failedCustomer = negotiationCustomer;
+            ClearNegotiation(true);
+            failedCustomer.ServerGiveUp("흥정 결렬");
+            ShopNetworkGame.Instance.ServerSetEvent("흥정 기회를 모두 사용해 거래가 성사되지 않았습니다.");
+        }
+
+        private void ClearNegotiation(bool releaseCheckout)
+        {
+            NegotiationActive.Value = false;
+            NegotiationOwner.Value = ShopClawRules.NoOccupant;
+            NegotiationBasePrice.Value = 0;
+            NegotiationAttemptsRemaining.Value = 0;
+            negotiationCustomer = null;
+            if (releaseCheckout) checkoutBusy = false;
         }
 
         public bool ServerTryStaffCheckout(float durationMultiplier)
@@ -579,7 +664,8 @@ namespace PickAndPlaceShop
             }
         }
 
-        private IEnumerator ServerCheckoutRoutine(ShopCustomerNetwork customer, float durationMultiplier)
+        private IEnumerator ServerCheckoutRoutine(ShopCustomerNetwork customer, float durationMultiplier,
+            float salePriceMultiplier = 1f)
         {
             checkoutBusy = true;
             queue.Remove(customer);
@@ -610,6 +696,7 @@ namespace PickAndPlaceShop
             if (product != null && ShopLiveOperationsNetwork.Instance != null)
                 price = Mathf.RoundToInt(price * ShopLiveOperationsNetwork.Instance
                     .RegularPriceMultiplier(customer.CustomerId));
+            price = Mathf.Max(0, Mathf.RoundToInt(price * Mathf.Max(1f, salePriceMultiplier)));
             int coins = ShopNetworkGame.Instance.Coins.Value;
             int sold = ShopNetworkGame.Instance.SoldToday.Value;
             bool completed = ShopSaleProcessor.TryComplete(ledger, customer.NetworkObjectId, price,

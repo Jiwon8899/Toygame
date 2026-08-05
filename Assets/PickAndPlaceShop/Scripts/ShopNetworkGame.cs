@@ -237,6 +237,29 @@ namespace PickAndPlaceShop
             InteractRpc(action);
         }
 
+        public void RequestNegotiationStart()
+        {
+            if (IsSpawned) NegotiationStartRpc();
+        }
+
+        public void RequestNegotiationResolve(float markerPosition)
+        {
+            if (IsSpawned) NegotiationResolveRpc(Mathf.Clamp01(markerPosition));
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void NegotiationStartRpc(RpcParams rpcParams = default)
+        {
+            ShopNightSalesSystem.Instance?.ServerBeginNegotiation(rpcParams.Receive.SenderClientId);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void NegotiationResolveRpc(float markerPosition, RpcParams rpcParams = default)
+        {
+            ShopNightSalesSystem.Instance?.ServerResolveNegotiation(rpcParams.Receive.SenderClientId,
+                markerPosition);
+        }
+
         public void RequestUpgradePurchase(ShopUpgradeCategory category)
         {
             if (!IsSpawned) return;

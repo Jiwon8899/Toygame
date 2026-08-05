@@ -77,7 +77,12 @@ namespace PickAndPlaceShop
             UpdateTarget();
             if (currentTarget != null && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
-                currentTarget.Interact();
+                bool shiftHeld = Keyboard.current.leftShiftKey.isPressed ||
+                                 Keyboard.current.rightShiftKey.isPressed;
+                if (shiftHeld && currentTarget.Action == ShopAction.Register && ShopNetworkGame.Instance != null)
+                    ShopNetworkGame.Instance.RequestNegotiationStart();
+                else
+                    currentTarget.Interact();
             }
         }
 
@@ -120,7 +125,10 @@ namespace PickAndPlaceShop
             }
 
             LocalPrompt = currentTarget != null
-                ? "[E] " + currentTarget.Prompt
+                ? currentTarget.Action == ShopAction.Register && ShopNetworkGame.Instance != null &&
+                  ShopNetworkGame.Instance.Phase.Value == ShopPhase.Open
+                    ? "[E] 즉시 판매 · [Shift+E] 흥정 시도"
+                    : "[E] " + currentTarget.Prompt
                 : string.Empty;
         }
 
