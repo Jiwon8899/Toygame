@@ -135,7 +135,11 @@ namespace PickAndPlaceShop
         private void Update()
         {
             AttachGame();
-            if (observedGame == null || config == null) return;
+            bool gameplayActive = observedGame != null &&
+                                  UnityEngine.SceneManagement.SceneManager.GetActiveScene().name ==
+                                  ShopLaunchContext.CompleteFlowScene;
+            if (hotbarCanvas != null) hotbarCanvas.enabled = gameplayActive;
+            if (!gameplayActive || config == null) return;
             if (shelf == null)
             {
                 shelf = FindFirstObjectByType<ShopDisplayShelfAnchors>();
@@ -737,6 +741,7 @@ namespace PickAndPlaceShop
             hotbarCanvas = canvasObject.GetComponent<Canvas>();
             hotbarCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
             hotbarCanvas.sortingOrder = 1450;
+            hotbarCanvas.enabled = false;
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
