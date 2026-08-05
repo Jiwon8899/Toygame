@@ -302,8 +302,13 @@ namespace PickAndPlaceShop
                 OccupantClientId.Value != NetworkManager.Singleton.LocalClientId) return;
             ShopProductDefinition product = config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value);
             if (product == null) return;
+            List<ShopProductDefinition> products = new() { product };
+            if (CurrentDrawHasLastPrize.Value && config.LastPrizeDefinition != null)
+                products.Add(config.LastPrizeDefinition);
+            if (CurrentDrawHasCeiling.Value && config.CeilingPrizeDefinition != null)
+                products.Add(config.CeilingPrizeDefinition);
             presentedAttempt = AttemptId.Value;
-            ShopCapsuleOpeningPresenter.Show("쿠지 결과 · " + ResultRank.Value + "상", product,
+            ShopCapsuleOpeningPresenter.ShowBatch("쿠지 결과 · " + ResultRank.Value + "상", products,
                 ResultAccent(ResultRank.Value), ResultStorageMessage.Value.ToString());
             Debug.Log("[Arcade Result UI] kuji shown attempt=" + AttemptId.Value +
                       " product=" + product.DisplayName, this);

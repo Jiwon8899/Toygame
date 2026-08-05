@@ -127,6 +127,33 @@ namespace PickAndPlaceShop.Editor
                       "shader=Universal Render Pipeline/Lit");
         }
 
+        [MenuItem("Tools/Pick And Place Shop/Regenerate Product Icons From Front")]
+        public static void RegenerateIconsFromFront()
+        {
+            EnsureFolder(IconFolder);
+            ShopProductVisualConfig config = EnsureConfig();
+            ShopProductDefinition[] products = AssetDatabase.FindAssets("t:ShopProductDefinition",
+                    new[] { ProductFolder })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(AssetDatabase.LoadAssetAtPath<ShopProductDefinition>)
+                .Where(product => product != null && product.VisualPrefab != null)
+                .OrderBy(product => product.ProductId)
+                .ToArray();
+            for (int index = 0; index < products.Length; index++)
+            {
+                EditorUtility.DisplayProgressBar("상품 정면 아이콘", products[index].DisplayName,
+                    index / (float)Mathf.Max(1, products.Length));
+                Sprite icon = RenderIcon(products[index].ProductId, products[index].VisualPrefab,
+                    products[index].Tint, config.ThumbnailResolution);
+                products[index].EditorConfigureVisual(products[index].VisualPrefab, icon, products[index].Tint);
+                EditorUtility.SetDirty(products[index]);
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            EditorUtility.ClearProgressBar();
+            Debug.Log("[ProductIcons] COMPLETE front-facing=" + products.Length);
+        }
+
         private static GameObject BuildWrapper(GameObject source, int index, float targetSize,
             out int unreadableMeshes)
         {
@@ -323,7 +350,7 @@ namespace PickAndPlaceShop.Editor
             camera.orthographicSize = Mathf.Max(0.06f,
                 Mathf.Max(bounds.extents.x, bounds.extents.y) * 1.28f);
             camera.cullingMask = 1 << PreviewLayer;
-            camera.transform.position = bounds.center + new Vector3(0.45f, 0.3f, -0.8f);
+            camera.transform.position = bounds.center + new Vector3(0.45f, 0.3f, 0.8f);
             camera.transform.LookAt(bounds.center);
             RenderTexture render = RenderTexture.GetTemporary(resolution, resolution, 24,
                 RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB, 4);

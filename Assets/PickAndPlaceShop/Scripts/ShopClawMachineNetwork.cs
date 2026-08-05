@@ -64,6 +64,8 @@ namespace PickAndPlaceShop
             new(new FixedString64Bytes(""));
         public NetworkVariable<int> LastAwardedRarity = new(0);
         public NetworkVariable<Color> LastAwardedCapsuleColor = new(Color.white);
+        public NetworkVariable<int> LastAwardedProductId = new(-1);
+        public NetworkVariable<int> LastAwardedDestination = new((int)ShopContainerKind.PersonalInventory);
         public NetworkVariable<FixedString128Bytes> ResultMessage =
             new(new FixedString128Bytes("사용 가능"));
 
@@ -881,6 +883,8 @@ namespace PickAndPlaceShop
                 product != null ? product.DisplayName : prize.VisualDisplayName.Value.ToString());
             LastAwardedRarity.Value = product != null ? (int)product.Rarity : 0;
             LastAwardedCapsuleColor.Value = prize.VisualColor.Value;
+            LastAwardedProductId.Value = product != null ? product.ProductId : -1;
+            LastAwardedDestination.Value = (int)destination;
             AwardedCount.Value++;
             LastResultSuccess.Value = true;
             ResultMessage.Value = new FixedString128Bytes(destination == ShopContainerKind.PersonalInventory
@@ -897,10 +901,13 @@ namespace PickAndPlaceShop
         private void OnAwardedCountChanged(int previous, int current)
         {
             if (current <= previous) return;
-            ShopCapsuleOpeningPresenter.Show(
-                LastAwardedName.Value.ToString(),
-                (ShopProductRarity)Mathf.Clamp(LastAwardedRarity.Value, 0, 3),
-                LastAwardedCapsuleColor.Value);
+            ShopProductDefinition product = ShopProductVisuals.Find(LastAwardedProductId.Value);
+            if (product == null) return;
+            ShopContainerKind destination = (ShopContainerKind)LastAwardedDestination.Value;
+            ShopCapsuleOpeningPresenter.Show("뽑기 결과", product, LastAwardedCapsuleColor.Value,
+                destination == ShopContainerKind.PersonalInventory
+                    ? "개인 인벤토리에 보관했습니다."
+                    : "공용 창고에 보관했습니다.");
         }
 
         private void HandleDayAndPhase(float dt)
