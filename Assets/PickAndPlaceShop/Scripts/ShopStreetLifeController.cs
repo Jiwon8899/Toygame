@@ -84,28 +84,33 @@ namespace PickAndPlaceShop
         {
             if (world == null || appearances == null) return;
             Vector3 origin = ShopNightSalesSystem.Instance.RoadsidePosition;
-            float lane = world.PedestrianLaneSpacing;
+            // 보도 중심 오프셋. 차도는 Z -5~5, 보도는 Z ±5.1~7.1 이므로 ±6.1 이 보도 한가운데다.
+            const float Walk = 6.1f;
             routes = new[]
             {
-                new[] { origin + new Vector3(-12f, 0f, -lane), origin + new Vector3(12f, 0f, -lane) },
-                new[] { origin + new Vector3(12f, 0f, lane), origin + new Vector3(-12f, 0f, lane) },
+                // 남쪽 보도: 서 -> 동
+                new[] { origin + new Vector3(5f, 0f, -Walk), origin + new Vector3(58f, 0f, -Walk) },
+                // 북쪽 보도: 동 -> 서 (상점 앞을 지나감)
+                new[] { origin + new Vector3(58f, 0f, Walk + 0.2f), origin + new Vector3(5f, 0f, Walk + 0.2f) },
+                // 남쪽 보도 순회
                 new[]
                 {
-                    origin + new Vector3(-10f, 0f, -lane * 1.75f),
-                    origin + new Vector3(0f, 0f, -lane * 1.95f),
-                    origin + new Vector3(10f, 0f, -lane * 1.75f),
-                    origin + new Vector3(0f, 0f, lane * 1.95f)
+                    origin + new Vector3(9f, 0f, -Walk - 0.35f),
+                    origin + new Vector3(27f, 0f, -Walk + 0.25f),
+                    origin + new Vector3(47f, 0f, -Walk - 0.35f),
+                    origin + new Vector3(27f, 0f, -Walk + 0.45f)
                 }
             };
+            // 거리 데코도 보도 위로 (기존에는 차도 한복판에 생성되고 있었다)
             for (int i = 0; i < 4; i++)
             {
-                float x = -10f + i * 6.5f;
-                CreatePlanter(origin + new Vector3(x, 0f, 3f));
-                if (i < 3) CreateLamp(origin + new Vector3(x + 2.7f, 0f, -3f));
+                float x = 31f + i * 7.5f;
+                CreatePlanter(origin + new Vector3(x, 0f, Walk + 0.45f));
+                if (i < 3) CreateLamp(origin + new Vector3(x + 3.7f, 0f, Walk + 0.45f));
             }
-            CreateBench(origin + new Vector3(-6f, 0f, 3.2f));
-            CreateBench(origin + new Vector3(7f, 0f, 3.2f));
-            CreateStreetSign(origin + new Vector3(0f, 0f, 3.4f));
+            CreateBench(origin + new Vector3(24f, 0f, Walk + 0.45f));
+            CreateBench(origin + new Vector3(64f, 0f, Walk + 0.45f));
+            CreateStreetSign(origin + new Vector3(17f, 0f, Walk + 0.45f));
 
             GameObject[] pool = appearances.AppearancePrefabs;
             int count = Mathf.Min(world.MaximumPedestrians, pool?.Length ?? 0);
