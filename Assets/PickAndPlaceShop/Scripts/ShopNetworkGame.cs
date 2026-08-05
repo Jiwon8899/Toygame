@@ -214,6 +214,31 @@ namespace PickAndPlaceShop
             PurchaseUpgradeRpc(category);
         }
 
+        public void RequestContainerMove(ShopContainerKind sourceContainer, int sourceSlot,
+            ShopContainerKind destinationContainer, int destinationSlot)
+        {
+            if (!IsSpawned) return;
+            MoveContainerSlotRpc(sourceContainer, sourceSlot, destinationContainer, destinationSlot);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void MoveContainerSlotRpc(ShopContainerKind sourceContainer, int sourceSlot,
+            ShopContainerKind destinationContainer, int destinationSlot, RpcParams rpcParams = default)
+        {
+            ulong requester = rpcParams.Receive.SenderClientId;
+            if (!ServerTryMoveSlot(requester, sourceContainer, sourceSlot,
+                    destinationContainer, destinationSlot, out string message))
+            {
+                ServerSetEvent(string.IsNullOrWhiteSpace(message)
+                    ? "상품을 옮길 수 없습니다." : message);
+            }
+            else if (sourceContainer == ShopContainerKind.SharedDisplay ||
+                     destinationContainer == ShopContainerKind.SharedDisplay)
+            {
+                ShopNightSalesSystem.Instance?.ServerRefreshDisplayLedger();
+            }
+        }
+
         public int GetUpgradeLevel(ShopUpgradeCategory category) => category switch
         {
             ShopUpgradeCategory.Player => PlayerUpgradeLevel.Value,
@@ -927,6 +952,110 @@ namespace PickAndPlaceShop
             SyncLegacyContainerCounts();
             return true;
         }
+
+        public bool ServerTryMoveSlot(ulong requester, ShopContainerKind sourceContainer,
+            int sourceSlot, ShopContainerKind destinationContainer, int destinationSlot,
+            out string message)
+        {
+            message = string.Empty;
+            if (!IsServer)
+            {
+                message = "호스트에서만 상품을 이동할 수 있습니다.";
+                return false;
+            }
+            if (!IsPlayerManagedContainer(sourceContainer) ||
+                !IsPlayerManagedContainer(destinationContainer))
+            {
+                message = "자동화 수집함은 장치 관리 화면에서 옮겨 주세요.";
+                return false;
+            }
+
+            ulong sourceOwner = sourceContainer == ShopContainerKind.PersonalInventory
+                ? requester : ShopContainerRules.SharedOwner;
+            ulong destinationOwner = destinationContainer == ShopContainerKind.PersonalInventory
+                ? requester : ShopContainerRules.SharedOwner;
+            int sourceCapacity = CapacityFor(sourceContainer);
+            int destinationCapacity = CapacityFor(destinationContainer);
+            if (sourceSlot < 0 || sourceSlot >= sourceCapacity || destinationSlot < 0 ||
+                destinationSlot >= destinationCapacity ||
+                sourceContainer == destinationContainer && sourceSlot == destinationSlot)
+            {
+                message = "올바르지 않은 슬롯입니다.";
+                return false;
+            }
+
+            int sourceIndex = FindContainerSlot(sourceOwner, sourceContainer, sourceSlot);
+            if (sourceIndex < 0)
+            {
+                message = "원본 슬롯이 비어 있습니다.";
+                return false;
+            }
+            int destinationIndex = FindContainerSlot(destinationOwner, destinationContainer, destinationSlot);
+            ShopContainerItem source = ItemContainers[sourceIndex];
+
+            if (destinationIndex < 0)
+            {
+                source.OwnerClientId = destinationOwner;
+                source.Container = destinationContainer;
+                source.SlotIndex = destinationSlot;
+                ItemContainers[sourceIndex] = source;
+                SyncLegacyContainerCounts();
+                message = "상품을 옮겼습니다.";
+                return true;
+            }
+
+            ShopContainerItem destination = ItemContainers[destinationIndex];
+            if (source.ProductId == destination.ProductId)
+            {
+                int available = Mathf.Max(0, destination.MaxStack - destination.Quantity);
+                int moved = Mathf.Min(source.Quantity, available);
+                if (moved <= 0)
+                {
+                    message = "이 스택은 이미 가득 찼습니다.";
+                    return false;
+                }
+                source.Quantity -= moved;
+                destination.Quantity += moved;
+                ItemContainers[destinationIndex] = destination;
+                if (source.Quantity <= 0) ItemContainers.RemoveAt(sourceIndex);
+                else ItemContainers[sourceIndex] = source;
+                SyncLegacyContainerCounts();
+                message = moved + "개를 합쳤습니다.";
+                return true;
+            }
+
+            // Different products swap atomically. No list mutation is made until every
+            // permission and capacity check above has succeeded, so a rejected drag rolls back.
+            ShopContainerItem swappedSource = source;
+            swappedSource.OwnerClientId = destinationOwner;
+            swappedSource.Container = destinationContainer;
+            swappedSource.SlotIndex = destinationSlot;
+            ShopContainerItem swappedDestination = destination;
+            swappedDestination.OwnerClientId = sourceOwner;
+            swappedDestination.Container = sourceContainer;
+            swappedDestination.SlotIndex = sourceSlot;
+            ItemContainers[sourceIndex] = swappedDestination;
+            ItemContainers[destinationIndex] = swappedSource;
+            SyncLegacyContainerCounts();
+            message = "두 상품의 위치를 바꿨습니다.";
+            return true;
+        }
+
+        private int FindContainerSlot(ulong owner, ShopContainerKind container, int slot)
+        {
+            for (int i = 0; i < ItemContainers.Count; i++)
+            {
+                ShopContainerItem item = ItemContainers[i];
+                if (ShopContainerRules.BelongsTo(item, owner, container) && item.SlotIndex == slot)
+                    return i;
+            }
+            return -1;
+        }
+
+        private static bool IsPlayerManagedContainer(ShopContainerKind container) =>
+            container == ShopContainerKind.PersonalInventory ||
+            container == ShopContainerKind.SharedStorage ||
+            container == ShopContainerKind.SharedDisplay;
 
         public bool ServerTrySplitStack(ulong owner, ShopContainerKind container, int slotIndex,
             int amount, out ShopContainerItem split)
