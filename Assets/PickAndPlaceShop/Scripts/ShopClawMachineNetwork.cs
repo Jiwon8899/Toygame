@@ -179,6 +179,8 @@ namespace PickAndPlaceShop
             ServerRefillPrizes();
             return true;
         }
+
+        public Vector2 GetScoopVerificationTarget() => FindQaSuccessTarget();
 #endif
 
 #if UNITY_EDITOR
@@ -417,7 +419,7 @@ namespace PickAndPlaceShop
             float dt = Time.fixedDeltaTime;
             stateElapsed += dt;
             HandleDayAndPhase(dt);
-            if (State.Value == ShopClawMachineState.Idle)
+            if (State.Value == ShopClawMachineState.Idle || State.Value == ShopClawMachineState.Cooldown)
             {
                 recoveryCheckElapsed += dt;
                 if (recoveryCheckElapsed >= 1f)
@@ -1240,6 +1242,9 @@ namespace PickAndPlaceShop
                 local.z = Mathf.Clamp(local.z, config.ZBounds.x + 0.05f,
                     config.ZBounds.y - 0.05f);
                 Vector3 position = transform.TransformPoint(local);
+                if (TryResolvePlayfieldFloor(position, out float restoredFloorY))
+                    position.y = Mathf.Max(position.y, restoredFloorY +
+                        Mathf.Max(0.16f, definition.Size * 0.48f) + 0.015f);
                 Quaternion rotation = transform.rotation * item.localRotation;
                 GameObject instance = Instantiate(prizePrefab, position, rotation);
                 NetworkObject networkObject = instance.GetComponent<NetworkObject>();
@@ -1349,24 +1354,45 @@ namespace PickAndPlaceShop
                 float jitterX = (float)(prizeRandom.NextDouble() * 2.0 - 1.0) * 0.16f;
                 float jitterZ = (float)(prizeRandom.NextDouble() * 2.0 - 1.0) * 0.16f;
                 Vector3 candidate = spawn.position + transform.right * jitterX + transform.forward * jitterZ;
+                if (TryResolvePlayfieldFloor(candidate, out float floorY))
+                    candidate.y = Mathf.Max(candidate.y, floorY + radius + 0.015f);
                 Vector3 candidateLocal = transform.InverseTransformPoint(candidate);
                 if (config.SpawnGuardEnabled)
                 {
                     float halfWidth = config.SpawnGuardWidth * 0.5f - radius;
                     float halfDepth = config.SpawnGuardDepth * 0.5f - radius * 0.35f;
-                    // Fill the guarded drop zone in three non-overlapping columns and
-                    // vertical tiers.  Randomly clamping all spawn points into this small
-                    // zone previously collapsed them to the same edge and skipped most of
-                    // the requested pool.  Vertical tiers are collision-free at creation
-                    // and settle naturally onto the shallow feeder afterwards.
                     int slot = occupied.Count;
-                    int column = slot % 3;
-                    int tier = slot / 3;
-                    candidateLocal.x = Mathf.Lerp(-halfWidth, halfWidth, column * 0.5f);
-                    candidateLocal.z = Mathf.Clamp(config.SpawnGuardCenterZ,
-                        config.SpawnGuardCenterZ - halfDepth,
-                        config.SpawnGuardCenterZ + halfDepth);
-                    candidateLocal.y += tier * (radius * 2f + clearance);
+                    const int guardCapacity = 6;
+                    if (slot < guardCapacity)
+                    {
+                        // Only the newest six capsules occupy the feeder.  More vertical
+                        // tiers exceeded the machine's playable height and were recovered
+                        // back into the same invalid tier forever.
+                        int column = slot % 3;
+                        int tier = slot / 3;
+                        candidateLocal.x = Mathf.Lerp(-halfWidth, halfWidth, column * 0.5f);
+                        candidateLocal.z = Mathf.Clamp(config.SpawnGuardCenterZ,
+                            config.SpawnGuardCenterZ - halfDepth,
+                            config.SpawnGuardCenterZ + halfDepth);
+                        candidateLocal.y += tier * (radius * 2f + clearance);
+                    }
+                    else
+                    {
+                        // Initial pool fill belongs on the playable field, not in a tall
+                        // feeder tower.  A 4x2 grid plus one shallow second layer holds the
+                        // remaining default pool while keeping every capsule below 3 m.
+                        int fieldSlot = slot - guardCapacity;
+                        int layer = fieldSlot / 8;
+                        int gridSlot = fieldSlot % 8;
+                        int column = gridSlot % 4;
+                        int row = gridSlot / 4;
+                        float guardFront = config.SpawnGuardCenterZ - config.SpawnGuardDepth * 0.5f;
+                        candidateLocal.x = Mathf.Lerp(config.XBounds.x + radius,
+                            config.XBounds.y - radius, column / 3f);
+                        candidateLocal.z = Mathf.Lerp(config.ZBounds.x + radius,
+                            guardFront - radius, row);
+                        candidateLocal.y += layer * (radius * 2f + clearance);
+                    }
                 }
                 else
                 {
@@ -1412,6 +1438,25 @@ namespace PickAndPlaceShop
             return false;
         }
 
+        private bool TryResolvePlayfieldFloor(Vector3 sample, out float floorY)
+        {
+            floorY = float.NegativeInfinity;
+            Vector3 up = transform.up;
+            RaycastHit[] hits = Physics.RaycastAll(sample + up * 2f, -up, 4f,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider == null || hit.collider.GetComponentInParent<ShopClawPrizeNetwork>() != null ||
+                    scoopRig != null && hit.collider.transform.IsChildOf(scoopRig.transform) ||
+                    Vector3.Dot(hit.normal, up) < 0.65f) continue;
+                float height = Vector3.Dot(hit.point, up);
+                float sampleHeight = Vector3.Dot(sample, up);
+                if (height < sampleHeight - 0.35f || height > sampleHeight + 1.5f || height <= floorY) continue;
+                floorY = height;
+            }
+            return !float.IsNegativeInfinity(floorY);
+        }
+
         private int FindDefinitionIndex(ShopClawPrizeDefinition target)
         {
             if (prizeDefinitions == null) return 0;
@@ -1428,6 +1473,7 @@ namespace PickAndPlaceShop
                 if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
                 Vector3 local = transform.InverseTransformPoint(prize.transform.position);
                 bool outside = ShopClawRules.IsPrizeOutsidePlayableArea(local, config.XBounds, config.ZBounds);
+                bool severeVerticalEscape = local.y < -0.5f || local.y > 4.5f;
                 Vector3 chuteLocal = chuteDropPoint != null ? chuteDropPoint.localPosition : Vector3.zero;
                 bool stuckAtChuteLip = Mathf.Abs(local.x - chuteLocal.x) < 0.72f &&
                                       Mathf.Abs(local.z - chuteLocal.z) < 0.62f &&
@@ -1443,7 +1489,7 @@ namespace PickAndPlaceShop
                     ? elapsed + 1f
                     : 1f;
                 abnormalStuckSeconds[prize.NetworkObjectId] = stuck;
-                if (stuck < config.AntiStuckDelay) continue;
+                if (!severeVerticalEscape && stuck < config.AntiStuckDelay) continue;
 
                 abnormalStuckSeconds.Remove(prize.NetworkObjectId);
                 if (outside)
@@ -1463,6 +1509,26 @@ namespace PickAndPlaceShop
         private void ServerReturnPrizeToField(ShopClawPrizeNetwork prize)
         {
             if (prize == null || prizeSpawnPoints == null || prizeSpawnPoints.Length == 0) return;
+            ShopClawPrizeDefinition definition = FindDefinitionByProductId(prize.ProductId.Value);
+            if (definition != null)
+            {
+                ShopClawPrizePool pool = config != null ? config.PrizePool : null;
+                int attempts = pool != null ? pool.SpawnAttemptsPerPrize : 8;
+                float clearance = pool != null ? pool.SpawnClearance : 0.035f;
+                var occupied = new List<(Vector3 position, float radius)>();
+                foreach (ShopClawPrizeNetwork other in activePrizes)
+                {
+                    if (other == null || other == prize || !other.IsSpawned || other.Awarded.Value) continue;
+                    occupied.Add((other.transform.position,
+                        Mathf.Max(0.16f, other.VisualSize.Value * 0.48f) + clearance));
+                }
+                if (TryFindPrizeSpawn(definition, attempts, clearance, occupied,
+                        out Vector3 safePosition, out Quaternion safeRotation))
+                {
+                    prize.ServerReturnToField(safePosition, safeRotation);
+                    return;
+                }
+            }
             Vector3 local = transform.InverseTransformPoint(prize.transform.position);
             Transform nearest = prizeSpawnPoints[0];
             float nearestDistance = float.MaxValue;
@@ -1474,7 +1540,19 @@ namespace PickAndPlaceShop
                 nearestDistance = distance;
                 nearest = spawn;
             }
-            prize.ServerReturnToField(nearest.position + Vector3.up * 0.12f, nearest.rotation);
+            // A full field can exhaust the non-overlap retries.  The old fallback
+            // placed the capsule centre only 12 cm above the authored point, which
+            // is below the radius of normal capsules and could leave the body under
+            // the playfield.  Resolve the actual surface and keep the complete body
+            // above it even when this final, overlapping fallback is necessary.
+            float fallbackRadius = Mathf.Max(0.16f, prize.VisualSize.Value * 0.48f);
+            Vector3 fallbackPosition = nearest.position;
+            if (TryResolvePlayfieldFloor(fallbackPosition, out float fallbackFloorY))
+                fallbackPosition.y = Mathf.Max(fallbackPosition.y,
+                    fallbackFloorY + fallbackRadius + 0.025f);
+            else
+                fallbackPosition += transform.up * (fallbackRadius + 0.025f);
+            prize.ServerReturnToField(fallbackPosition, nearest.rotation);
         }
 
         private IEnumerator ServerDespawnAwardedPrize(ShopClawPrizeNetwork prize)
@@ -2066,8 +2144,26 @@ namespace PickAndPlaceShop
             }
 
             if (State.Value != ShopClawMachineState.Descend || !blocked) return;
-            scoopBlockedDuringDescent = true;
             Vector3 actualLocal = transform.InverseTransformPoint(scoopRig.Body.position);
+            if (!ShopClawRules.IsDescentTerminalContact(actualLocal.y, config.DropHeight,
+                    config.ScoopDiameter, hit.normal, transform.up))
+            {
+                // A side wall or cabinet glass is not the playfield floor. Nudge the rail
+                // inward and keep descending instead of starting the scoop in mid-air.
+                Vector3 localNormal = transform.InverseTransformDirection(hit.normal);
+                Vector2 correction = new(localNormal.x, localNormal.z);
+                if (correction.sqrMagnitude < 0.0001f) correction = -RailPosition.Value;
+                if (correction.sqrMagnitude > 0.0001f)
+                    RailPosition.Value = ShopClawRules.ClampRail(
+                        RailPosition.Value + correction.normalized * 0.08f,
+                        config.XBounds, config.ScoopZBounds);
+                if (!wasBlocked)
+                    Debug.Log("[ScoopPhysics] SIDE_BLOCK_RECOVERY machine=" + config.MachineId +
+                              " blocker=" + (hit.collider != null ? hit.collider.name : "none") +
+                              " height=" + actualLocal.y.ToString("F3"), this);
+                return;
+            }
+            scoopBlockedDuringDescent = true;
             ClawHeight.Value = Mathf.Max(actualLocal.y, config.DropHeight);
             if (wasBlocked) return;
 
@@ -2446,6 +2542,7 @@ namespace PickAndPlaceShop
                 if (prize == null || !prize.IsSpawned || prize.Awarded.Value ||
                     prize.MachineNetworkObjectId.Value != NetworkObjectId) continue;
                 Vector3 local = transform.InverseTransformPoint(GetPrizePhysicalCenter(prize));
+                if (local.y < 0.55f || local.y > 3f) continue;
                 Vector2 candidate = new(local.x, local.z);
                 Vector2 clamped = ShopClawRules.ClampRail(candidate, config.XBounds, config.ZBounds);
                 if ((candidate - clamped).sqrMagnitude > 0.01f) continue;

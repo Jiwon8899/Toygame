@@ -57,6 +57,14 @@ namespace PickAndPlaceShop
                 Mathf.Clamp(position.y, Mathf.Min(zBounds.x, zBounds.y), Mathf.Max(zBounds.x, zBounds.y)));
         }
 
+        public static bool IsDescentTerminalContact(float actualHeight, float dropHeight,
+            float scoopDiameter, Vector3 contactNormal, Vector3 machineUp)
+        {
+            float nearFloorHeight = dropHeight + Mathf.Max(0.18f, scoopDiameter * 0.3f);
+            float upwardSurface = Vector3.Dot(contactNormal.normalized, machineUp.normalized);
+            return actualHeight <= nearFloorHeight || upwardSurface >= 0.45f;
+        }
+
         public static bool CanAwardChutePrize(ShopClawMachineState state)
         {
             return state == ShopClawMachineState.Release || state == ShopClawMachineState.Judge ||

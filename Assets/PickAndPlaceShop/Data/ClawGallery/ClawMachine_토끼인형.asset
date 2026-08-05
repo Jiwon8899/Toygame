@@ -22,8 +22,8 @@ MonoBehaviour:
   zBounds: {x: -1.18, y: 1.18}
   topHeight: 3.2
   dropHeight: 0.95
-  descendSpeed: 0.525
-  liftSpeed: 1.25
+  descendSpeed: 0.588
+  liftSpeed: 1.4
   returnSpeed: 1.2
   closeDuration: 1.625
   releaseDuration: 1.4
@@ -43,13 +43,13 @@ MonoBehaviour:
   scoopOpenRimHeight: 0.04
   scoopLipCloseDuration: 0.55
   scrapeDistance: 0.78
-  scrapeSpeed: 0.48
+  scrapeSpeed: 0.538
   scrapeTiltAngle: 8
   scoopPivotHeight: 0.55
   scoopDigAngle: 28
   scoopCarryAngle: -10
   scoopMaxAngularSpeed: 42.5
-  scoopAngularAcceleration: 112.5
+  scoopAngularAcceleration: 126
   scoopRotationSweepStep: 3
   pourAngle: 62
   sweepSkin: 0.006

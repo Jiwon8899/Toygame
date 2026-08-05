@@ -293,6 +293,17 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
+        public void ScoopDescent_RejectsHighSideWallButAcceptsFloorContact()
+        {
+            Assert.IsFalse(ShopClawRules.IsDescentTerminalContact(3.1675f, 0.98f, 1.535f,
+                Vector3.right, Vector3.up), "High cabinet glass must not start the scoop.");
+            Assert.IsTrue(ShopClawRules.IsDescentTerminalContact(1.26f, 0.98f, 1.535f,
+                Vector3.right, Vector3.up), "A low funnel contact is a safe descent limit.");
+            Assert.IsTrue(ShopClawRules.IsDescentTerminalContact(2.2f, 0.98f, 1.535f,
+                Vector3.up, Vector3.up), "An upward-facing floor surface is terminal.");
+        }
+
+        [Test]
         public void DisplayShelfAnchors_AreGeneratedFromShelfSurfacesNotWorldFloor()
         {
             GameObject root = new("Shared Display Shelves");
