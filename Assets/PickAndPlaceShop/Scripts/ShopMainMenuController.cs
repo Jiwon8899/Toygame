@@ -41,6 +41,7 @@ namespace PickAndPlaceShop
 
         private void Awake()
         {
+            NormalizeTitlePresentation();
             ShopInputModeManager.Push(this, ShopInputMode.Menu);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -65,6 +66,40 @@ namespace PickAndPlaceShop
             RegisterSaveChoiceButtons();
             PopulateResolutionDropdown();
             Show("MainPanel", "BtnMainStart");
+        }
+
+        private void NormalizeTitlePresentation()
+        {
+            Canvas canvas = GetComponentInChildren<Canvas>(true);
+            if (canvas != null)
+            {
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.overrideSorting = true;
+                canvas.sortingOrder = 100;
+                canvas.targetDisplay = 0;
+                canvas.transform.localScale = Vector3.one;
+
+                GameObject veil = FindObject("MenuVeil");
+                if (veil != null && veil.transform.parent != canvas.transform)
+                {
+                    veil.transform.SetParent(canvas.transform, false);
+                    veil.transform.SetAsFirstSibling();
+                }
+                if (veil != null && veil.transform is RectTransform veilRect)
+                {
+                    veilRect.anchorMin = Vector2.zero;
+                    veilRect.anchorMax = Vector2.one;
+                    veilRect.offsetMin = Vector2.zero;
+                    veilRect.offsetMax = Vector2.zero;
+                }
+            }
+
+            Camera menuCamera = GetComponentInChildren<Camera>(true);
+            if (menuCamera != null)
+            {
+                menuCamera.clearFlags = CameraClearFlags.SolidColor;
+                menuCamera.backgroundColor = new Color(0.035f, 0.055f, 0.08f, 1f);
+            }
         }
 
         private void OnDestroy()

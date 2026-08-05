@@ -40,11 +40,7 @@ namespace PickAndPlaceShop
             if (!visible) return;
 
             stateLabel.text = StateText(customer.State.Value) + "\n" + customer.DesiredProductName.Value;
-            Camera camera = Camera.main;
-            if (camera != null)
-            {
-                stateLabel.transform.rotation = Quaternion.LookRotation(stateLabel.transform.position - camera.transform.position);
-            }
+            ShopWorldFacingUtility.FaceCamera(stateLabel.transform, Camera.main);
 
             if (bodyRenderer != null && appliedType != customer.CustomerType.Value)
             {

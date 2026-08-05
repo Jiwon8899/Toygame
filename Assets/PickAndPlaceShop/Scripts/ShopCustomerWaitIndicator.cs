@@ -96,9 +96,7 @@ namespace PickAndPlaceShop
                 if (entry.Root == null) continue;
 
                 entry.Root.transform.position = entry.Customer.transform.position + new Vector3(0f, 2.15f, 0f);
-                if (cam != null)
-                    entry.Root.transform.rotation = Quaternion.LookRotation(
-                        entry.Root.transform.position - cam.transform.position, Vector3.up);
+                ShopWorldFacingUtility.FaceCamera(entry.Root.transform, cam);
 
                 if (entry.Label != null)
                 {

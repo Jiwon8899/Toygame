@@ -65,12 +65,7 @@ namespace PickAndPlaceShop
 
         private void LateUpdate()
         {
-            Camera camera = Camera.main;
-            if (camera != null)
-            {
-                Vector3 direction = transform.position - camera.transform.position;
-                if (direction.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(direction);
-            }
+            ShopWorldFacingUtility.FaceCamera(transform, Camera.main);
             if (Time.unscaledTime >= expiresAt) Destroy(gameObject);
         }
 
