@@ -49,7 +49,7 @@ namespace PickAndPlaceShop
             {
                 Material material = materials[i];
                 string shaderName = material != null && material.shader != null ? material.shader.name : string.Empty;
-                if (!string.IsNullOrEmpty(shaderName) &&
+                if (!string.IsNullOrEmpty(shaderName) && material.shader.isSupported &&
                     shaderName.IndexOf("InternalError", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
                 Color color = Color.gray;
                 if (material != null)

@@ -639,7 +639,7 @@ namespace PickAndPlaceShop
             root.transform.position = position + Vector3.up * 0.65f;
             root.transform.localScale = new Vector3(1.35f, 1.3f, 0.75f);
             Renderer renderer = root.GetComponent<Renderer>();
-            renderer.material.color = color;
+            ShopBuildSafeMaterials.ApplyLitColor(renderer, color);
             root.AddComponent<ShopInteractable>().Configure(action, prompt);
 
             GameObject labelHost = new(objectName + "_Label");
@@ -689,8 +689,9 @@ namespace PickAndPlaceShop
                 Collider collider = decor.GetComponent<Collider>();
                 if (collider != null) Destroy(collider);
                 Renderer renderer = decor.GetComponent<Renderer>();
-                renderer.material.color = index == 0 ? new Color(0.85f, 0.38f, 0.58f) :
-                    index == 1 ? new Color(1f, 0.75f, 0.25f) : new Color(0.45f, 0.8f, 1f);
+                ShopBuildSafeMaterials.ApplyLitColor(renderer,
+                    index == 0 ? new Color(0.85f, 0.38f, 0.58f) :
+                    index == 1 ? new Color(1f, 0.75f, 0.25f) : new Color(0.45f, 0.8f, 1f));
                 upcycleDecorations.Add(decor);
             }
             for (int i = 0; i < upcycleDecorations.Count; i++)

@@ -7,6 +7,7 @@ namespace PickAndPlaceShop
     /// <summary>Adds build-safe collision to imported city shells and parked cars.</summary>
     public static class ShopCityCollisionBootstrap
     {
+        private const string CollisionChildName = "[Runtime] City Collision";
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Initialize()
         {
@@ -43,16 +44,20 @@ namespace PickAndPlaceShop
                                         System.StringComparison.OrdinalIgnoreCase)
                     ? filter.transform.parent.gameObject
                     : filter.gameObject;
-                if (target.GetComponent<Collider>() != null) continue;
+                if (target.GetComponent<Collider>() != null || target.transform.Find(CollisionChildName) != null)
+                    continue;
                 if (!TryGetLocalBounds(target, out Bounds bounds)) continue;
 
-                BoxCollider collider = target.AddComponent<BoxCollider>();
+                GameObject collisionHost = new(CollisionChildName);
+                collisionHost.transform.SetParent(target.transform, false);
+                collisionHost.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                collisionHost.transform.localScale = Vector3.one;
+                BoxCollider collider = collisionHost.AddComponent<BoxCollider>();
                 collider.center = bounds.center;
                 collider.size = Vector3.Scale(bounds.size,
                     Vector3.one * (building ? buildingScale : vehicleScale));
 
-                NavMeshObstacle obstacle = target.GetComponent<NavMeshObstacle>();
-                if (obstacle == null) obstacle = target.AddComponent<NavMeshObstacle>();
+                NavMeshObstacle obstacle = collisionHost.AddComponent<NavMeshObstacle>();
                 obstacle.shape = NavMeshObstacleShape.Box;
                 obstacle.center = collider.center;
                 obstacle.size = collider.size;
