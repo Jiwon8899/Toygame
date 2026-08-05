@@ -20,6 +20,11 @@ namespace PickAndPlaceShop
         private TextMesh consignmentText;
         private readonly List<GameObject> consignmentVisuals = new();
         private string consignmentSnapshot;
+        private GameObject capsuleRecyclerFacility;
+        private GameObject appraisalFacility;
+        private GameObject curationDeskFacility;
+        private GameObject consignmentFacility;
+        private GameObject consignmentRejectFacility;
 
         public int EmptyCapsuleCount
         {
@@ -66,6 +71,7 @@ namespace PickAndPlaceShop
             if (facilitiesRoot == null) BuildFacilities();
             RefreshUpcycleDecorations();
             RefreshReviewBoard();
+            RefreshFacilityUnlocks();
             ServerUpdateConsignment();
             RefreshConsignmentCorner();
         }
@@ -86,6 +92,15 @@ namespace PickAndPlaceShop
         {
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null || !game.IsServer) return;
+            int expansion = ShopProgressionManager.Instance?.ExpansionLevel ?? 1;
+            if (action == ShopAction.CapsuleRecycler && expansion < 3 ||
+                action == ShopAction.AppraisalDesk && expansion < 4 ||
+                (action == ShopAction.ConsignmentCorner || action == ShopAction.ConsignmentReject) && expansion < 5 ||
+                action == ShopAction.CurationDesk && expansion < 4)
+            {
+                game.ServerSetEvent("이 시설은 가게 확장 후 이용할 수 있습니다.");
+                return;
+            }
             if (action == ShopAction.CapsuleRecycler) ServerCraftNextDecoration(game);
             else if (action == ShopAction.ReviewBoard)
                 game.ServerSetEvent(game.ReviewHistory.Value.ToString());
@@ -105,7 +120,8 @@ namespace PickAndPlaceShop
         {
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null || !game.IsServer || config == null) return;
-            if (game.Reputation.Value < config.ConsignmentUnlockReputation)
+            if ((ShopProgressionManager.Instance?.ExpansionLevel ?? 1) < 5 ||
+                game.Reputation.Value < config.ConsignmentUnlockReputation)
             {
                 if (game.ConsignmentOfferCount.Value > 0) ClearConsignmentOffer(game, false);
                 return;
@@ -417,17 +433,18 @@ namespace PickAndPlaceShop
         private void BuildFacilities()
         {
             facilitiesRoot = new GameObject("Differentiation Facilities");
-            BuildFacility("빈 캡슐 회수함", config.CapsuleRecyclerPosition,
+            capsuleRecyclerFacility = BuildFacility("빈 캡슐 회수함", config.CapsuleRecyclerPosition,
                 new Color(0.12f, 0.62f, 0.58f), ShopAction.CapsuleRecycler,
                 "빈 캡슐 회수함 / 업사이클 장식 제작");
             BuildReviewBoard();
-            BuildFacility("굿즈 감정소", config.AppraisalPosition,
+            appraisalFacility = BuildFacility("굿즈 감정소", config.AppraisalPosition,
                 new Color(0.34f, 0.23f, 0.52f), ShopAction.AppraisalDesk,
                 "보유 상품 1개 감정하기");
             BuildConsignmentCorner();
-            BuildFacility("진열 자동 정렬", config.CurationDeskPosition,
+            curationDeskFacility = BuildFacility("진열 자동 정렬", config.CurationDeskPosition,
                 new Color(0.15f, 0.44f, 0.65f), ShopAction.CurationDesk,
                 "공용 진열 상품 자동 정렬");
+            RefreshFacilityUnlocks();
         }
 
         private void BuildConsignmentCorner()
@@ -436,6 +453,7 @@ namespace PickAndPlaceShop
                 new Color(0.62f, 0.38f, 0.17f), ShopAction.ConsignmentCorner,
                 "위탁 수집가의 제안 수락");
             corner.transform.localScale = new Vector3(2.4f, 1.45f, 0.9f);
+            consignmentFacility = corner;
             Transform label = corner.transform.Find("위탁 판매 코너_Label");
             if (label != null)
             {
@@ -448,6 +466,7 @@ namespace PickAndPlaceShop
                 new Vector3(1.8f, 0f, 0f), new Color(0.48f, 0.16f, 0.16f),
                 ShopAction.ConsignmentReject, "현재 위탁 제안 거절");
             reject.transform.localScale = new Vector3(0.65f, 0.65f, 0.65f);
+            consignmentRejectFacility = reject;
 
             GameObject visualHost = new("Consignment Product Visuals");
             visualHost.transform.SetParent(facilitiesRoot.transform, false);
@@ -477,7 +496,8 @@ namespace PickAndPlaceShop
         {
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null || config == null) return;
-            bool unlocked = game.Reputation.Value >= config.ConsignmentUnlockReputation;
+            bool unlocked = (ShopProgressionManager.Instance?.ExpansionLevel ?? 1) >= 5 &&
+                            game.Reputation.Value >= config.ConsignmentUnlockReputation;
             bool visiting = unlocked && game.ConsignmentOfferCount.Value > 0;
             if (consignmentNpc != null) consignmentNpc.SetActive(visiting);
             if (consignmentText != null)
@@ -526,6 +546,18 @@ namespace PickAndPlaceShop
                 consignmentVisuals.Add(visual);
                 slot++;
             }
+        }
+
+        private void RefreshFacilityUnlocks()
+        {
+            int level = ShopProgressionManager.Instance?.ExpansionLevel ?? 1;
+            if (capsuleRecyclerFacility != null) capsuleRecyclerFacility.SetActive(level >= 3);
+            if (appraisalFacility != null) appraisalFacility.SetActive(level >= 4);
+            if (curationDeskFacility != null) curationDeskFacility.SetActive(level >= 4);
+            if (consignmentFacility != null) consignmentFacility.SetActive(level >= 5);
+            if (consignmentRejectFacility != null) consignmentRejectFacility.SetActive(level >= 5);
+            if (consignmentVisualRoot != null) consignmentVisualRoot.gameObject.SetActive(level >= 5);
+            if (consignmentNpc != null && level < 5) consignmentNpc.SetActive(false);
         }
 
         private void BuildReviewBoard()

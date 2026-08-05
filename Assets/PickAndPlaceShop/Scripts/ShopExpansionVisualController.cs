@@ -85,9 +85,13 @@ namespace PickAndPlaceShop
             RestoreSceneDefaults();
             ApplyStageObjectRules(level);
             Vector3 origin = ShopNightSalesSystem.Instance.DisplayWorkPosition;
-            for (int tier = 2; tier <= Mathf.Min(4, level); tier++)
-                CreateShelf(origin + new Vector3((tier - 3) * 2.1f, 0f, 2.1f), tier);
-            if (level >= 5) CreateRoomExtension(origin, 1);
+            if (level >= 2) CreateShelf(origin + new Vector3(-2.1f, 0f, 2.1f), 2);
+            if (level >= 3) CreateBundledZone(config != null ? config.Level3ZoneCenter : new Vector3(11.7f, 0f, 3.2f),
+                3, "캡슐 회수 구역");
+            if (level >= 4) CreateBundledZone(config != null ? config.Level4ZoneCenter : new Vector3(11.7f, 0f, 0.2f),
+                4, "굿즈 감정 구역");
+            if (level >= 5) CreateBundledZone(config != null ? config.Level5ZoneCenter : new Vector3(11.7f, 0f, 6.1f),
+                5, "위탁 판매 구역");
             if (level >= 6) CreateRoomExtension(origin + Vector3.right * 5f, 2);
         }
 
@@ -174,6 +178,44 @@ namespace PickAndPlaceShop
             CreatePart(root.transform, "SideWall", new Vector3(index == 1 ? -2.4f : 2.4f, 1.6f, 0f),
                 new Vector3(0.18f, 3.2f, 4.5f), wall, true);
             customerBrowsePoints.Add(root.transform.position + new Vector3(0f, 0f, 0.55f));
+            generated.Add(root);
+        }
+
+        private void CreateBundledZone(Vector3 center, int level, string label)
+        {
+            GameObject root = new("ExpansionBundle_L" + level);
+            root.transform.SetParent(transform, false);
+            root.transform.position = center;
+            Vector2 size = config != null ? config.ZoneFloorSize : new Vector2(6f, 2.6f);
+            Color floor = level switch
+            {
+                3 => new Color(0.24f, 0.48f, 0.45f),
+                4 => new Color(0.40f, 0.30f, 0.52f),
+                _ => new Color(0.56f, 0.38f, 0.20f)
+            };
+            Color wall = config != null ? config.RoomWallColor : new Color(0.19f, 0.12f, 0.18f);
+            CreatePart(root.transform, "Floor", Vector3.down * 0.08f,
+                new Vector3(size.x, 0.16f, size.y), floor, true);
+            CreatePart(root.transform, "OuterWall", new Vector3(size.x * 0.5f - 0.09f, 1.5f, 0f),
+                new Vector3(0.18f, 3f, size.y), wall, true);
+            CreatePart(root.transform, "Canopy", new Vector3(0f, 2.9f, 0f),
+                new Vector3(size.x, 0.14f, size.y), new Color(wall.r * 1.25f, wall.g * 1.25f, wall.b * 1.25f), false);
+
+            GameObject signObject = new("ZoneSign");
+            signObject.transform.SetParent(root.transform, false);
+            signObject.transform.localPosition = new Vector3(0f, 2.45f, -size.y * 0.48f);
+            TextMesh sign = signObject.AddComponent<TextMesh>();
+            sign.text = "Lv." + level + "  " + label + "\n진열대 + 특화 시설";
+            sign.anchor = TextAnchor.MiddleCenter;
+            sign.alignment = TextAlignment.Center;
+            sign.characterSize = 0.085f;
+            sign.fontSize = 48;
+            sign.color = new Color(1f, 0.88f, 0.48f);
+            signObject.AddComponent<ShopWorldFacingText>();
+
+            CreateShelf(center + new Vector3(-1.65f, 0f, 0f), level);
+            customerBrowsePoints.Add(center + new Vector3(-0.6f, 0f, 0.35f));
+            customerBrowsePoints.Add(center + new Vector3(0.8f, 0f, -0.35f));
             generated.Add(root);
         }
 
