@@ -61,6 +61,11 @@ namespace PickAndPlaceShop
                 if (product != null) instance.Enqueue(sourceLabel, product, accentColor, storageMessage);
         }
 
+        public static void Dismiss()
+        {
+            if (instance != null) instance.closeRequested = true;
+        }
+
         private static void EnsureInstance()
         {
             if (instance != null) return;
