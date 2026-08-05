@@ -244,7 +244,7 @@ namespace PickAndPlaceShop
             part.transform.SetParent(parent, false);
             part.transform.localPosition = localPosition;
             part.transform.localScale = scale;
-            part.GetComponent<Renderer>().material.color = color;
+            ShopBuildSafeMaterials.ApplyLitColor(part.GetComponent<Renderer>(), color);
             if (!keepCollider)
             {
                 Collider collider = part.GetComponent<Collider>();

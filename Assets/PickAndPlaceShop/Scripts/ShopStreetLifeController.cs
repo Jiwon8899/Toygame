@@ -232,7 +232,8 @@ namespace PickAndPlaceShop
             GameObject item = GameObject.CreatePrimitive(type);
             item.name = name; item.transform.SetParent(parent, false);
             item.transform.localPosition = localPosition; item.transform.localScale = scale;
-            item.GetComponent<Renderer>().material.color = color;
+            ShopBuildSafeMaterials.ApplyLitColor(item.GetComponent<Renderer>(), color,
+                name == "Bulb");
             if (!keepCollider) { Collider collider = item.GetComponent<Collider>(); if (collider != null) Destroy(collider); }
             item.isStatic = true;
             return item;

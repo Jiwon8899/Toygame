@@ -266,7 +266,7 @@ namespace PickAndPlaceShop
                 ShopAutomationState.StoppedNoFunds => new Color(1f, 0.65f, 0.08f),
                 _ => new Color(0.25f, 0.55f, 1f)
             };
-            indicator.material.color = color;
+            ShopBuildSafeMaterials.ApplyLitColor(indicator, color, true);
         }
 
         private void HandleVisualChanged(bool _, bool __) => ApplyVisual();

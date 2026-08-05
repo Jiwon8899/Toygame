@@ -18,6 +18,8 @@ namespace PickAndPlaceShop.Editor
         private const string VisualFolder = "Assets/PickAndPlaceShop/Resources/ProductVisuals/Generated";
         private const string MeshFolder =
             "Assets/PickAndPlaceShop/Resources/ProductVisuals/Generated/Meshes";
+        private const string MaterialFolder =
+            "Assets/PickAndPlaceShop/Resources/ProductMaterials/Generated";
         private const string IconFolder = "Assets/PickAndPlaceShop/Resources/ProductIcons/Generated";
         private const string ConfigPath =
             "Assets/PickAndPlaceShop/Resources/Products/ShopProductVisualConfig.asset";
@@ -29,6 +31,8 @@ namespace PickAndPlaceShop.Editor
         {
             EnsureFolder(VisualFolder);
             EnsureFolder(MeshFolder);
+            EnsureFolder(MaterialFolder);
+            EnsureRuntimeMaterialTemplate();
             EnsureFolder(IconFolder);
             EnsureFolder(Path.GetDirectoryName(CsvPath).Replace('\\', '/'));
             ClearGeneratedIcons();
@@ -90,6 +94,39 @@ namespace PickAndPlaceShop.Editor
                       " unreadableMeshes=" + unreadableMeshes + " csv=" + CsvPath);
         }
 
+        [MenuItem("Tools/Pick And Place Shop/Bake Build-Safe Product Materials")]
+        public static void BakeExistingMaterials()
+        {
+            EnsureFolder(MaterialFolder);
+            EnsureRuntimeMaterialTemplate();
+            string[] paths = AssetDatabase.FindAssets("t:Prefab", new[] { VisualFolder })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => Path.GetFileName(path).StartsWith("ProductVisual_", StringComparison.Ordinal))
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToArray();
+            int baked = 0;
+            for (int index = 0; index < paths.Length; index++)
+            {
+                EditorUtility.DisplayProgressBar("빌드 안전 머티리얼 베이크", paths[index],
+                    index / (float)Mathf.Max(1, paths.Length));
+                GameObject root = PrefabUtility.LoadPrefabContents(paths[index]);
+                try
+                {
+                    baked += BakeMaterials(root, index);
+                    PrefabUtility.SaveAsPrefabAsset(root, paths[index]);
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(root);
+                }
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            EditorUtility.ClearProgressBar();
+            Debug.Log($"[ProductMaterials] COMPLETE prefabs={paths.Length} materials={baked} " +
+                      "shader=Universal Render Pipeline/Lit");
+        }
+
         private static GameObject BuildWrapper(GameObject source, int index, float targetSize,
             out int unreadableMeshes)
         {
@@ -105,6 +142,7 @@ namespace PickAndPlaceShop.Editor
             foreach (MonoBehaviour item in root.GetComponentsInChildren<MonoBehaviour>(true))
                 UnityEngine.Object.DestroyImmediate(item);
             MakeMeshesRuntimeOnly(root, index);
+            BakeMaterials(root, index);
             Bounds bounds = CalculateBounds(root);
             float longest = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
             float scale = longest > 0.0001f ? targetSize / longest : 1f;
@@ -116,6 +154,121 @@ namespace PickAndPlaceShop.Editor
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             UnityEngine.Object.DestroyImmediate(root);
             return saved;
+        }
+
+        private static int BakeMaterials(GameObject root, int modelIndex)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) throw new InvalidOperationException("URP Lit 셰이더를 찾지 못했습니다.");
+            int materialIndex = 0;
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] sourceMaterials = renderer.sharedMaterials;
+                Material[] bakedMaterials = new Material[sourceMaterials.Length];
+                for (int slot = 0; slot < sourceMaterials.Length; slot++)
+                {
+                    Material source = sourceMaterials[slot];
+                    string path = MaterialFolder + "/ProductMaterial_" + modelIndex.ToString("D3") + "_" +
+                                  materialIndex.ToString("D2") + ".mat";
+                    materialIndex++;
+                    if (AssetDatabase.LoadAssetAtPath<Material>(path) != null) AssetDatabase.DeleteAsset(path);
+                    Material baked = new(shader)
+                    {
+                        name = Path.GetFileNameWithoutExtension(path),
+                        enableInstancing = true
+                    };
+                    CopyGltfMaterial(source, baked);
+                    AssetDatabase.CreateAsset(baked, path);
+                    bakedMaterials[slot] = baked;
+                }
+                renderer.sharedMaterials = bakedMaterials;
+            }
+            return materialIndex;
+        }
+
+        private static void CopyGltfMaterial(Material source, Material target)
+        {
+            Color baseColor = ReadColor(source, "baseColorFactor", "_BaseColor", "_Color", Color.white);
+            Texture baseMap = ReadTexture(source, "baseColorTexture", "_BaseMap", "_MainTex");
+            target.SetColor("_BaseColor", baseColor);
+            if (baseMap != null) target.SetTexture("_BaseMap", baseMap);
+
+            Texture normal = ReadTexture(source, "normalTexture", "_BumpMap");
+            if (normal != null)
+            {
+                target.SetTexture("_BumpMap", normal);
+                target.EnableKeyword("_NORMALMAP");
+                target.SetFloat("_BumpScale", ReadFloat(source, "normalTexture_scale", "_BumpScale", 1f));
+            }
+
+            Texture occlusion = ReadTexture(source, "occlusionTexture", "_OcclusionMap");
+            if (occlusion != null)
+            {
+                target.SetTexture("_OcclusionMap", occlusion);
+                target.SetFloat("_OcclusionStrength",
+                    ReadFloat(source, "occlusionTexture_strength", "_OcclusionStrength", 1f));
+            }
+
+            float metallic = ReadFloat(source, "metallicFactor", "_Metallic", 0f);
+            float roughness = source != null && source.HasProperty("roughnessFactor")
+                ? source.GetFloat("roughnessFactor")
+                : 1f - ReadFloat(source, "_Smoothness", "_Smoothness", 0.35f);
+            target.SetFloat("_Metallic", metallic);
+            target.SetFloat("_Smoothness", Mathf.Clamp01(1f - roughness));
+            Color emission = ReadColor(source, "emissiveFactor", "_EmissionColor", "_EmissionColor", Color.black);
+            Texture emissionMap = ReadTexture(source, "emissiveTexture", "_EmissionMap");
+            if (emission.maxColorComponent > 0.001f || emissionMap != null)
+            {
+                target.SetColor("_EmissionColor", emission);
+                if (emissionMap != null) target.SetTexture("_EmissionMap", emissionMap);
+                target.EnableKeyword("_EMISSION");
+            }
+            target.SetFloat("_Cull", ReadFloat(source, "_Cull", "_Cull", 2f));
+        }
+
+        private static Color ReadColor(Material source, string first, string second, string third, Color fallback)
+        {
+            if (source == null) return fallback;
+            if (source.HasProperty(first)) return source.GetColor(first);
+            if (source.HasProperty(second)) return source.GetColor(second);
+            if (source.HasProperty(third)) return source.GetColor(third);
+            return fallback;
+        }
+
+        private static Texture ReadTexture(Material source, params string[] names)
+        {
+            if (source == null) return null;
+            foreach (string name in names)
+                if (source.HasProperty(name) && source.GetTexture(name) != null) return source.GetTexture(name);
+            return null;
+        }
+
+        private static float ReadFloat(Material source, string first, string second, float fallback)
+        {
+            if (source == null) return fallback;
+            if (source.HasProperty(first)) return source.GetFloat(first);
+            if (source.HasProperty(second)) return source.GetFloat(second);
+            return fallback;
+        }
+
+        private static void EnsureRuntimeMaterialTemplate()
+        {
+            const string path = MaterialFolder + "/RuntimeLitBase.mat";
+            Material template = AssetDatabase.LoadAssetAtPath<Material>(path);
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) throw new InvalidOperationException("URP Lit 셰이더를 찾지 못했습니다.");
+            if (template == null)
+            {
+                template = new Material(shader) { name = "RuntimeLitBase", enableInstancing = true };
+                AssetDatabase.CreateAsset(template, path);
+            }
+            else template.shader = shader;
+            template.SetColor("_BaseColor", Color.white);
+            template.SetFloat("_Metallic", 0f);
+            template.SetFloat("_Smoothness", 0.25f);
+            template.SetColor("_EmissionColor", Color.black);
+            template.EnableKeyword("_EMISSION");
+            EditorUtility.SetDirty(template);
         }
 
         private static void MakeMeshesRuntimeOnly(GameObject root, int modelIndex)

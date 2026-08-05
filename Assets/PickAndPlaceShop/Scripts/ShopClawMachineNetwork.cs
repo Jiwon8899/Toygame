@@ -514,9 +514,7 @@ namespace PickAndPlaceShop
             Collider markerCollider = aimGroundMarker.GetComponent<Collider>();
             if (markerCollider != null) Destroy(markerCollider);
             Renderer markerRenderer = aimGroundMarker.GetComponent<Renderer>();
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
-            markerRenderer.material = new Material(shader);
-            markerRenderer.material.color = new Color(0.03f, 0.03f, 0.04f, 0.5f);
+            ShopBuildSafeMaterials.ApplyLitColor(markerRenderer, new Color(0.03f, 0.03f, 0.04f, 0.5f));
             markerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             markerRenderer.receiveShadows = false;
         }
@@ -581,7 +579,7 @@ namespace PickAndPlaceShop
             part.transform.localRotation = localRotation;
             part.transform.localScale = localScale;
             Renderer renderer = part.GetComponent<Renderer>();
-            renderer.material.color = config.SpawnGuardColor;
+            ShopBuildSafeMaterials.ApplyLitColor(renderer, config.SpawnGuardColor);
             BoxCollider collider = part.GetComponent<BoxCollider>();
             collider.size = new Vector3(0.94f, 0.9f, 0.94f);
             collider.material = glideSurface && config.ScoopOuterPhysicsMaterial != null
