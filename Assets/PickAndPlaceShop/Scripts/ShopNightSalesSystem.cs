@@ -58,6 +58,8 @@ namespace PickAndPlaceShop
         private readonly List<ShopCustomerNetwork> queue = new();
         private readonly Dictionary<int, int> productSales = new();
         private readonly HashSet<ulong> giveUpsProcessed = new();
+        private readonly Dictionary<ulong, int> browsePointReservations = new();
+        private readonly Dictionary<ulong, int> inspectPointReservations = new();
         private float operatingRemaining;
         private float spawnElapsed;
         private int restockCursor;
@@ -364,6 +366,7 @@ namespace PickAndPlaceShop
         public void ServerJoinQueue(ShopCustomerNetwork customer)
         {
             if (!IsServer || customer == null || queue.Contains(customer)) return;
+            ReleaseCustomerPoints(customer.NetworkObjectId);
             queue.Add(customer);
             QueueCount.Value = queue.Count;
             if (Debug.isDebugBuild)
@@ -377,7 +380,7 @@ namespace PickAndPlaceShop
             int extensionCount = ShopExpansionVisualController.CustomerBrowsePointCount;
             int total = baseCount + extensionCount;
             if (total <= 0) return entrancePoint != null ? entrancePoint.position : transform.position;
-            int index = (int)(customerId % (ulong)total);
+            int index = ReservePoint(browsePointReservations, customerId, total);
             if (index < baseCount && browsePoints[index] != null) return browsePoints[index].position;
             if (ShopExpansionVisualController.TryGetCustomerBrowsePoint(index - baseCount, out Vector3 extension))
                 return extension;
@@ -386,7 +389,12 @@ namespace PickAndPlaceShop
 
         public Vector3 ServerGetInspectPoint(ulong customerId)
         {
-            return PointFromArray(inspectPoints, customerId, entrancePoint);
+            browsePointReservations.Remove(customerId);
+            int count = inspectPoints != null ? inspectPoints.Length : 0;
+            if (count <= 0) return entrancePoint != null ? entrancePoint.position : transform.position;
+            int index = ReservePoint(inspectPointReservations, customerId, count);
+            return inspectPoints[index] != null ? inspectPoints[index].position :
+                PointFromArray(inspectPoints, customerId, entrancePoint);
         }
 
         public Vector3 ServerGetQueuePosition(ShopCustomerNetwork customer)
@@ -406,6 +414,7 @@ namespace PickAndPlaceShop
             if (!IsServer || customer == null || !giveUpsProcessed.Add(customer.NetworkObjectId)) return;
             queue.Remove(customer);
             ledger.CancelReservation(customer.NetworkObjectId);
+            ReleaseCustomerPoints(customer.NetworkObjectId);
             QueueCount.Value = queue.Count;
             GiveUpCount.Value++;
             SatisfactionTotal.Value += 25;
@@ -420,6 +429,7 @@ namespace PickAndPlaceShop
             if (!IsServer || customer == null) return;
             queue.Remove(customer);
             ledger.CancelReservation(customer.NetworkObjectId);
+            ReleaseCustomerPoints(customer.NetworkObjectId);
             activeCustomers.Remove(customer.NetworkObjectId);
             QueueCount.Value = queue.Count;
             CustomersInStore.Value = activeCustomers.Count;
@@ -481,6 +491,8 @@ namespace PickAndPlaceShop
             TopProductName.Value = new FixedString64Bytes("없음");
             productSales.Clear();
             giveUpsProcessed.Clear();
+            browsePointReservations.Clear();
+            inspectPointReservations.Clear();
             ledger.ResetTransactions();
         }
 
@@ -735,6 +747,28 @@ namespace PickAndPlaceShop
             }
 
             return entrancePoint != null ? entrancePoint.position : transform.position;
+        }
+
+        private static int ReservePoint(Dictionary<ulong, int> reservations, ulong customerId, int count)
+        {
+            if (reservations.TryGetValue(customerId, out int reserved) && reserved >= 0 && reserved < count)
+                return reserved;
+            int start = (int)(customerId % (ulong)count);
+            for (int offset = 0; offset < count; offset++)
+            {
+                int candidate = (start + offset) % count;
+                if (reservations.ContainsValue(candidate)) continue;
+                reservations[customerId] = candidate;
+                return candidate;
+            }
+            reservations[customerId] = start;
+            return start;
+        }
+
+        private void ReleaseCustomerPoints(ulong customerId)
+        {
+            browsePointReservations.Remove(customerId);
+            inspectPointReservations.Remove(customerId);
         }
 
         private void RebuildLedgerFromNetworkStock()

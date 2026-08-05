@@ -45,6 +45,11 @@ namespace PickAndPlaceShop
         [Min(0.1f)] [SerializeField] private float obstacleAvoidanceSeconds = 0.55f;
         [Min(0.25f)] [SerializeField] private float arrivalDistance = 0.72f;
 
+        [Header("Animation stability")]
+        [Min(0.01f)] [SerializeField] private float walkEnterSpeed = 0.15f;
+        [Min(0f)] [SerializeField] private float idleReturnSpeed = 0.05f;
+        [Min(0.05f)] [SerializeField] private float minimumAnimationStateSeconds = 0.2f;
+
         private float movementSpeed;
         private float patienceSeconds;
         private float stateElapsed;
@@ -59,6 +64,7 @@ namespace PickAndPlaceShop
         private float visualSpeed;
         private float visualStationarySeconds;
         private bool visualMoving;
+        private float visualStateChangedAt;
         private float avoidanceTimer;
         private float avoidanceSign = 1f;
 
@@ -376,6 +382,7 @@ namespace PickAndPlaceShop
             visualAnimator.SetBool(MovingParameter, false);
             visualMoving = false;
             visualStationarySeconds = 0f;
+            visualStateChangedAt = Time.unscaledTime;
         }
 
         private void UpdateVisualAnimation()
@@ -392,16 +399,25 @@ namespace PickAndPlaceShop
             }
             visualSpeed = Mathf.MoveTowards(visualSpeed, measuredSpeed, deltaTime * 8f);
             lastVisualPosition = transform.position;
-            if (measuredSpeed >= 0.12f)
+            float heldSeconds = Time.unscaledTime - visualStateChangedAt;
+            if (!visualMoving && measuredSpeed >= walkEnterSpeed &&
+                heldSeconds >= minimumAnimationStateSeconds)
             {
                 visualMoving = true;
                 visualStationarySeconds = 0f;
+                visualStateChangedAt = Time.unscaledTime;
             }
-            else if (measuredSpeed <= 0.025f)
+            else if (visualMoving && measuredSpeed <= idleReturnSpeed)
             {
                 visualStationarySeconds += deltaTime;
-                if (visualStationarySeconds >= 0.08f) visualMoving = false;
+                if (visualStationarySeconds >= minimumAnimationStateSeconds &&
+                    heldSeconds >= minimumAnimationStateSeconds)
+                {
+                    visualMoving = false;
+                    visualStateChangedAt = Time.unscaledTime;
+                }
             }
+            else if (measuredSpeed > idleReturnSpeed) visualStationarySeconds = 0f;
 
             if (visualAnimator != null) visualAnimator.SetBool(MovingParameter, visualMoving);
         }
