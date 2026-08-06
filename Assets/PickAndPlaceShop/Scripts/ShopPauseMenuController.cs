@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Blocks.Gameplay.Core;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -29,6 +30,7 @@ namespace PickAndPlaceShop
             if (title != null) title.text = ShopGameIdentity.KoreanShortName;
             CreateSaveButton();
             CreateTutorialResetButton();
+            ApplyWarmStyle();
             RegisterButtons();
         }
 
@@ -184,11 +186,88 @@ namespace PickAndPlaceShop
                 statusRect.anchoredPosition = new Vector2(0f, -326f);
                 Text status = statusObject.GetComponent<Text>();
                 Text label = template.GetComponentInChildren<Text>(true);
-                status.font = label != null ? label.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                status.font = ShopUiFonts.Medium;
                 status.fontSize = 20;
                 status.alignment = TextAnchor.MiddleCenter;
-                status.color = new Color(0.45f, 1f, 0.75f);
+                status.color = ShopUiSkin.Teal;
             }
+        }
+
+        private void ApplyWarmStyle()
+        {
+            GameObject panel = FindObject("PauseMainPanel");
+            if (panel == null) return;
+            RectTransform panelRect = panel.GetComponent<RectTransform>();
+            if (panelRect != null) panelRect.sizeDelta = new Vector2(600f, 820f);
+            Image panelImage = panel.GetComponent<Image>();
+            if (panelImage != null)
+            {
+                panelImage.color = ShopUiSkin.CreamCard;
+                ShopUiSkin.Round(panelImage, 28);
+            }
+
+            Text title = Find<Text>("PauseTitle");
+            if (title != null)
+            {
+                title.font = ShopUiFonts.Bold;
+                title.fontStyle = FontStyle.Normal;
+                title.fontSize = 38;
+                title.color = ShopUiSkin.BrownDeep;
+                title.rectTransform.anchoredPosition = new Vector2(0f, 286f);
+            }
+
+            if (panel.transform.Find("PawBadge") == null)
+                ShopUiSkin.AddIcon("Paw", panel.transform, ShopUiIcon.Paw, ShopUiSkin.Teal,
+                    new Vector2(86f, 86f), new Vector2(0f, -34f), new Vector2(0.5f, 1f));
+
+            StylePauseButton("BtnPauseResume", ShopUiSkin.Teal, Color.white);
+            StylePauseButton("BtnPauseSave", ShopUiSkin.Teal, Color.white);
+            StylePauseButton("BtnPauseHelp", ShopUiSkin.CreamBackground, ShopUiSkin.BrownDeep);
+            StylePauseButton("BtnPauseSettings", ShopUiSkin.CreamBackground, ShopUiSkin.BrownDeep);
+            StylePauseButton("BtnPauseMainMenu", ShopUiSkin.CreamBackground, ShopUiSkin.BrownDeep);
+            StylePauseButton("BtnPauseQuit", ShopUiSkin.CreamCard, ShopUiSkin.Orange);
+
+            if (root != null && root.transform.Find("WarmDecorPink") == null)
+            {
+                CreateDecor("WarmDecorPink", root.transform, ShopUiSkin.Pink, new Vector2(-390f, 170f), 330f);
+                CreateDecor("WarmDecorTeal", root.transform, ShopUiSkin.Teal, new Vector2(420f, -220f), 390f);
+            }
+            GlobalGameFontApplier.ApplyTo(root);
+        }
+
+        private void StylePauseButton(string name, Color background, Color foreground)
+        {
+            Button button = Find<Button>(name);
+            if (button == null) return;
+            Image image = button.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = background;
+                ShopUiSkin.Pill(image);
+            }
+            Text label = button.GetComponentInChildren<Text>(true);
+            if (label != null)
+            {
+                label.font = ShopUiFonts.Bold;
+                label.fontStyle = FontStyle.Normal;
+                label.fontSize = 22;
+                label.color = foreground;
+            }
+        }
+
+        private static void CreateDecor(string name, Transform parent, Color color, Vector2 position, float size)
+        {
+            GameObject item = new(name, typeof(RectTransform), typeof(Image));
+            item.transform.SetParent(parent, false);
+            item.transform.SetAsFirstSibling();
+            RectTransform rect = item.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = Vector2.one * size;
+            Image image = item.GetComponent<Image>();
+            image.color = new Color(color.r, color.g, color.b, 0.1f);
+            image.raycastTarget = false;
+            ShopUiSkin.Round(image, 28);
         }
 
         private void BuildButtonLayout(Transform panel)

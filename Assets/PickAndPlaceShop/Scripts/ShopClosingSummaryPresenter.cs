@@ -101,7 +101,7 @@ namespace PickAndPlaceShop
             int reputationDelta = night.ReputationDelta.Value;
             float interval = config != null ? config.ClosingItemInterval : 0.4f;
 
-            title.text = day + "일차 마감";
+            title.text = day + "일차 마감\n오늘도 수고했어요!";
             yield return WaitOrSkip(interval);
             if (!skipRequested)
             {
@@ -111,34 +111,34 @@ namespace PickAndPlaceShop
                 {
                     elapsed += Time.unscaledDeltaTime;
                     int shown = Mathf.RoundToInt(totalRevenue * Mathf.Clamp01(elapsed / countSeconds));
-                    revenue.text = "오늘 매출   " + shown.ToString("N0") + "원";
+                    revenue.text = shown.ToString("N0") + "원";
                     yield return null;
                 }
             }
-            revenue.text = "오늘 매출   " + totalRevenue.ToString("N0") + "원";
+            revenue.text = totalRevenue.ToString("N0") + "원";
             yield return WaitOrSkip(interval);
-            sold.text = "판매 수량   " + totalSold + "개";
+            sold.text = totalSold + "개";
             yield return WaitOrSkip(interval);
-            goal.text = (goalMet ? "✓  목표 달성" : "—  목표 미달성") +
-                        "   " + totalSold + " / " + goalTarget;
-            goal.color = goalMet ? new Color(0.35f, 1f, 0.58f) : new Color(1f, 0.62f, 0.35f);
+            goal.text = (goalMet ? "달성" : "미달성") + "\n" + totalSold + " / " + goalTarget;
+            goal.color = goalMet ? ShopUiSkin.Teal : ShopUiSkin.Orange;
             yield return WaitOrSkip(interval);
-            reputation.text = "평판 변화   " + (reputationDelta >= 0 ? "+" : string.Empty) + reputationDelta;
+            reputation.text = (reputationDelta >= 0 ? "+" : string.Empty) + reputationDelta;
+            reputation.color = reputationDelta >= 0 ? ShopUiSkin.Teal : ShopUiSkin.Orange;
             yield return WaitOrSkip(interval);
-            nextDay.text = "다음 날 예고   준비 시간에 기계 재고가 리필됩니다";
+            nextDay.text = "다음 날에는 준비 시간에 기계 재고가 채워져요.";
 
             if (skipRequested)
             {
-                title.text = day + "일차 마감";
-                revenue.text = "오늘 매출   " + totalRevenue.ToString("N0") + "원";
-                sold.text = "판매 수량   " + totalSold + "개";
-                goal.text = (goalMet ? "✓  목표 달성" : "—  목표 미달성") +
-                            "   " + totalSold + " / " + goalTarget;
-                goal.color = goalMet ? new Color(0.35f, 1f, 0.58f) : new Color(1f, 0.62f, 0.35f);
-                reputation.text = "평판 변화   " + (reputationDelta >= 0 ? "+" : string.Empty) + reputationDelta;
-                nextDay.text = "다음 날 예고   준비 시간에 기계 재고가 리필됩니다";
+                title.text = day + "일차 마감\n오늘도 수고했어요!";
+                revenue.text = totalRevenue.ToString("N0") + "원";
+                sold.text = totalSold + "개";
+                goal.text = (goalMet ? "달성" : "미달성") + "\n" + totalSold + " / " + goalTarget;
+                goal.color = goalMet ? ShopUiSkin.Teal : ShopUiSkin.Orange;
+                reputation.text = (reputationDelta >= 0 ? "+" : string.Empty) + reputationDelta;
+                reputation.color = reputationDelta >= 0 ? ShopUiSkin.Teal : ShopUiSkin.Orange;
+                nextDay.text = "다음 날에는 준비 시간에 기계 재고가 채워져요.";
             }
-            footer.text = "[E / Space / Esc] 다음 날로";
+            footer.text = "다음 날로  →\nE · Space · Esc";
             skipRequested = false;
             waitingForClose = true;
             presentation = null;
@@ -173,7 +173,8 @@ namespace PickAndPlaceShop
         {
             group.alpha = 0f;
             title.text = revenue.text = sold.text = goal.text = reputation.text = nextDay.text = footer.text = string.Empty;
-            goal.color = Color.white;
+            goal.color = ShopUiSkin.TextBody;
+            reputation.color = ShopUiSkin.TextBody;
         }
 
         private void BuildUi()
@@ -189,26 +190,81 @@ namespace PickAndPlaceShop
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
 
-            Image backdrop = CreateImage("Backdrop", canvas.transform, new Color(0.008f, 0.015f, 0.025f, 0.97f));
+            Image backdrop = CreateImage("Backdrop", canvas.transform, ShopUiSkin.BrownDeep);
             RectTransform bg = backdrop.rectTransform;
             bg.anchorMin = Vector2.zero; bg.anchorMax = Vector2.one;
             bg.offsetMin = bg.offsetMax = Vector2.zero;
-            Image card = CreateImage("SummaryCard", backdrop.transform, new Color(0.035f, 0.075f, 0.095f, 1f));
+            AddConfetti(backdrop.transform);
+            Image card = CreateImage("SummaryCard", backdrop.transform, ShopUiSkin.CreamCard);
             RectTransform cardRect = card.rectTransform;
             cardRect.anchorMin = cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-            cardRect.sizeDelta = new Vector2(980f, 760f);
+            cardRect.sizeDelta = new Vector2(1060f, 860f);
+            ShopUiSkin.Round(card, 28);
 
-            title = CreateText("Title", card.transform, 54, FontStyle.Bold, new Color(1f, 0.82f, 0.3f));
-            revenue = CreateText("Revenue", card.transform, 40, FontStyle.Bold, Color.white);
-            sold = CreateText("Sold", card.transform, 36, FontStyle.Normal, Color.white);
-            goal = CreateText("Goal", card.transform, 36, FontStyle.Bold, Color.white);
-            reputation = CreateText("Reputation", card.transform, 36, FontStyle.Normal, Color.white);
-            nextDay = CreateText("NextDay", card.transform, 30, FontStyle.Normal, new Color(0.68f, 0.88f, 1f));
-            footer = CreateText("Footer", card.transform, 25, FontStyle.Normal, new Color(0.7f, 0.76f, 0.82f));
-            Place(title, 265f, 90f); Place(revenue, 145f, 70f); Place(sold, 65f, 64f);
-            Place(goal, -20f, 64f); Place(reputation, -105f, 64f); Place(nextDay, -215f, 60f);
-            Place(footer, -325f, 50f);
+            title = CreateText("Title", card.transform, 38, FontStyle.Bold, ShopUiSkin.BrownDeep);
+            Place(title, 332f, 110f);
+
+            Image revenueCard = CreateImage("RevenueHero", card.transform, ShopUiSkin.Teal);
+            Place(revenueCard.rectTransform, new Vector2(0f, 190f), new Vector2(900f, 150f));
+            ShopUiSkin.Round(revenueCard, 20);
+            Text revenueLabel = CreateText("RevenueLabel", revenueCard.transform, 18, FontStyle.Normal, Color.white);
+            revenueLabel.text = "오늘 매출";
+            Place(revenueLabel, 42f, 32f);
+            revenue = CreateText("Revenue", revenueCard.transform, 46, FontStyle.Bold, Color.white);
+            Place(revenue, -18f, 70f);
+
+            sold = CreateStatCard("SoldCard", card.transform, "판매 수량", -310f);
+            goal = CreateStatCard("GoalCard", card.transform, "목표 달성", 0f);
+            reputation = CreateStatCard("ReputationCard", card.transform, "평판 변화", 310f);
+
+            Image notice = CreateImage("NextDayBanner", card.transform, ShopUiSkin.CreamBackground);
+            Place(notice.rectTransform, new Vector2(0f, -120f), new Vector2(900f, 92f));
+            ShopUiSkin.Round(notice, 20);
+            ShopUiSkin.AddIcon("Idea", notice.transform, ShopUiIcon.Idea, ShopUiSkin.Orange,
+                new Vector2(58f, 58f), new Vector2(18f, -17f), new Vector2(0f, 1f));
+            nextDay = CreateText("NextDay", notice.transform, 20, FontStyle.Bold, ShopUiSkin.TextBody);
+            nextDay.alignment = TextAnchor.MiddleLeft;
+            nextDay.rectTransform.anchorMin = Vector2.zero;
+            nextDay.rectTransform.anchorMax = Vector2.one;
+            nextDay.rectTransform.offsetMin = new Vector2(94f, 8f);
+            nextDay.rectTransform.offsetMax = new Vector2(-20f, -8f);
+
+            Image cta = CreateImage("NextDayButton", card.transform, ShopUiSkin.Teal);
+            Place(cta.rectTransform, new Vector2(0f, -244f), new Vector2(620f, 78f));
+            ShopUiSkin.Pill(cta);
+            footer = CreateText("Footer", cta.transform, 23, FontStyle.Bold, Color.white);
+            footer.rectTransform.anchorMin = Vector2.zero;
+            footer.rectTransform.anchorMax = Vector2.one;
+            footer.rectTransform.offsetMin = footer.rectTransform.offsetMax = Vector2.zero;
             canvasObject.SetActive(false);
+        }
+
+        private Text CreateStatCard(string name, Transform parent, string label, float x)
+        {
+            Image card = CreateImage(name, parent, ShopUiSkin.CreamBackground);
+            Place(card.rectTransform, new Vector2(x, 34f), new Vector2(280f, 150f));
+            ShopUiSkin.Round(card, 20);
+            Text caption = CreateText("Label", card.transform, 17, FontStyle.Normal, ShopUiSkin.TextMuted);
+            caption.text = label;
+            Place(caption, 40f, 32f);
+            Text value = CreateText("Value", card.transform, 30, FontStyle.Bold, ShopUiSkin.TextBody);
+            Place(value, -20f, 72f);
+            return value;
+        }
+
+        private static void AddConfetti(Transform parent)
+        {
+            Color[] colors = { ShopUiSkin.Pink, ShopUiSkin.Teal, ShopUiSkin.Orange, ShopUiSkin.Currency };
+            for (int i = 0; i < 28; i++)
+            {
+                Image dot = CreateImage("Confetti", parent, new Color(colors[i % colors.Length].r,
+                    colors[i % colors.Length].g, colors[i % colors.Length].b, 0.35f));
+                RectTransform rect = dot.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2((i * 37 % 100) / 100f, (i * 61 % 100) / 100f);
+                rect.sizeDelta = new Vector2(10f + i % 3 * 6f, 10f + i % 3 * 6f);
+                rect.anchoredPosition = Vector2.zero;
+                ShopUiSkin.Round(dot, 12);
+            }
         }
 
         private static Image CreateImage(string name, Transform parent, Color color)
@@ -233,6 +289,13 @@ namespace PickAndPlaceShop
             RectTransform rect = text.rectTransform;
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.sizeDelta = new Vector2(860f, height); rect.anchoredPosition = new Vector2(0f, y);
+        }
+
+        private static void Place(RectTransform rect, Vector2 position, Vector2 size)
+        {
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
         }
     }
 }

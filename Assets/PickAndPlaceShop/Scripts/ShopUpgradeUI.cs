@@ -17,6 +17,7 @@ namespace PickAndPlaceShop
             public Text History;
             public Text Next;
             public Button Button;
+            public Text Dots;
         }
 
         private static readonly ShopUpgradeCategory[] Categories =
@@ -117,29 +118,39 @@ namespace PickAndPlaceShop
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
-            overlay = CreatePanel("Dim", canvasObject.transform, Vector2.zero, new Color(0.01f, 0.018f, 0.035f, 0.88f));
+            overlay = CreatePanel("Dim", canvasObject.transform, Vector2.zero, new Color(0.26f, 0.16f, 0.1f, 0.84f));
             RectTransform dimRect = overlay.GetComponent<RectTransform>();
             dimRect.anchorMin = Vector2.zero; dimRect.anchorMax = Vector2.one;
             dimRect.offsetMin = dimRect.offsetMax = Vector2.zero;
 
-            GameObject panel = CreatePanel("UpgradePanel", overlay.transform, new Vector2(1540f, 1000f),
-                new Color(0.035f, 0.055f, 0.085f, 0.98f));
+            GameObject panel = CreatePanel("UpgradePanel", overlay.transform, new Vector2(1620f, 980f),
+                ShopUiSkin.CreamCard);
             RectTransform panelRect = panel.GetComponent<RectTransform>();
             panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
+            ShopUiSkin.Round(panel.GetComponent<Image>(), 28);
 
             Text title = CreateText("Title", panel.transform, "상점 업그레이드", 44, FontStyle.Bold,
-                TextAnchor.MiddleLeft, new Color(0.3f, 1f, 0.78f));
+                TextAnchor.MiddleLeft, ShopUiSkin.BrownDeep);
             SetRect(title.rectTransform, new Vector2(50f, -12f), new Vector2(900f, 76f), new Vector2(0f, 1f));
             Text subtitle = CreateText("Subtitle", panel.transform,
                 "숫자 키 또는 카드를 클릭하세요. 현재 게임에 연결된 기능만 표시됩니다.", 22,
-                FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.7f, 0.8f, 0.9f));
+                FontStyle.Normal, TextAnchor.MiddleLeft, ShopUiSkin.TextMuted);
             SetRect(subtitle.rectTransform, new Vector2(52f, -82f), new Vector2(1100f, 40f), new Vector2(0f, 1f));
-            moneyText = CreateText("Money", panel.transform, string.Empty, 30, FontStyle.Bold,
-                TextAnchor.MiddleRight, new Color(1f, 0.78f, 0.25f));
-            SetRect(moneyText.rectTransform, new Vector2(-95f, -38f), new Vector2(420f, 52f), new Vector2(1f, 1f));
+            GameObject moneyChip = CreatePanel("MoneyChip", panel.transform, new Vector2(340f, 62f), ShopUiSkin.Orange);
+            SetRect(moneyChip.GetComponent<RectTransform>(), new Vector2(-104f, -24f), new Vector2(340f, 62f), Vector2.one);
+            ShopUiSkin.Pill(moneyChip.GetComponent<Image>());
+            ShopUiSkin.AddIcon("Coin", moneyChip.transform, ShopUiIcon.Coin, ShopUiSkin.BrownMid,
+                new Vector2(44f, 44f), new Vector2(10f, -9f), new Vector2(0f, 1f));
+            moneyText = CreateText("Money", moneyChip.transform, string.Empty, 20, FontStyle.Bold,
+                TextAnchor.MiddleLeft, Color.white);
+            moneyText.rectTransform.anchorMin = Vector2.zero;
+            moneyText.rectTransform.anchorMax = Vector2.one;
+            moneyText.rectTransform.offsetMin = new Vector2(66f, 4f);
+            moneyText.rectTransform.offsetMax = new Vector2(-12f, -4f);
 
-            GameObject close = CreatePanel("Close", panel.transform, new Vector2(58f, 58f), new Color(0.6f, 0.16f, 0.2f));
-            SetRect(close.GetComponent<RectTransform>(), new Vector2(-18f, -18f), new Vector2(58f, 58f), new Vector2(1f, 1f));
+            GameObject close = CreatePanel("Close", panel.transform, new Vector2(58f, 58f), ShopUiSkin.BrownMid);
+            SetRect(close.GetComponent<RectTransform>(), new Vector2(-24f, -26f), new Vector2(58f, 58f), new Vector2(1f, 1f));
+            ShopUiSkin.Round(close.GetComponent<Image>(), 28);
             Button closeButton = close.AddComponent<Button>();
             closeButton.targetGraphic = close.GetComponent<Image>();
             closeButton.onClick.AddListener(() => SetOpen(false));
@@ -148,63 +159,97 @@ namespace PickAndPlaceShop
 
             Color[] accents =
             {
-                new(0.25f,0.75f,1f), new(0.3f,1f,0.72f), new(1f,0.68f,0.25f), new(0.85f,0.45f,1f),
-                new(1f,0.45f,0.58f), new(0.45f,0.7f,1f), new(0.3f,0.9f,0.55f), new(1f,0.72f,0.2f)
+                ShopUiSkin.Teal, ShopUiSkin.Orange, ShopUiSkin.Pink, ShopUiSkin.Teal,
+                ShopUiSkin.Pink, ShopUiSkin.Orange, ShopUiSkin.BrownMid, ShopUiSkin.Teal
             };
             for (int i = 0; i < Categories.Length; i++)
             {
                 Card card = CreateCard(panel.transform, Categories[i], i + 1, accents[i]);
                 SetRect(card.Background.rectTransform,
-                    new Vector2(50f + (i % 2) * 750f, -132f - (i / 2) * 205f),
-                    new Vector2(700f, 185f), new Vector2(0f, 1f));
+                    new Vector2(50f + (i % 2) * 785f, -132f - (i / 2) * 202f),
+                    new Vector2(735f, 182f), new Vector2(0f, 1f));
                 cards.Add(card);
             }
 
             Text footer = CreateText("Footer", panel.transform,
                 "1~8 구매 · X 닫기 · 고용된 알바는 직접 걸어 다니며 공용 자원만 사용합니다.", 20,
-                FontStyle.Bold, TextAnchor.MiddleCenter, new Color(0.74f, 0.8f, 0.9f));
+                FontStyle.Bold, TextAnchor.MiddleCenter, ShopUiSkin.TextMuted);
             SetRect(footer.rectTransform, new Vector2(50f, 16f), new Vector2(1440f, 42f), Vector2.zero);
         }
 
         private Card CreateCard(Transform parent, ShopUpgradeCategory category, int key, Color accent)
         {
-            GameObject root = CreatePanel("Card_" + category, parent, new Vector2(700f, 185f), new Color(0.075f, 0.105f, 0.15f));
+            GameObject root = CreatePanel("Card_" + category, parent, new Vector2(735f, 182f), ShopUiSkin.CreamBackground);
             Image background = root.GetComponent<Image>();
+            ShopUiSkin.Round(background, 20);
             Button button = root.AddComponent<Button>();
             button.targetGraphic = background;
             int index = key - 1;
             button.onClick.AddListener(() => Purchase(index));
-            GameObject bar = CreatePanel("Accent", root.transform, new Vector2(8f, 185f), accent);
-            SetRect(bar.GetComponent<RectTransform>(), Vector2.zero, new Vector2(8f, 185f), new Vector2(0f, 0.5f));
-            Text title = CreateText("Title", root.transform, string.Empty, 27, FontStyle.Bold, TextAnchor.MiddleLeft, accent);
-            SetRect(title.rectTransform, new Vector2(28f, -10f), new Vector2(640f, 42f), new Vector2(0f, 1f));
-            Text history = CreateText("History", root.transform, string.Empty, 18, FontStyle.Normal,
-                TextAnchor.UpperLeft, new Color(0.76f, 0.82f, 0.9f));
-            SetRect(history.rectTransform, new Vector2(30f, -55f), new Vector2(300f, 112f), new Vector2(0f, 1f));
-            Text next = CreateText("Next", root.transform, string.Empty, 19, FontStyle.Bold, TextAnchor.UpperLeft, Color.white);
-            SetRect(next.rectTransform, new Vector2(340f, -55f), new Vector2(330f, 112f), new Vector2(0f, 1f));
-            return new Card { Category = category, Background = background, Title = title, History = history, Next = next, Button = button };
+            GameObject number = CreatePanel("NumberBadge", root.transform, new Vector2(40f, 40f), ShopUiSkin.BrownMid);
+            SetRect(number.GetComponent<RectTransform>(), new Vector2(14f, -14f), new Vector2(40f, 40f), new Vector2(0f, 1f));
+            ShopUiSkin.Round(number.GetComponent<Image>(), 20);
+            Text numberText = CreateText("Number", number.transform, key.ToString(), 16, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
+            SetRect(numberText.rectTransform, Vector2.zero, new Vector2(40f, 40f), new Vector2(0.5f, 0.5f));
+            ShopUiSkin.AddIcon("Category", root.transform, IconFor(category), accent,
+                new Vector2(56f, 56f), new Vector2(68f, -14f), new Vector2(0f, 1f));
+            Text title = CreateText("Title", root.transform, string.Empty, 25, FontStyle.Bold, TextAnchor.MiddleLeft, ShopUiSkin.BrownDeep);
+            SetRect(title.rectTransform, new Vector2(140f, -12f), new Vector2(420f, 42f), new Vector2(0f, 1f));
+            Text history = CreateText("History", root.transform, string.Empty, 19, FontStyle.Bold,
+                TextAnchor.MiddleLeft, ShopUiSkin.Teal);
+            SetRect(history.rectTransform, new Vector2(140f, -54f), new Vector2(260f, 36f), new Vector2(0f, 1f));
+            Text next = CreateText("Next", root.transform, string.Empty, 17, FontStyle.Bold, TextAnchor.MiddleLeft, ShopUiSkin.TextBody);
+            SetRect(next.rectTransform, new Vector2(18f, -106f), new Vector2(699f, 60f), new Vector2(0f, 1f));
+            GameObject nextBar = CreatePanel("NextBar", root.transform, new Vector2(699f, 60f), ShopUiSkin.CreamCard);
+            nextBar.transform.SetAsFirstSibling();
+            SetRect(nextBar.GetComponent<RectTransform>(), new Vector2(18f, -106f), new Vector2(699f, 60f), new Vector2(0f, 1f));
+            ShopUiSkin.Round(nextBar.GetComponent<Image>(), 12);
+            next.transform.SetAsLastSibling();
+            return new Card { Category = category, Background = background, Title = title, History = history, Next = next, Button = button, Dots = history };
         }
 
         private void Refresh()
         {
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null) return;
-            moneyText.text = "가게 자금 " + game.Coins.Value + "원\n전체 " + game.TotalUpgradeLevel + "/" + ShopNetworkGame.TotalSupportedUpgradeLevels;
+            moneyText.text = game.Coins.Value.ToString("N0") + "원  ·  " + game.TotalUpgradeLevel + "/" + ShopNetworkGame.TotalSupportedUpgradeLevels;
             for (int i = 0; i < cards.Count; i++)
             {
                 Card card = cards[i];
                 int level = game.GetUpgradeLevel(card.Category);
                 int max = ShopNetworkGame.GetUpgradeMaxLevel(card.Category);
                 int cost = game.GetNextUpgradeCost(card.Category);
-                card.Title.text = "[" + (i + 1) + "] " + ShopNetworkGame.UpgradeTitle(card.Category) + "  " + level + "/" + max;
-                card.History.text = HistoryFor(card.Category, level);
-                card.Next.text = level >= max ? "완료\n현재 효과 적용 중" :
-                    "다음 효과\n" + game.UpgradeNextEffect(card.Category) + "\n비용 " + cost + "원";
+                card.Title.text = ShopNetworkGame.UpgradeTitle(card.Category);
+                card.History.text = ProgressDots(level, max);
+                card.Next.text = level >= max ? "최대 레벨 · 현재 효과 적용 중" :
+                    "다음  " + game.UpgradeNextEffect(card.Category) + "     " + cost.ToString("N0") + "원";
                 card.Button.interactable = level < max && cost > 0;
-                card.Background.color = level >= max ? new Color(0.075f, 0.18f, 0.15f) :
-                    game.Coins.Value >= cost ? new Color(0.075f, 0.15f, 0.13f) : new Color(0.14f, 0.075f, 0.085f);
+                card.Background.color = level >= max ? new Color32(0xE7, 0xDD, 0xCB, 0xFF) :
+                    game.Coins.Value >= cost ? ShopUiSkin.CreamBackground : new Color32(0xF0, 0xE1, 0xDC, 0xFF);
             }
+        }
+
+        private static string ProgressDots(int level, int max)
+        {
+            string result = string.Empty;
+            for (int i = 0; i < max; i++) result += i < level ? "● " : "○ ";
+            return result.TrimEnd();
+        }
+
+        private static ShopUiIcon IconFor(ShopUpgradeCategory category)
+        {
+            return category switch
+            {
+                ShopUpgradeCategory.Player => ShopUiIcon.Shoe,
+                ShopUpgradeCategory.Operations => ShopUiIcon.Store,
+                ShopUpgradeCategory.Facility => ShopUiIcon.Idea,
+                ShopUpgradeCategory.Claw => ShopUiIcon.Target,
+                ShopUpgradeCategory.Gacha => ShopUiIcon.Capsule,
+                ShopUpgradeCategory.Kuji => ShopUiIcon.Ticket,
+                ShopUpgradeCategory.StoreExpansion => ShopUiIcon.Expand,
+                ShopUpgradeCategory.Staff => ShopUiIcon.People,
+                _ => ShopUiIcon.Star
+            };
         }
 
         private static string HistoryFor(ShopUpgradeCategory category, int level)

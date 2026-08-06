@@ -68,6 +68,8 @@ namespace PickAndPlaceShop
         private readonly List<GameObject> placementVisuals = new();
         private readonly List<Canvas> hiddenCanvases = new();
         private Text scoreText;
+        private Text gradeText;
+        private readonly Text[] scoreMetrics = new Text[4];
         private Text helpText;
         private Canvas scoreCanvas;
         private Canvas photoCanvas;
@@ -658,12 +660,27 @@ namespace PickAndPlaceShop
         {
             if (scoreText == null || observedGame == null || config == null) return;
             int average = CurrentScoreAverage;
-            scoreText.text = "선반 평가 " + config.CurationGrade(average) + "등급\n" +
-                             "군집 " + observedGame.CurationClusterScore.Value +
-                             "  대칭 " + observedGame.CurationSymmetryScore.Value +
-                             "  희귀도 노출 " + observedGame.CurationRarityScore.Value +
-                             "  밀도 " + observedGame.CurationDensityScore.Value +
-                             (observedGame.CurationAutomatic.Value ? "  [자동 정렬]" : "  [수동 진열]");
+            string grade = config.CurationGrade(average);
+            scoreText.text = "선반 평가\n" + (observedGame.CurationAutomatic.Value ? "자동 정렬" : "수동 진열");
+            if (gradeText != null)
+            {
+                gradeText.text = grade;
+                gradeText.color = grade switch
+                {
+                    "S" => new Color32(0xFF, 0xC2, 0x2E, 0xFF),
+                    "A" => new Color32(0xFF, 0x61, 0xB8, 0xFF),
+                    "B" => new Color32(0x61, 0xB2, 0xFF, 0xFF),
+                    _ => new Color32(0x59, 0xFF, 0x9E, 0xFF)
+                };
+            }
+            int[] values =
+            {
+                observedGame.CurationClusterScore.Value, observedGame.CurationSymmetryScore.Value,
+                observedGame.CurationRarityScore.Value, observedGame.CurationDensityScore.Value
+            };
+            string[] labels = { "군집", "대칭", "희귀도 노출", "밀도" };
+            for (int i = 0; i < scoreMetrics.Length; i++)
+                if (scoreMetrics[i] != null) scoreMetrics[i].text = labels[i] + "\n" + values[i];
         }
 
         private void EnterPhotoMode()
@@ -761,15 +778,42 @@ namespace PickAndPlaceShop
             RectTransform rect = panel.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
-            rect.anchoredPosition = new Vector2(24f, -90f);
-            rect.sizeDelta = new Vector2(690f, 105f);
-            panel.GetComponent<Image>().color = new Color(0.025f, 0.055f, 0.075f, 0.88f);
-            scoreText = CreateText(panel.transform, font, 24, TextAnchor.MiddleLeft);
-            scoreText.rectTransform.offsetMin = new Vector2(18f, 34f);
-            scoreText.rectTransform.offsetMax = new Vector2(-18f, -8f);
+            rect.anchoredPosition = new Vector2(24f, -84f);
+            rect.sizeDelta = new Vector2(620f, 250f);
+            Image scoreBackground = panel.GetComponent<Image>();
+            scoreBackground.color = ShopUiSkin.CreamCard;
+            ShopUiSkin.Round(scoreBackground, 20);
+            scoreText = CreateText(panel.transform, font, 25, TextAnchor.UpperLeft);
+            scoreText.color = ShopUiSkin.BrownDeep;
+            scoreText.rectTransform.offsetMin = new Vector2(22f, 146f);
+            scoreText.rectTransform.offsetMax = new Vector2(-110f, -18f);
+            Image gradeBadge = new GameObject("GradeBadge", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            gradeBadge.transform.SetParent(panel.transform, false);
+            gradeBadge.color = ShopUiSkin.BrownDeep;
+            gradeBadge.rectTransform.anchorMin = gradeBadge.rectTransform.anchorMax = gradeBadge.rectTransform.pivot = Vector2.one;
+            gradeBadge.rectTransform.anchoredPosition = new Vector2(-22f, -20f);
+            gradeBadge.rectTransform.sizeDelta = new Vector2(72f, 72f);
+            ShopUiSkin.Round(gradeBadge, 28);
+            gradeText = CreateText(gradeBadge.transform, ShopUiFonts.Bold, 32, TextAnchor.MiddleCenter);
+            gradeText.rectTransform.offsetMin = gradeText.rectTransform.offsetMax = Vector2.zero;
+            for (int i = 0; i < scoreMetrics.Length; i++)
+            {
+                Image mini = new GameObject("Metric" + i, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                mini.transform.SetParent(panel.transform, false);
+                mini.color = ShopUiSkin.CreamBackground;
+                mini.rectTransform.anchorMin = mini.rectTransform.anchorMax = mini.rectTransform.pivot = new Vector2(0f, 0f);
+                mini.rectTransform.anchoredPosition = new Vector2(20f + i * 146f, 24f);
+                mini.rectTransform.sizeDelta = new Vector2(132f, 82f);
+                ShopUiSkin.Round(mini, 12);
+                scoreMetrics[i] = CreateText(mini.transform, font, 16, TextAnchor.MiddleCenter);
+                scoreMetrics[i].color = ShopUiSkin.TextBody;
+                scoreMetrics[i].rectTransform.offsetMin = new Vector2(6f, 4f);
+                scoreMetrics[i].rectTransform.offsetMax = new Vector2(-6f, -4f);
+            }
             helpText = CreateText(panel.transform, font, 18, TextAnchor.MiddleLeft);
-            helpText.rectTransform.offsetMin = new Vector2(18f, 7f);
-            helpText.rectTransform.offsetMax = new Vector2(-18f, -68f);
+            helpText.color = ShopUiSkin.TextMuted;
+            helpText.rectTransform.offsetMin = new Vector2(22f, 112f);
+            helpText.rectTransform.offsetMax = new Vector2(-110f, -76f);
             scoreCanvas.enabled = false;
 
             GameObject photoObject = new("Photo Mode Canvas", typeof(Canvas), typeof(CanvasScaler));
@@ -805,9 +849,11 @@ namespace PickAndPlaceShop
             stripRect.anchorMin = stripRect.anchorMax = new Vector2(0.5f, 0f);
             stripRect.pivot = new Vector2(0.5f, 0f);
             // Keep the quick slots clear of the shared bottom interaction/help line.
-            stripRect.anchoredPosition = new Vector2(0f, 132f);
-            stripRect.sizeDelta = new Vector2(590f, 116f);
-            strip.GetComponent<Image>().color = new Color(0.02f, 0.04f, 0.06f, 0.88f);
+            stripRect.anchoredPosition = new Vector2(0f, 126f);
+            stripRect.sizeDelta = new Vector2(640f, 132f);
+            Image stripImage = strip.GetComponent<Image>();
+            stripImage.color = ShopUiSkin.CreamCard;
+            ShopUiSkin.Round(stripImage, 20);
 
             for (int i = 0; i < 5; i++)
             {
@@ -816,9 +862,21 @@ namespace PickAndPlaceShop
                 RectTransform slotRect = slot.GetComponent<RectTransform>();
                 slotRect.anchorMin = slotRect.anchorMax = new Vector2(0f, 0.5f);
                 slotRect.pivot = new Vector2(0f, 0.5f);
-                slotRect.anchoredPosition = new Vector2(12f + i * 114f, 8f);
-                slotRect.sizeDelta = new Vector2(104f, 94f);
+                slotRect.anchoredPosition = new Vector2(16f + i * 124f, 0f);
+                slotRect.sizeDelta = new Vector2(112f, 104f);
                 hotbarBackgrounds[i] = slot.GetComponent<Image>();
+                ShopUiSkin.Round(hotbarBackgrounds[i], 12);
+
+                Image numberBadge = new GameObject("NumberBadge", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                numberBadge.transform.SetParent(slot.transform, false);
+                numberBadge.color = ShopUiSkin.BrownMid;
+                numberBadge.rectTransform.anchorMin = numberBadge.rectTransform.anchorMax = numberBadge.rectTransform.pivot = new Vector2(0f, 1f);
+                numberBadge.rectTransform.anchoredPosition = new Vector2(6f, -6f);
+                numberBadge.rectTransform.sizeDelta = new Vector2(28f, 28f);
+                ShopUiSkin.Round(numberBadge, 12);
+                Text number = CreateText(numberBadge.transform, ShopUiFonts.Bold, 14, TextAnchor.MiddleCenter);
+                number.text = (i + 1).ToString();
+                number.rectTransform.offsetMin = number.rectTransform.offsetMax = Vector2.zero;
 
                 Image icon = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image))
                     .GetComponent<Image>();
@@ -831,8 +889,9 @@ namespace PickAndPlaceShop
                 hotbarIcons[i] = icon;
 
                 Text label = CreateText(slot.transform, font, 16, TextAnchor.LowerCenter);
-                label.rectTransform.offsetMin = new Vector2(2f, 2f);
-                label.rectTransform.offsetMax = new Vector2(-2f, -68f);
+                label.color = ShopUiSkin.TextBody;
+                label.rectTransform.offsetMin = new Vector2(4f, 4f);
+                label.rectTransform.offsetMax = new Vector2(-4f, -72f);
                 hotbarLabels[i] = label;
             }
             RefreshHotbar();
@@ -923,10 +982,12 @@ namespace PickAndPlaceShop
                 ShopProductDefinition product = ShopProductVisuals.Find(productId);
                 hotbarIcons[i].sprite = product != null ? product.Icon : null;
                 hotbarIcons[i].enabled = hotbarIcons[i].sprite != null;
-                hotbarLabels[i].text = (i + 1) + (product != null ? "  " + product.DisplayName : "  빈 슬롯");
+                hotbarLabels[i].text = product != null ? product.DisplayName : "+";
                 hotbarBackgrounds[i].color = activeHotbarSlot == i && heldVisual != null
-                    ? new Color(0.92f, 0.62f, 0.12f, 0.96f)
-                    : new Color(0.08f, 0.13f, 0.2f, 0.96f);
+                    ? ShopUiSkin.Teal
+                    : ShopUiSkin.CreamBackground;
+                hotbarLabels[i].color = activeHotbarSlot == i && heldVisual != null
+                    ? Color.white : ShopUiSkin.TextBody;
             }
         }
 
