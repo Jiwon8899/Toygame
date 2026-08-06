@@ -9,8 +9,7 @@ namespace PickAndPlaceShop
     {
         private static ShopOnlineOrderIconWidget instance;
         private ShopLiveOperationsNetwork observed;
-        private CanvasGroup group;
-        private Image icon;
+        private GameObject panel;
         private Text label;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -25,7 +24,7 @@ namespace PickAndPlaceShop
         private void Awake()
         {
             BuildUi();
-            group.alpha = 0f;
+            panel.SetActive(false);
         }
 
         private void Update()
@@ -42,63 +41,47 @@ namespace PickAndPlaceShop
 
         private void Refresh()
         {
+            if (panel == null) return;
             if (observed == null || observed.OnlineOrders.Count == 0)
             {
-                group.alpha = 0f;
+                panel.SetActive(false);
                 return;
             }
+
             ShopOnlineOrderState order = observed.OnlineOrders[0];
             ShopProductDefinition product = ShopProductVisuals.Find(order.ProductId);
-            icon.sprite = product != null ? product.Icon : null;
-            icon.color = icon.sprite != null ? Color.white : new Color(0.2f, 0.24f, 0.3f);
             label.text = product != null
-                ? "온라인 주문 · " + product.DisplayName + " x" + order.Quantity
-                : "온라인 주문 상품";
-            group.alpha = 1f;
+                ? $"온라인 주문\n{product.DisplayName} ×{order.Quantity}"
+                : "온라인 주문\n상품을 확인하세요";
+            panel.SetActive(true);
         }
 
         private void BuildUi()
         {
-            GameObject canvasObject = new("Canvas", typeof(Canvas), typeof(CanvasScaler),
-                typeof(CanvasGroup));
-            canvasObject.transform.SetParent(transform, false);
-            Canvas canvas = canvasObject.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 15010;
-            group = canvasObject.GetComponent<CanvasGroup>();
-            GameObject panel = new("OnlineOrderIcon", typeof(RectTransform), typeof(Image));
-            panel.transform.SetParent(canvasObject.transform, false);
-            RectTransform rect = panel.GetComponent<RectTransform>();
-            rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.one;
-            rect.anchoredPosition = new Vector2(-28f, -156f);
-            rect.sizeDelta = new Vector2(310f, 96f);
-            panel.GetComponent<Image>().color = new Color(0.025f, 0.05f, 0.075f, 0.94f);
-            icon = new GameObject("ProductIcon", typeof(RectTransform), typeof(Image))
-                .GetComponent<Image>();
-            icon.transform.SetParent(panel.transform, false);
-            icon.preserveAspect = true;
-            RectTransform iconRect = icon.rectTransform;
-            iconRect.anchorMin = iconRect.anchorMax = new Vector2(0f, 0.5f);
-            iconRect.pivot = new Vector2(0f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(10f, 0f);
-            iconRect.sizeDelta = new Vector2(76f, 76f);
+            panel = ShopHudStack.Instance.CreateItem(this, ShopHudStackSlot.OnlineOrder,
+                "OnlineOrder", 100f);
+            ShopUiSkin.AddIcon("Package", panel.transform, ShopUiIcon.Package, ShopUiSkin.Pink,
+                new Vector2(64f, 64f), new Vector2(16f, -18f), new Vector2(0f, 1f));
+
             label = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
             label.transform.SetParent(panel.transform, false);
             label.font = ShopUiFonts.Bold;
             label.fontSize = 18;
             label.fontStyle = FontStyle.Normal;
             label.alignment = TextAnchor.MiddleLeft;
-            label.color = Color.white;
-            RectTransform labelRect = label.rectTransform;
-            labelRect.anchorMin = new Vector2(0f, 0f);
-            labelRect.anchorMax = new Vector2(1f, 1f);
-            labelRect.offsetMin = new Vector2(96f, 8f);
-            labelRect.offsetMax = new Vector2(-8f, -8f);
+            label.color = ShopUiSkin.TextBody;
+            label.raycastTarget = false;
+            RectTransform rect = label.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(96f, 12f);
+            rect.offsetMax = new Vector2(-18f, -12f);
         }
 
         private void OnDestroy()
         {
             if (observed != null) observed.OnlineOrders.OnListChanged -= Changed;
+            ShopHudStack.Instance.RemoveItem(this);
             if (instance == this) instance = null;
         }
     }

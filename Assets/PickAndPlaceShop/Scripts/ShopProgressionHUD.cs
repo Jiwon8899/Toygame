@@ -25,6 +25,7 @@ namespace PickAndPlaceShop
         private GameObject objectivePanel;
         private CanvasGroup objectiveGroup;
         private Text objectiveText;
+        private Text objectiveStepText;
         private Image objectiveFill;
         private GameObject overlay;
         private Text contentText;
@@ -80,6 +81,7 @@ namespace PickAndPlaceShop
         private void OnDestroy()
         {
             CloseTutorialSkipConfirmation();
+            ShopHudStack.Instance.RemoveItem(this);
             Detach();
             if (toggleStatusAction != null)
             {
@@ -208,7 +210,7 @@ namespace PickAndPlaceShop
             BuildTutorialSkipConfirmation(safe.transform);
 
             tabHint = CreateText("StatusHint", safe.transform, "Tab · 가게 현황   |   I · 상품 보관함",
-                18, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.72f, 0.8f, 0.88f, 0.72f));
+                18, FontStyle.Normal, TextAnchor.MiddleCenter, ShopUiSkin.TextMuted);
             SetRect(tabHint.rectTransform, new Vector2(0f, 12f), new Vector2(680f, 34f),
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             GlobalGameFontApplier.ApplyTo(gameObject);
@@ -227,29 +229,47 @@ namespace PickAndPlaceShop
 
         private void BuildObjective(Transform parent)
         {
-            objectivePanel = CreatePanel("CurrentObjective", parent, new Vector2(620f, 116f), PanelColor);
-            RectTransform rect = objectivePanel.GetComponent<RectTransform>();
-            SetRect(rect, new Vector2(-24f, -24f), new Vector2(620f, 116f),
-                Vector2.one, Vector2.one, Vector2.one);
+            objectivePanel = ShopHudStack.Instance.CreateItem(this, ShopHudStackSlot.Objective,
+                "CurrentObjective", 124f);
             objectiveGroup = objectivePanel.AddComponent<CanvasGroup>();
 
+            GameObject stepBadge = CreatePanel("StepBadge", objectivePanel.transform,
+                new Vector2(60f, 60f), ShopUiSkin.Pink);
+            SetRect(stepBadge.GetComponent<RectTransform>(), new Vector2(16f, -16f),
+                new Vector2(60f, 60f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            ShopUiSkin.Round(stepBadge.GetComponent<Image>(), 20);
+            objectiveStepText = CreateText("Step", stepBadge.transform, "1/7", 17,
+                FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
+            objectiveStepText.rectTransform.anchorMin = Vector2.zero;
+            objectiveStepText.rectTransform.anchorMax = Vector2.one;
+            objectiveStepText.rectTransform.offsetMin = objectiveStepText.rectTransform.offsetMax = Vector2.zero;
+
             objectiveText = CreateText("ObjectiveText", objectivePanel.transform, "목표를 불러오는 중",
-                22, FontStyle.Bold, TextAnchor.UpperLeft, Color.white);
-            SetRect(objectiveText.rectTransform, new Vector2(22f, -14f), new Vector2(438f, 68f),
+                19, FontStyle.Bold, TextAnchor.UpperLeft, ShopUiSkin.TextBody);
+            SetRect(objectiveText.rectTransform, new Vector2(88f, -16f), new Vector2(248f, 70f),
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
 
             tutorialSkipButton = CreateButton("TutorialSkip", objectivePanel.transform, "건너뛰기",
-                new Vector2(126f, 44f), OpenTutorialSkipConfirmation);
-            SetRect(tutorialSkipButton.GetComponent<RectTransform>(), new Vector2(-18f, -16f),
-                new Vector2(126f, 44f), Vector2.one, Vector2.one, Vector2.one);
+                new Vector2(96f, 36f), OpenTutorialSkipConfirmation);
+            SetRect(tutorialSkipButton.GetComponent<RectTransform>(), new Vector2(-16f, -16f),
+                new Vector2(96f, 36f), Vector2.one, Vector2.one, Vector2.one);
+            Image skipImage = tutorialSkipButton.GetComponent<Image>();
+            skipImage.color = ShopUiSkin.CreamBackground;
+            ShopUiSkin.Pill(skipImage);
+            Text skipLabel = tutorialSkipButton.GetComponentInChildren<Text>();
+            skipLabel.color = ShopUiSkin.BrownMid;
+            skipLabel.fontSize = 15;
             tutorialSkipButton.gameObject.SetActive(false);
 
             GameObject track = CreatePanel("ProgressTrack", objectivePanel.transform,
-                new Vector2(576f, 12f), new Color(0.12f, 0.17f, 0.23f, 1f));
-            SetRect(track.GetComponent<RectTransform>(), new Vector2(22f, 18f), new Vector2(576f, 12f),
+                new Vector2(420f, 10f), ShopUiSkin.Divider);
+            SetRect(track.GetComponent<RectTransform>(), new Vector2(16f, 14f), new Vector2(420f, 10f),
                 Vector2.zero, Vector2.zero, Vector2.zero);
+            ShopUiSkin.Pill(track.GetComponent<Image>());
             GameObject fill = CreatePanel("ProgressFill", track.transform, Vector2.zero, Mint);
             objectiveFill = fill.GetComponent<Image>();
+            objectiveFill.color = ShopUiSkin.Teal;
+            ShopUiSkin.Pill(objectiveFill);
             RectTransform fillRect = objectiveFill.rectTransform;
             fillRect.anchorMin = Vector2.zero;
             fillRect.anchorMax = Vector2.one;
@@ -353,33 +373,43 @@ namespace PickAndPlaceShop
         private void BuildTutorialSkipConfirmation(Transform parent)
         {
             tutorialSkipConfirmation = CreatePanel("TutorialSkipConfirmation", parent, Vector2.zero,
-                new Color(0.008f, 0.015f, 0.028f, 0.94f));
+                new Color(0.26f, 0.16f, 0.1f, 0.82f));
             RectTransform overlayRect = tutorialSkipConfirmation.GetComponent<RectTransform>();
             overlayRect.anchorMin = Vector2.zero;
             overlayRect.anchorMax = Vector2.one;
             overlayRect.offsetMin = overlayRect.offsetMax = Vector2.zero;
 
             GameObject card = CreatePanel("Card", tutorialSkipConfirmation.transform,
-                new Vector2(720f, 330f), new Color(0.025f, 0.055f, 0.08f, 1f));
-            SetRect(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(720f, 330f),
+                new Vector2(680f, 390f), ShopUiSkin.CreamCard);
+            SetRect(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(680f, 390f),
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-            Text title = CreateText("Title", card.transform, "튜토리얼을 스킵하시겠습니까?",
-                34, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
-            SetRect(title.rectTransform, new Vector2(0f, 70f), new Vector2(650f, 72f),
+            ShopUiSkin.Round(card.GetComponent<Image>(), 28);
+            ShopUiSkin.AddIcon("Question", card.transform, ShopUiIcon.Idea, ShopUiSkin.Pink,
+                new Vector2(72f, 72f), new Vector2(0f, -36f), new Vector2(0.5f, 1f));
+            Text title = CreateText("Title", card.transform, "튜토리얼을 건너뛸까요?",
+                30, FontStyle.Bold, TextAnchor.MiddleCenter, ShopUiSkin.BrownDeep);
+            SetRect(title.rectTransform, new Vector2(0f, 60f), new Vector2(610f, 62f),
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
             Text body = CreateText("Body", card.transform,
-                "예를 선택하면 일반 목표로 전환됩니다.", 21, FontStyle.Normal,
-                TextAnchor.MiddleCenter, Muted);
-            SetRect(body.rectTransform, new Vector2(0f, 15f), new Vector2(650f, 52f),
+                "나중에 설정에서 다시 시작할 수 있어요.", 19, FontStyle.Normal,
+                TextAnchor.MiddleCenter, ShopUiSkin.TextMuted);
+            SetRect(body.rectTransform, new Vector2(0f, 8f), new Vector2(610f, 48f),
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-            Button yes = CreateButton("ConfirmSkip", card.transform, "예",
-                new Vector2(240f, 62f), ConfirmTutorialSkip);
-            SetRect(yes.GetComponent<RectTransform>(), new Vector2(-132f, -82f), new Vector2(240f, 62f),
+            Button no = CreateButton("ContinueTutorial", card.transform, "계속할게요",
+                new Vector2(260f, 60f), CloseTutorialSkipConfirmation);
+            SetRect(no.GetComponent<RectTransform>(), new Vector2(-142f, -92f), new Vector2(260f, 60f),
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-            Button no = CreateButton("CancelSkip", card.transform, "아니오",
-                new Vector2(240f, 62f), CloseTutorialSkipConfirmation);
-            SetRect(no.GetComponent<RectTransform>(), new Vector2(132f, -82f), new Vector2(240f, 62f),
+            Image noImage = no.GetComponent<Image>();
+            noImage.color = ShopUiSkin.CreamBackground;
+            ShopUiSkin.Pill(noImage);
+            no.GetComponentInChildren<Text>().color = ShopUiSkin.BrownDeep;
+            Button yes = CreateButton("ConfirmSkip", card.transform, "건너뛸게요",
+                new Vector2(260f, 60f), ConfirmTutorialSkip);
+            SetRect(yes.GetComponent<RectTransform>(), new Vector2(142f, -92f), new Vector2(260f, 60f),
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            Image yesImage = yes.GetComponent<Image>();
+            yesImage.color = ShopUiSkin.Teal;
+            ShopUiSkin.Pill(yesImage);
             tutorialSkipConfirmation.SetActive(false);
         }
 
@@ -450,13 +480,14 @@ namespace PickAndPlaceShop
                     out int tutorialTarget))
             {
                 if (tutorialSkipButton != null) tutorialSkipButton.gameObject.SetActive(true);
+                if (objectiveStepText != null) objectiveStepText.text = (manager.TutorialStep + 1) + "/7";
                 string tutorialKey = "tutorial:" + manager.TutorialStep;
                 if (tutorialKey != objectiveKey)
                 {
                     objectiveKey = tutorialKey;
                     objectiveGroup.alpha = 0.25f;
                 }
-                objectiveText.text = "<color=#46FFBF><b>튜토리얼</b></color>  " + tutorialLabel + "\n" +
+                objectiveText.text = "튜토리얼 · " + tutorialLabel + "\n" +
                                      (manager.TutorialStep == 0
                                          ? (tutorialCurrent / 10f).ToString("0.0") + "m / " +
                                            (tutorialTarget / 10f).ToString("0.0") + "m"
@@ -466,6 +497,7 @@ namespace PickAndPlaceShop
                 return;
             }
             if (tutorialSkipButton != null) tutorialSkipButton.gameObject.SetActive(false);
+            if (objectiveStepText != null) objectiveStepText.text = "목표";
             string key;
             string label;
             ShopProgressConditionType type;
@@ -501,7 +533,7 @@ namespace PickAndPlaceShop
                 objectiveGroup.alpha = 0.25f;
             }
             float progress = target <= 0 ? 1f : Mathf.Clamp01(current / (float)target);
-            objectiveText.text = "<color=#46FFBF><b>현재 목표</b></color>  " + label + "\n" +
+            objectiveText.text = "현재 목표 · " + label + "\n" +
                                  FormatCurrent(type, current) + " / " + FormatDisplayTarget(type, target);
             objectiveFill.rectTransform.anchorMax = new Vector2(progress, 1f);
         }
