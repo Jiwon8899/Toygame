@@ -7,6 +7,8 @@ namespace PickAndPlaceShop
         private static readonly int MovingParameter = Animator.StringToHash("Moving");
         private static readonly int RunningParameter = Animator.StringToHash("Running");
         private static readonly int SpeedParameter = Animator.StringToHash("Speed");
+        private static readonly int Attack1Parameter = Animator.StringToHash("Attack1");
+        private static readonly int Attack2Parameter = Animator.StringToHash("Attack2");
 
         [SerializeField] private Animator appearanceAnimator;
         [Min(0.1f)] [SerializeField] private float runThreshold = 3.8f;
@@ -16,6 +18,13 @@ namespace PickAndPlaceShop
         public Animator AppearanceAnimator => appearanceAnimator;
         public float CurrentSpeed { get; private set; }
         public bool IsRunning { get; private set; }
+
+        public void PlayAttack(int comboIndex)
+        {
+            if (appearanceAnimator == null) return;
+            appearanceAnimator.ResetTrigger(comboIndex == 0 ? Attack2Parameter : Attack1Parameter);
+            appearanceAnimator.SetTrigger(comboIndex == 0 ? Attack1Parameter : Attack2Parameter);
+        }
 
 #if UNITY_EDITOR
         public void EditorConfigure(Animator animator, float runningSpeedThreshold)

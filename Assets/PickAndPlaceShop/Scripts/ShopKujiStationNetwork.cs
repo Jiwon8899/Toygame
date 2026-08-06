@@ -42,11 +42,18 @@ namespace PickAndPlaceShop
         public NetworkVariable<float> ScratchProgress = new(0f);
         public NetworkVariable<int> SetNumber = new(1);
         public NetworkVariable<float> RefillSecondsRemaining = new(0f);
+        public NetworkVariable<int> Durability = new(0);
+        public NetworkVariable<float> BrokenSecondsRemaining = new(0f);
+        public NetworkVariable<int> TheftHitSerial = new(0);
 
         private readonly ShopAcquisitionAwardLedger awardLedger = new();
         private float stateElapsed;
         private float scratchElapsed;
         private int presentedAttempt = -1;
+        private Vector3 damageVisualBasePosition;
+        private float damageShakeUntil;
+        private int observedTheftHitSerial;
+        private ShopTheftConfig theftConfig;
 
         public string PoolId => config != null ? config.PoolId : name;
         public int TicketPrice => config != null ? config.TicketPrice : 0;
@@ -66,6 +73,7 @@ namespace PickAndPlaceShop
                 ? config.DisplayName + " 마우스로 긁는 중"
                 : config.DisplayName + " 등급 공개 중";
         public Vector3 InteractionWorldPosition => interactionPoint != null ? interactionPoint.position : transform.position;
+        public bool IsBroken => BrokenSecondsRemaining.Value > 0f;
 
 #if UNITY_EDITOR
         public void EditorConfigure(ShopKujiPoolConfig poolConfig, Transform usePoint, Transform ticketTransform,
@@ -86,6 +94,8 @@ namespace PickAndPlaceShop
 
         public override void OnNetworkSpawn()
         {
+            theftConfig = ShopTheftConfig.Load();
+            damageVisualBasePosition = transform.localPosition;
             if (IsServer)
             {
                 // Keep the station on the session owner in the project's Distributed Authority
@@ -97,6 +107,8 @@ namespace PickAndPlaceShop
                     RestoreSaveState(saved);
                 else
                     ResetSet(false);
+                Durability.Value = theftConfig != null ? theftConfig.KujiDurability : 1;
+                BrokenSecondsRemaining.Value = 0f;
                 NetworkManager.OnClientDisconnectCallback += OnClientDisconnected;
             }
         }
@@ -118,6 +130,11 @@ namespace PickAndPlaceShop
             ulong sender = rpcParams.Receive.SenderClientId;
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (config == null || game == null) return;
+            if (IsBroken)
+            {
+                game.ServerSetEvent(config.DisplayName + "은(는) 파손되어 수리 중입니다.");
+                return;
+            }
             if (State.Value == ShopKujiState.Refilling)
             {
                 game.ServerSetEvent(config.DisplayName + " 새 상자 개봉 중 · " +
@@ -193,7 +210,20 @@ namespace PickAndPlaceShop
 
         private void FixedUpdate()
         {
-            if (!IsServer || !IsSpawned || State.Value == ShopKujiState.Idle) return;
+            if (!IsServer || !IsSpawned) return;
+            if (BrokenSecondsRemaining.Value > 0f)
+            {
+                BrokenSecondsRemaining.Value = Mathf.Max(0f,
+                    BrokenSecondsRemaining.Value - Time.fixedDeltaTime);
+                if (BrokenSecondsRemaining.Value <= 0f)
+                {
+                    ShopTheftConfig theft = ShopTheftConfig.Load();
+                    Durability.Value = theft != null ? theft.KujiDurability : 1;
+                    ShopNetworkGame.Instance?.ServerSetEvent(config.DisplayName + " 수리가 끝났습니다.");
+                }
+                return;
+            }
+            if (State.Value == ShopKujiState.Idle) return;
             if (State.Value == ShopKujiState.Refilling)
             {
                 RefillSecondsRemaining.Value = Mathf.Max(0f,
@@ -243,9 +273,65 @@ namespace PickAndPlaceShop
 
         private void Update()
         {
+            ApplyTheftDamageVisual();
             ApplyVisuals();
             UpdateInformationText();
             TryPresentResult();
+        }
+
+        public bool ServerApplyTheftHit(ulong attackerClientId, int damage, ShopTheftConfig theft)
+        {
+            if (!IsServer || !IsSpawned || config == null || theft == null || IsBroken ||
+                State.Value != ShopKujiState.Idle) return false;
+            Durability.Value = Mathf.Max(0, Durability.Value - Mathf.Max(1, damage));
+            TheftHitSerial.Value++;
+            if (Durability.Value > 0)
+            {
+                ShopNetworkGame.Instance?.ServerSetEvent(config.DisplayName + " 내구도 " +
+                                                          Durability.Value + "/" + theft.KujiDurability);
+                return true;
+            }
+
+            ShopKujiRank rank = ShopTheftRules.SelectTheftKuji(Random.value, theft);
+            ShopProductDefinition product = config.PrizeDefinitionFor(rank, TheftHitSerial.Value);
+            if (product == null && rank != ShopKujiRank.D)
+                product = config.PrizeDefinitionFor(ShopKujiRank.D, TheftHitSerial.Value);
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            int visualIndex = product != null ? ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab) : -1;
+            if (game == null || product == null ||
+                !game.ServerTryAcquireItem(attackerClientId, product, visualIndex,
+                    ShopAcquisitionSource.Theft, 0, out ShopContainerKind destination))
+            {
+                Durability.Value = 1;
+                game?.ServerSetEvent("보관 공간이 부족해 파손 보상을 획득하지 못했습니다.");
+                return true;
+            }
+
+            BrokenSecondsRemaining.Value = theft.BrokenRecoverySeconds;
+            game.ServerRecordAcquired(1);
+            game.ServerSetEvent(config.DisplayName + " 파손 강탈: " + product.DisplayName +
+                                (destination == ShopContainerKind.PersonalInventory
+                                    ? " → 개인 가방"
+                                    : " → 공용 창고"));
+            ShopPlayerTheftNetwork.ServerReportTheftSuccess(attackerClientId, ShopTheftAction.KujiBreak);
+            return true;
+        }
+
+        private void ApplyTheftDamageVisual()
+        {
+            if (theftConfig == null) theftConfig = ShopTheftConfig.Load();
+            if (theftConfig == null) return;
+            if (TheftHitSerial.Value != observedTheftHitSerial)
+            {
+                observedTheftHitSerial = TheftHitSerial.Value;
+                damageShakeUntil = Time.time + theftConfig.DamageShakeSeconds;
+            }
+            if (Time.time < damageShakeUntil)
+                transform.localPosition = damageVisualBasePosition +
+                                          new Vector3(Mathf.Sin(Time.time * theftConfig.DamageShakeFrequency) *
+                                                      theftConfig.DamageShakeDistance, 0f, 0f);
+            else if (transform.localPosition != damageVisualBasePosition)
+                transform.localPosition = damageVisualBasePosition;
         }
 
         private void ServerAwardResult()
@@ -406,7 +492,8 @@ namespace PickAndPlaceShop
             }
             if (statusLamp != null)
             {
-                Color color = State.Value == ShopKujiState.Idle ? new Color(0.2f, 1f, 0.5f) :
+                Color color = IsBroken ? new Color(1f, 0.12f, 0.08f) :
+                    State.Value == ShopKujiState.Idle ? new Color(0.2f, 1f, 0.5f) :
                     State.Value == ShopKujiState.Result ? new Color(1f, 0.65f, 0.2f) : new Color(0.65f, 0.35f, 1f);
                 MaterialPropertyBlock block = new();
                 statusLamp.GetPropertyBlock(block);
@@ -502,7 +589,11 @@ namespace PickAndPlaceShop
                                    "\n티켓 " + EffectiveTicketPrice +
                                    (EffectiveTicketPrice < config.TicketPrice ? " (할인)" : string.Empty) +
                                    " | 전체 " + TotalRemaining + detail +
-                                   "\n천장 " + DrawsSinceCeiling.Value + "/" + config.CeilingDraws + result;
+                                   "\n천장 " + DrawsSinceCeiling.Value + "/" + config.CeilingDraws + result +
+                                   (IsBroken
+                                       ? "\n파손 · 수리 " + Mathf.CeilToInt(BrokenSecondsRemaining.Value) + "초"
+                                       : "\n내구도 " + Durability.Value + "/" +
+                                         (ShopTheftConfig.Load()?.KujiDurability ?? Durability.Value));
         }
     }
 }

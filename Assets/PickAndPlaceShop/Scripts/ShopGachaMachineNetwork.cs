@@ -27,12 +27,19 @@ namespace PickAndPlaceShop
         public NetworkVariable<FixedString64Bytes> ResultProduct = new(new FixedString64Bytes("상품 준비 중"));
         public NetworkVariable<FixedString128Bytes> ResultStorageMessage =
             new(new FixedString128Bytes("획득 결과를 확인하는 중입니다."));
+        public NetworkVariable<int> Durability = new(0);
+        public NetworkVariable<float> BrokenSecondsRemaining = new(0f);
+        public NetworkVariable<int> TheftHitSerial = new(0);
 
         private readonly ShopAcquisitionAwardLedger awardLedger = new();
         private float stateElapsed;
         private int presentedAttempt = -1;
         private int observedDay = -1;
         private bool dailyRefillPending;
+        private Vector3 damageVisualBasePosition;
+        private float damageShakeUntil;
+        private int observedTheftHitSerial;
+        private ShopTheftConfig theftConfig;
 
         public string MachineId => config != null ? config.MachineId : name;
         public int AttemptCost => config != null ? config.AttemptCost : 0;
@@ -44,6 +51,7 @@ namespace PickAndPlaceShop
             ? config.DisplayName + " 돌리기 (-" + EffectiveAttemptCost + " 가게 자금)"
             : config.DisplayName + " 진행 중";
         public Vector3 InteractionWorldPosition => interactionPoint != null ? interactionPoint.position : transform.position;
+        public bool IsBroken => BrokenSecondsRemaining.Value > 0f;
 
 #if UNITY_EDITOR
         public void EditorConfigure(ShopGachaMachineConfig machineConfig, Transform usePoint, Transform turnHandle,
@@ -64,6 +72,8 @@ namespace PickAndPlaceShop
 
         public override void OnNetworkSpawn()
         {
+            theftConfig = ShopTheftConfig.Load();
+            damageVisualBasePosition = transform.localPosition;
             if (IsServer)
             {
                 // The existing multiplayer sample uses Distributed Authority. Pin shared shop
@@ -74,6 +84,8 @@ namespace PickAndPlaceShop
                 observedDay = ShopNetworkGame.Instance != null ? ShopNetworkGame.Instance.Day.Value : 1;
                 State.Value = ShopGachaState.Idle;
                 OccupantClientId.Value = ShopClawRules.NoOccupant;
+                Durability.Value = theftConfig != null ? theftConfig.GachaDurability : 1;
+                BrokenSecondsRemaining.Value = 0f;
                 NetworkManager.OnClientDisconnectCallback += OnClientDisconnected;
             }
             ApplyCapsuleColor();
@@ -96,6 +108,11 @@ namespace PickAndPlaceShop
             ulong sender = rpcParams.Receive.SenderClientId;
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (config == null || game == null) return;
+            if (IsBroken)
+            {
+                game.ServerSetEvent(config.DisplayName + "은(는) 파손되어 수리 중입니다.");
+                return;
+            }
             if (!ShopClawRules.CanOperateDuring(game.Phase.Value))
             {
                 game.ServerSetEvent("가챠는 준비 또는 영업 시간에 이용할 수 있습니다.");
@@ -138,6 +155,18 @@ namespace PickAndPlaceShop
         private void FixedUpdate()
         {
             if (!IsServer || !IsSpawned) return;
+            if (BrokenSecondsRemaining.Value > 0f)
+            {
+                BrokenSecondsRemaining.Value = Mathf.Max(0f,
+                    BrokenSecondsRemaining.Value - Time.fixedDeltaTime);
+                if (BrokenSecondsRemaining.Value <= 0f)
+                {
+                    ShopTheftConfig theft = ShopTheftConfig.Load();
+                    Durability.Value = theft != null ? theft.GachaDurability : 1;
+                    ShopNetworkGame.Instance?.ServerSetEvent(config.DisplayName + " 수리가 끝났습니다.");
+                }
+                return;
+            }
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game != null && game.Day.Value != observedDay)
             {
@@ -176,9 +205,65 @@ namespace PickAndPlaceShop
 
         private void Update()
         {
+            ApplyTheftDamageVisual();
             ApplyVisuals();
             UpdateInformationText();
             TryPresentResult();
+        }
+
+        public bool ServerApplyTheftHit(ulong attackerClientId, int damage, ShopTheftConfig theft)
+        {
+            if (!IsServer || !IsSpawned || config == null || theft == null || IsBroken ||
+                State.Value != ShopGachaState.Idle) return false;
+            Durability.Value = Mathf.Max(0, Durability.Value - Mathf.Max(1, damage));
+            TheftHitSerial.Value++;
+            if (Durability.Value > 0)
+            {
+                ShopNetworkGame.Instance?.ServerSetEvent(config.DisplayName + " 내구도 " +
+                                                          Durability.Value + "/" + theft.GachaDurability);
+                return true;
+            }
+
+            ShopGachaRarity rarity = ShopTheftRules.SelectTheftGacha(Random.value, theft);
+            ShopProductDefinition product = config.ProductDefinitionFor(rarity, TheftHitSerial.Value);
+            if (product == null && rarity != ShopGachaRarity.Common)
+                product = config.ProductDefinitionFor(ShopGachaRarity.Common, TheftHitSerial.Value);
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            int visualIndex = product != null ? ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab) : -1;
+            if (game == null || product == null ||
+                !game.ServerTryAcquireItem(attackerClientId, product, visualIndex,
+                    ShopAcquisitionSource.Theft, 0, out ShopContainerKind destination))
+            {
+                Durability.Value = 1;
+                game?.ServerSetEvent("보관 공간이 부족해 파손 보상을 획득하지 못했습니다.");
+                return true;
+            }
+
+            BrokenSecondsRemaining.Value = theft.BrokenRecoverySeconds;
+            game.ServerRecordAcquired(1);
+            game.ServerSetEvent(config.DisplayName + " 파손 강탈: " + product.DisplayName +
+                                (destination == ShopContainerKind.PersonalInventory
+                                    ? " → 개인 가방"
+                                    : " → 공용 창고"));
+            ShopPlayerTheftNetwork.ServerReportTheftSuccess(attackerClientId, ShopTheftAction.GachaBreak);
+            return true;
+        }
+
+        private void ApplyTheftDamageVisual()
+        {
+            if (theftConfig == null) theftConfig = ShopTheftConfig.Load();
+            if (theftConfig == null) return;
+            if (TheftHitSerial.Value != observedTheftHitSerial)
+            {
+                observedTheftHitSerial = TheftHitSerial.Value;
+                damageShakeUntil = Time.time + theftConfig.DamageShakeSeconds;
+            }
+            if (Time.time < damageShakeUntil)
+                transform.localPosition = damageVisualBasePosition +
+                                          new Vector3(Mathf.Sin(Time.time * theftConfig.DamageShakeFrequency) *
+                                                      theftConfig.DamageShakeDistance, 0f, 0f);
+            else if (transform.localPosition != damageVisualBasePosition)
+                transform.localPosition = damageVisualBasePosition;
         }
 
         private void ServerAwardResult()
@@ -292,7 +377,8 @@ namespace PickAndPlaceShop
             }
             if (statusLamp != null)
             {
-                Color color = State.Value == ShopGachaState.Idle ? new Color(0.2f, 1f, 0.5f) :
+                Color color = IsBroken ? new Color(1f, 0.12f, 0.08f) :
+                    State.Value == ShopGachaState.Idle ? new Color(0.2f, 1f, 0.5f) :
                     State.Value == ShopGachaState.Result ? new Color(1f, 0.8f, 0.2f) : new Color(0.2f, 0.65f, 1f);
                 MaterialPropertyBlock block = new();
                 statusLamp.GetPropertyBlock(block);
@@ -320,7 +406,11 @@ namespace PickAndPlaceShop
             informationText.text = config.DisplayName + "\n1회 " + EffectiveAttemptCost +
                                    (EffectiveAttemptCost < config.AttemptCost ? " (할인)" : string.Empty) +
                                    " | 남은 캡슐 " +
-                                   RemainingStock.Value + result;
+                                   RemainingStock.Value + result +
+                                   (IsBroken
+                                       ? "\n파손 · 수리 " + Mathf.CeilToInt(BrokenSecondsRemaining.Value) + "초"
+                                       : "\n내구도 " + Durability.Value + "/" +
+                                         (ShopTheftConfig.Load()?.GachaDurability ?? Durability.Value));
         }
 
         private static string RarityLabel(ShopGachaRarity rarity) => rarity switch

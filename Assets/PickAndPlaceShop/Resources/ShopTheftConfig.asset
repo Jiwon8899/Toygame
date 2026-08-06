@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41fe8038089419b4cbc17d205a42c1c9, type: 3}
+  m_Name: ShopTheftConfig
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopTheftConfig
+  attackCooldown: 0.65
+  attackMoveMultiplier: 0.4
+  attackMoveSlowSeconds: 0.5
+  hitRadius: 2.2
+  hitAngle: 78
+  hitForwardOffset: 0.8
+  attackDamage: 15
+  clawImpulse: 0.72
+  clawVerticalImpulse: 0.18
+  clawTheftWindow: 3
+  maximumCapsuleSpeed: 2.7
+  maximumCapsuleAngularSpeed: 8
+  gachaDurability: 100
+  kujiDurability: 150
+  brokenRecoverySeconds: 210
+  theftUncommonChance: 0.12
+  theftRareChance: 0.015
+  theftKujiBChance: 0.08
+  theftKujiAChance: 0.015
+  maximumAlert: 100
+  clawAlert: 28
+  gachaAlert: 46
+  kujiAlert: 56
+  alertDecayDelay: 10
+  insideShopDecayPerSecond: 1.5
+  outsideShopDecayPerSecond: 0.1
+  shopSafeRadius: 18
+  alertAfterArrestNormalized: 0
+  policeAppearancePrefab: {fileID: 4304917915462873115, guid: 4e0a55fb8b16e8543b1b56979360648d, type: 3}
+  policeSpeed: 4.8
+  policeTargetRefreshSeconds: 0.15
+  arrestDistance: 1.5
+  arrestHoldSeconds: 1
+  chaseTimeoutSeconds: 40
+  arrestFine: 300
+  policeSpawnDistance: 8
+  policeNavMeshSampleRadius: 6
+  arrestTeleportHeightOffset: 0.15

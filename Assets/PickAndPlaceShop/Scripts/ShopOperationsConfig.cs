@@ -26,7 +26,8 @@ namespace PickAndPlaceShop
     {
         Manual,
         Automation,
-        Consignment
+        Consignment,
+        Theft
     }
 
     public enum ShopCustomerDialogueEvent

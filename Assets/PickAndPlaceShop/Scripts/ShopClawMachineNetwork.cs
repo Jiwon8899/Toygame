@@ -111,6 +111,9 @@ namespace PickAndPlaceShop
         private GameObject aimGroundMarker;
         private readonly Dictionary<ulong, float> chuteStableSeconds = new();
         private readonly Dictionary<ulong, float> chuteLastObservationTime = new();
+        private ulong theftOwnerClientId = ShopClawRules.NoOccupant;
+        private float theftWindowUntil;
+        private bool theftAwardedInWindow;
         private readonly Dictionary<ulong, float> abnormalStuckSeconds = new();
         private bool physicalClawReady;
         private float verticalVelocity;
@@ -428,6 +431,8 @@ namespace PickAndPlaceShop
                     ServerRecoverOutOfBoundsPrizes();
                 }
             }
+            if (Time.time <= theftWindowUntil && theftOwnerClientId != ShopClawRules.NoOccupant)
+                ServerObserveChuteCandidates();
 
             switch (State.Value)
             {
@@ -801,11 +806,47 @@ namespace PickAndPlaceShop
             ClawHeight.Value = next;
         }
 
+        public bool ServerApplyTheftImpulse(ulong attackerClientId, ShopTheftConfig theft)
+        {
+            if (!IsServer || !IsSpawned || theft == null || State.Value != ShopClawMachineState.Idle)
+                return false;
+            int affected = 0;
+            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            {
+                if (prize == null || !prize.IsSpawned || prize.Awarded.Value || prize.Body == null) continue;
+                Vector2 planar = UnityEngine.Random.insideUnitCircle.normalized;
+                if (planar.sqrMagnitude < 0.01f) planar = Vector2.right;
+                Vector3 impulse = new(planar.x * theft.ClawImpulse,
+                    theft.ClawVerticalImpulse * UnityEngine.Random.Range(
+                        theft.ClawVerticalImpulseMinimumMultiplier, 1f),
+                    planar.y * theft.ClawImpulse);
+                prize.Body.AddForce(impulse, ForceMode.Impulse);
+                prize.Body.linearVelocity = ShopTheftRules.ClampVelocity(prize.Body.linearVelocity,
+                    theft.MaximumCapsuleSpeed);
+                prize.Body.angularVelocity = ShopTheftRules.ClampVelocity(prize.Body.angularVelocity,
+                    theft.MaximumCapsuleAngularSpeed);
+                prize.Body.maxDepenetrationVelocity = Mathf.Min(prize.Body.maxDepenetrationVelocity,
+                    theft.MaximumCapsuleSpeed);
+                prize.Body.WakeUp();
+                affected++;
+            }
+            if (affected <= 0) return false;
+            theftOwnerClientId = attackerClientId;
+            theftWindowUntil = Time.time + theft.ClawTheftWindow;
+            theftAwardedInWindow = false;
+            ShopNetworkGame.Instance?.ServerSetEvent(
+                "기계가 흔들렸습니다. 캡슐이 배출구에 완전히 들어가야 획득됩니다.");
+            return true;
+        }
+
         public void ServerObserveChutePrize(ShopClawPrizeNetwork prize, Collider chuteVolume)
         {
             if (!IsServer || prize == null || !prize.IsSpawned || chuteVolume == null) return;
-            if (!chargedAttempts.Contains(AttemptId.Value) ||
-                !ShopClawRules.CanAwardChutePrize(State.Value)) return;
+            bool paidRound = chargedAttempts.Contains(AttemptId.Value) &&
+                             ShopClawRules.CanAwardChutePrize(State.Value);
+            bool theftWindow = Time.time <= theftWindowUntil &&
+                               theftOwnerClientId != ShopClawRules.NoOccupant;
+            if (!paidRound && !theftWindow) return;
             if (!TryGetPrizePhysicalBounds(prize, out Bounds prizeBounds) ||
                 !ShopClawRules.IsFullyInsideChute(prizeBounds, chuteVolume.bounds,
                     config.ChuteHorizontalInset) ||
@@ -857,7 +898,16 @@ namespace PickAndPlaceShop
             bool belongs = prize.MachineNetworkObjectId.Value == NetworkObjectId;
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (!belongs || prize.Awarded.Value) return;
-            if (config != null && config.MultiPrizePolicy == ShopMultiPrizePolicy.SingleAndReturnExtras &&
+            bool theftAward = Time.time <= theftWindowUntil &&
+                              theftOwnerClientId != ShopClawRules.NoOccupant &&
+                              !(chargedAttempts.Contains(AttemptId.Value) &&
+                                ShopClawRules.CanAwardChutePrize(State.Value));
+            if (theftAward && theftAwardedInWindow)
+            {
+                ServerReturnPrizeToField(prize);
+                return;
+            }
+            if (!theftAward && config != null && config.MultiPrizePolicy == ShopMultiPrizePolicy.SingleAndReturnExtras &&
                 roundAwardCount > 0)
             {
                 ResultMessage.Value = new FixedString128Bytes("기본 기계는 한 판에 1개만 획득합니다. 추가 캡슐을 부드럽게 돌려보냅니다.");
@@ -866,12 +916,15 @@ namespace PickAndPlaceShop
             }
             ShopProductRarity spawnedRarity = (ShopProductRarity)Mathf.Clamp(
                 prize.SpawnedRarity.Value, 0, (int)ShopProductRarity.UltraRare);
+            if (theftAward && spawnedRarity == ShopProductRarity.UltraRare)
+                spawnedRarity = ShopProductRarity.Common;
             ShopProductDefinition product = FindProductForRarity(spawnedRarity,
                 AttemptId.Value * 397 ^ (int)prize.NetworkObjectId);
             int awardedVisualIndex = product != null
                 ? ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab)
                 : prize.VisualPrefabIndex.Value;
-            if (game == null || !game.ServerCanAcquireItem(OccupantClientId.Value, product))
+            ulong rewardOwner = theftAward ? theftOwnerClientId : OccupantClientId.Value;
+            if (game == null || !game.ServerCanAcquireItem(rewardOwner, product))
             {
                 ResultMessage.Value = new FixedString128Bytes("인벤토리와 창고가 가득 차 상품을 받을 수 없습니다.");
                 game?.ServerSetEvent("인벤토리와 창고가 모두 가득 차 상품을 플레이필드로 돌려보냈습니다.");
@@ -879,8 +932,9 @@ namespace PickAndPlaceShop
                 return;
             }
             ShopContainerKind destination = ShopContainerKind.PersonalInventory;
-            bool stored = game != null && game.ServerTryAcquireItem(OccupantClientId.Value, product,
-                awardedVisualIndex, out destination);
+            bool stored = game != null && game.ServerTryAcquireItem(rewardOwner, product,
+                awardedVisualIndex, theftAward ? ShopAcquisitionSource.Theft : ShopAcquisitionSource.Manual,
+                0, out destination);
             if (!stored)
             {
                 ResultMessage.Value = new FixedString128Bytes("인벤토리와 창고가 가득 차 상품을 받을 수 없습니다.");
@@ -893,7 +947,10 @@ namespace PickAndPlaceShop
             RemainingCapsules.Value = Mathf.Max(0, RemainingCapsules.Value - 1);
             awardedAttemptId = AttemptId.Value;
             roundAwardCount++;
+            if (theftAward) theftAwardedInWindow = true;
             game.ServerRecordAcquired(1);
+            if (theftAward)
+                ShopPlayerTheftNetwork.ServerReportTheftSuccess(rewardOwner, ShopTheftAction.ClawChute);
             ShopProgressionManager progression = ShopProgressionManager.Instance;
             if (progression == null)
                 Debug.LogError("[Progression] 컬렉션 관리자를 찾지 못했습니다.", this);
