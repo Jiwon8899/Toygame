@@ -196,6 +196,7 @@ namespace PickAndPlaceShop
             label.anchor = TextAnchor.MiddleCenter;
             label.alignment = TextAlignment.Center;
             label.color = new Color(0.35f, 1f, 0.55f);
+            ShopUiFonts.Apply(label, ShopUiFontWeight.Bold);
 
             return new Entry
             {

@@ -28,10 +28,9 @@ namespace PickAndPlaceShop
         private void LateUpdate()
         {
             if (customer == null || stateLabel == null) return;
-            if (!fontApplied && ShopKoreanFontApplier.KoreanFont != null)
+            if (!fontApplied)
             {
-                stateLabel.font = ShopKoreanFontApplier.KoreanFont;
-                stateLabel.GetComponent<Renderer>().sharedMaterial = ShopKoreanFontApplier.KoreanFont.material;
+                ShopUiFonts.Apply(stateLabel);
                 fontApplied = true;
             }
             ShopNightSalesSystem system = ShopNightSalesSystem.Instance;

@@ -47,9 +47,7 @@ namespace PickAndPlaceShop
             labelRect.offsetMin = new Vector2(22f, 12f);
             labelRect.offsetMax = new Vector2(-22f, -12f);
             Text label = labelObject.GetComponent<Text>();
-            label.font = ShopKoreanFontApplier.KoreanFont != null
-                ? ShopKoreanFontApplier.KoreanFont
-                : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            ShopUiFonts.Apply(label);
             label.fontSize = 27;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = new Color(0.93f, 1f, 0.98f, 1f);

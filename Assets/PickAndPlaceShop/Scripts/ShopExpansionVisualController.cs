@@ -211,6 +211,7 @@ namespace PickAndPlaceShop
             sign.characterSize = 0.085f;
             sign.fontSize = 48;
             sign.color = new Color(1f, 0.88f, 0.48f);
+            ShopUiFonts.Apply(sign, ShopUiFontWeight.Bold);
             CreateShelf(center + new Vector3(-1.65f, 0f, 0f), level);
             customerBrowsePoints.Add(center + new Vector3(-0.6f, 0f, 0.35f));
             customerBrowsePoints.Add(center + new Vector3(0.8f, 0f, -0.35f));

@@ -345,7 +345,7 @@ namespace PickAndPlaceShop
             rect.sizeDelta = dimensions;
             rect.anchoredPosition = position;
             Text text = go.GetComponent<Text>();
-            text.font = template != null ? template.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            ShopUiFonts.Apply(text, ShopUiFontWeight.Bold);
             text.fontSize = size;
             text.alignment = TextAnchor.MiddleCenter;
             text.resizeTextForBestFit = true;

@@ -172,6 +172,15 @@ namespace PickAndPlaceShop
             text.font = Resolve(weight);
             text.fontStyle = FontStyle.Normal;
         }
+
+        public static void Apply(TextMesh text, ShopUiFontWeight weight = ShopUiFontWeight.Regular)
+        {
+            if (text == null) return;
+            Font font = Resolve(weight);
+            text.font = font;
+            Renderer renderer = text.GetComponent<Renderer>();
+            if (renderer != null) renderer.sharedMaterial = font.material;
+        }
     }
 
     public static class ShopUiSkin
