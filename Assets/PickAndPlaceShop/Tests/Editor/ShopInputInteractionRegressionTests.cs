@@ -122,7 +122,7 @@ namespace PickAndPlaceShop.Tests
             string curation = File.ReadAllText(
                 "Assets/PickAndPlaceShop/Scripts/ShopCurationSystem.cs");
             StringAssert.Contains("!TryFindPersonalProduct(productId, out _)", curation);
-            StringAssert.Contains("stripRect.anchoredPosition = new Vector2(0f, 132f)", curation);
+            StringAssert.Contains("stripRect.anchoredPosition = new Vector2(0f, 126f)", curation);
         }
 
         [Test]
@@ -151,7 +151,7 @@ namespace PickAndPlaceShop.Tests
         {
             string hud = File.ReadAllText(
                 "Assets/PickAndPlaceShop/Scripts/ShopProgressionHUD.cs");
-            StringAssert.Contains("튜토리얼을 스킵하시겠습니까?", hud);
+            StringAssert.Contains("튜토리얼을 건너뛸까요?", hud);
             StringAssert.Contains("ConfirmTutorialSkip", hud);
             string progression = File.ReadAllText(
                 "Assets/PickAndPlaceShop/Scripts/ShopProgressionManager.cs");
