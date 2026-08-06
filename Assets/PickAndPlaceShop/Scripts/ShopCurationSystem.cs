@@ -747,7 +747,7 @@ namespace PickAndPlaceShop
 
         private void BuildUi()
         {
-            Font font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Arial" }, 24);
+            Font font = ShopUiFonts.Regular;
             GameObject canvasObject = new("Curation Score Canvas", typeof(Canvas), typeof(CanvasScaler));
             canvasObject.transform.SetParent(transform, false);
             scoreCanvas = canvasObject.GetComponent<Canvas>();

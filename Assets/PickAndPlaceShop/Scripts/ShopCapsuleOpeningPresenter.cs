@@ -315,10 +315,10 @@ namespace PickAndPlaceShop
             rect.sizeDelta = dimensions;
             rect.anchoredPosition = position;
             Text text = item.GetComponent<Text>();
-            text.font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Arial" }, size);
+            text.font = ShopUiFonts.Bold;
             text.text = value;
             text.fontSize = size;
-            text.fontStyle = FontStyle.Bold;
+            text.fontStyle = FontStyle.Normal;
             text.alignment = TextAnchor.MiddleCenter;
             text.color = Color.white;
             text.raycastTarget = false;

@@ -84,9 +84,9 @@ namespace PickAndPlaceShop
             iconRect.sizeDelta = new Vector2(76f, 76f);
             label = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
             label.transform.SetParent(panel.transform, false);
-            label.font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Arial" }, 18);
+            label.font = ShopUiFonts.Bold;
             label.fontSize = 18;
-            label.fontStyle = FontStyle.Bold;
+            label.fontStyle = FontStyle.Normal;
             label.alignment = TextAnchor.MiddleLeft;
             label.color = Color.white;
             RectTransform labelRect = label.rectTransform;

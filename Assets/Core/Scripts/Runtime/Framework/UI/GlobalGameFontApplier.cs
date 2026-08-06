@@ -85,7 +85,7 @@ namespace Blocks.Gameplay.Core
             GlobalGameFontSettings loadedSettings = LoadSettings();
             if (loadedSettings == null || root == null) return;
 
-            ApplyLegacyText(root.GetComponentsInChildren<Text>(true), loadedSettings.LegacyFont);
+            ApplyLegacyText(root.GetComponentsInChildren<Text>(true), loadedSettings);
             ApplyTextMeshes(root.GetComponentsInChildren<TextMesh>(true), loadedSettings.LegacyFont);
             ApplyTextMeshPro(root.GetComponentsInChildren<TMP_Text>(true), loadedSettings.TextMeshProFont);
             ApplyUiDocuments(root.GetComponentsInChildren<UIDocument>(true), loadedSettings.LegacyFont);
@@ -96,7 +96,7 @@ namespace Blocks.Gameplay.Core
             GlobalGameFontSettings loadedSettings = LoadSettings();
             if (loadedSettings == null || !loadedSettings.IsConfigured) return;
 
-            ApplyLegacyText(Resources.FindObjectsOfTypeAll<Text>(), loadedSettings.LegacyFont);
+            ApplyLegacyText(Resources.FindObjectsOfTypeAll<Text>(), loadedSettings);
             ApplyTextMeshes(Resources.FindObjectsOfTypeAll<TextMesh>(), loadedSettings.LegacyFont);
             ApplyTextMeshPro(Resources.FindObjectsOfTypeAll<TMP_Text>(), loadedSettings.TextMeshProFont);
             ApplyUiDocuments(Resources.FindObjectsOfTypeAll<UIDocument>(), loadedSettings.LegacyFont);
@@ -107,12 +107,13 @@ namespace Blocks.Gameplay.Core
             return component != null && component.gameObject.scene.IsValid();
         }
 
-        private static void ApplyLegacyText(Text[] textComponents, Font font)
+        private static void ApplyLegacyText(Text[] textComponents, GlobalGameFontSettings loadedSettings)
         {
+            Font font = loadedSettings != null ? loadedSettings.LegacyFont : null;
             if (font == null) return;
             foreach (Text text in textComponents)
             {
-                if (!IsLoaded(text) || text.font == font) continue;
+                if (!IsLoaded(text) || loadedSettings.IsLegacyFamilyFont(text.font)) continue;
                 text.font = font;
                 text.SetAllDirty();
             }

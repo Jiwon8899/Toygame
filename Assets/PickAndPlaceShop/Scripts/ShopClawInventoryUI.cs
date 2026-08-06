@@ -127,7 +127,7 @@ namespace PickAndPlaceShop
             }
             instance = this;
             DontDestroyOnLoad(gameObject);
-            uiFont = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Arial" }, 28);
+            uiFont = ShopUiFonts.Regular;
             BuildUi();
             SetOpen(false);
         }
@@ -456,9 +456,9 @@ namespace PickAndPlaceShop
             Text target = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text))
                 .GetComponent<Text>();
             target.transform.SetParent(parent, false);
-            target.font = uiFont;
+            target.font = ShopUiFonts.Resolve(style);
             target.fontSize = size;
-            target.fontStyle = style;
+            target.fontStyle = FontStyle.Normal;
             target.alignment = alignment;
             target.color = color;
             target.text = content;

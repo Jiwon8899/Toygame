@@ -211,8 +211,6 @@ namespace PickAndPlaceShop
             sign.characterSize = 0.085f;
             sign.fontSize = 48;
             sign.color = new Color(1f, 0.88f, 0.48f);
-            signObject.AddComponent<ShopWorldFacingText>();
-
             CreateShelf(center + new Vector3(-1.65f, 0f, 0f), level);
             customerBrowsePoints.Add(center + new Vector3(-0.6f, 0f, 0.35f));
             customerBrowsePoints.Add(center + new Vector3(0.8f, 0f, -0.35f));
@@ -270,9 +268,9 @@ namespace PickAndPlaceShop
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
             revealText = textObject.GetComponent<Text>();
-            revealText.font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Arial" }, 36);
+            revealText.font = ShopUiFonts.Bold;
             revealText.fontSize = 36;
-            revealText.fontStyle = FontStyle.Bold;
+            revealText.fontStyle = FontStyle.Normal;
             revealText.alignment = TextAnchor.MiddleCenter;
             revealText.color = new Color(1f, 0.84f, 0.32f);
             canvasObject.SetActive(false);

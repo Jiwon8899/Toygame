@@ -12,5 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd1901ca48e952c4b909fef741a20921, type: 3}
   m_Name: GlobalGameFontSettings
   m_EditorClassIdentifier: Blocks.Gameplay.Core::Blocks.Gameplay.Core.GlobalGameFontSettings
-  legacyFont: {fileID: 12800000, guid: 2ef0b417c3f6029429bc266024c9543d, type: 3}
+  legacyFont: {fileID: 12800000, guid: 9691f34fd09158045b164a770323dd56, type: 3}
+  legacyMediumFont: {fileID: 12800000, guid: 10926f19f16c7a04ea5b9f48ac1fecf7, type: 3}
+  legacyBoldFont: {fileID: 12800000, guid: 65d3108b1d4238b4f852cb73f44e329b, type: 3}
   textMeshProFont: {fileID: 11400000, guid: 768e8c35165f977449ad074302184a0f, type: 2}

@@ -2314,7 +2314,7 @@ namespace PickAndPlaceShop
             rect.anchoredPosition = new Vector2(0f, 125f);
             rect.sizeDelta = new Vector2(420f, 220f);
             countdownText = countdownObject.GetComponent<Text>();
-            countdownText.font = operatorHudText != null ? operatorHudText.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            countdownText.font = operatorHudText != null && operatorHudText.font != null ? operatorHudText.font : ShopUiFonts.Bold;
             countdownText.fontSize = 92;
             countdownText.fontStyle = FontStyle.Bold;
             countdownText.alignment = TextAnchor.MiddleCenter;

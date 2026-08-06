@@ -734,9 +734,9 @@ namespace PickAndPlaceShop
             Text text = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(Text)).GetComponent<Text>();
             text.transform.SetParent(parent, false);
-            text.font = GlobalGameFontApplier.LegacyFont;
+            text.font = ShopUiFonts.Resolve(style);
             text.fontSize = size;
-            text.fontStyle = style;
+            text.fontStyle = FontStyle.Normal;
             text.alignment = alignment;
             text.color = color;
             text.text = content;

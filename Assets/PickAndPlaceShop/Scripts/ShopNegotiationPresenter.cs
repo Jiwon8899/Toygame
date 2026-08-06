@@ -156,10 +156,10 @@ namespace PickAndPlaceShop
             GameObject item = new(name, typeof(RectTransform), typeof(Text));
             item.transform.SetParent(parent, false);
             Text text = item.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = ShopUiFonts.Resolve(style);
             text.text = value;
             text.fontSize = size;
-            text.fontStyle = style;
+            text.fontStyle = FontStyle.Normal;
             text.alignment = TextAnchor.MiddleCenter;
             text.color = Color.white;
             return text;
