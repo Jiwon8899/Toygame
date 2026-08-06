@@ -22,8 +22,6 @@ namespace PickAndPlaceShop
         private string consignmentSnapshot;
         private GameObject capsuleRecyclerFacility;
         private GameObject appraisalFacility;
-        private GameObject curationDeskFacility;
-        private GameObject curationCoordinatorNpc;
         private GameObject consignmentFacility;
         private GameObject consignmentRejectFacility;
 
@@ -96,8 +94,7 @@ namespace PickAndPlaceShop
             int expansion = ShopProgressionManager.Instance?.ExpansionLevel ?? 1;
             if (action == ShopAction.CapsuleRecycler && expansion < 3 ||
                 action == ShopAction.AppraisalDesk && expansion < 4 ||
-                (action == ShopAction.ConsignmentCorner || action == ShopAction.ConsignmentReject) && expansion < 5 ||
-                (action == ShopAction.CurationDesk || action == ShopAction.CurationCoordinator) && expansion < 4)
+                (action == ShopAction.ConsignmentCorner || action == ShopAction.ConsignmentReject) && expansion < 5)
             {
                 game.ServerSetEvent("이 시설은 가게 확장 후 이용할 수 있습니다.");
                 return;
@@ -113,10 +110,6 @@ namespace PickAndPlaceShop
             }
             else if (action == ShopAction.ConsignmentCorner) ServerAcceptConsignment(game, requester);
             else if (action == ShopAction.ConsignmentReject) ServerRejectConsignment(game);
-            else if (action == ShopAction.CurationDesk)
-                ShopCurationSystem.Instance?.ServerAutoArrange();
-            else if (action == ShopAction.CurationCoordinator)
-                game.ServerSetEvent("진열 코디네이터가 현재 선반 평가를 안내합니다.");
         }
 
         private void ServerUpdateConsignment()
@@ -284,24 +277,22 @@ namespace PickAndPlaceShop
             else { game.ConsignmentOfferProduct2.Value = productId; game.ConsignmentOfferPrice2.Value = price; }
         }
 
-        public void ServerGenerateDailyReview(int day, float averageWaitSeconds,
-            int displayedCategoryCount, int averageSatisfaction, ShopProductCategory trendCategory)
+        public void ServerGenerateDailyReview(int day, int sold, int dailyGoal,
+            ShopProductCategory trendCategory)
         {
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null || !game.IsServer || day <= game.LatestReviewDay.Value) return;
 
-            int stars = Mathf.Clamp(Mathf.CeilToInt(Mathf.Clamp(averageSatisfaction, 0, 100) / 20f), 1, 5);
-            string fallback = BuildReviewFallback(day, averageWaitSeconds, displayedCategoryCount,
-                averageSatisfaction, trendCategory);
-            CommitReview(day, stars, averageWaitSeconds, displayedCategoryCount,
-                averageSatisfaction, trendCategory, fallback);
+            int stars = config != null ? config.ReviewStars(sold, dailyGoal) : 1;
+            string fallback = BuildReviewFallback(sold, dailyGoal, trendCategory);
+            CommitReview(day, stars, sold, dailyGoal, trendCategory, fallback);
 
             ShopNarrativeAIService service = ShopNarrativeAIService.Instance;
             if (service == null) return;
             string prompt = "고양이 소품샵의 하루 손님 리뷰를 한국어 한 문장으로 작성하세요. " +
-                            "평균 대기시간=" + averageWaitSeconds.ToString("0.0") + "초, " +
-                            "진열 카테고리=" + displayedCategoryCount + "개, " +
-                            "평균 만족도=" + averageSatisfaction + "점, " +
+                            "판매량=" + sold + "개, " +
+                            "일일 목표=" + dailyGoal + "개, " +
+                            "목표 달성=" + (sold >= dailyGoal ? "예" : "아니오") + ", " +
                             "오늘의 유행=" + ShopProductLocalization.CategoryLabel(trendCategory) +
                             ". 수치나 판정을 바꾸지 말고 실제로 두드러진 장점 또는 단점을 언급하세요.";
             service.Request("daily-review:" + day, prompt, result =>
@@ -311,8 +302,7 @@ namespace PickAndPlaceShop
                 ShopLiveOperationsNetwork live = ShopLiveOperationsNetwork.Instance;
                 if (result.IsApiSuccess && result.HasText)
                 {
-                    CommitReview(day, stars, averageWaitSeconds, displayedCategoryCount,
-                        averageSatisfaction, trendCategory, result.Text);
+                    CommitReview(day, stars, sold, dailyGoal, trendCategory, result.Text);
                     if (live != null)
                     {
                         if (result.Kind == ShopNarrativeResultKind.Api) live.NarrativeApiCallsToday.Value++;
@@ -330,16 +320,15 @@ namespace PickAndPlaceShop
             });
         }
 
-        private void CommitReview(int day, int stars, float waitSeconds, int categoryCount,
-            int satisfaction, ShopProductCategory trendCategory, string sentence)
+        private void CommitReview(int day, int stars, int sold, int dailyGoal,
+            ShopProductCategory trendCategory, string sentence)
         {
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null || !game.IsServer) return;
             string clean = (sentence ?? string.Empty).Replace('\n', ' ').Replace('\r', ' ').Trim();
             if (clean.Length > 100) clean = clean.Substring(0, 100);
             string line = "[" + day + "일차 " + new string('★', stars) + new string('☆', 5 - stars) +
-                          " | 대기 " + waitSeconds.ToString("0.0") + "초 · 진열 " + categoryCount +
-                          "종 · 만족 " + satisfaction + " · 유행 " +
+                          " | 판매 " + sold + "/" + dailyGoal + " · 유행 " +
                           ShopProductLocalization.CategoryLabel(trendCategory) + "] " + clean;
             string current = game.ReviewHistory.Value.ToString();
             var reviews = new List<string>();
@@ -354,18 +343,16 @@ namespace PickAndPlaceShop
             game.LatestReviewDay.Value = day;
         }
 
-        private static string BuildReviewFallback(int day, float waitSeconds, int categoryCount,
-            int satisfaction, ShopProductCategory trendCategory)
+        private static string BuildReviewFallback(int sold, int dailyGoal,
+            ShopProductCategory trendCategory)
         {
-            if (waitSeconds >= 25f)
-                return "계산 줄이 길어서 기다림이 아쉬웠지만 고양이 굿즈 구경은 즐거웠어요.";
-            if (categoryCount <= 1)
-                return "진열 종류가 조금 더 다양해지면 다시 오래 둘러보고 싶어요.";
-            if (satisfaction >= 85)
-                return "유행 상품과 다양한 진열을 편하게 둘러볼 수 있어 아주 만족스러웠어요.";
-            if (satisfaction >= 60)
-                return "분위기가 편안하고 상품을 고르는 재미가 있는 소품샵이에요.";
-            return "귀여운 상품은 좋았지만 대기와 진열 구성이 조금 더 나아지면 좋겠어요.";
+            if (sold <= 0) return "오늘은 구매한 손님이 없어 다음 영업을 기대하고 있어요.";
+            if (sold >= Mathf.Max(1, dailyGoal) * 1.5f)
+                return "오늘의 목표를 훌쩍 넘긴 활기찬 소품샵이었어요.";
+            if (sold >= Mathf.Max(1, dailyGoal))
+                return "오늘의 판매 목표를 채운 믿음직한 소품샵이었어요.";
+            return ShopProductLocalization.CategoryLabel(trendCategory) +
+                   " 상품이 눈에 띄었지만 다음에는 목표 판매량도 기대할게요.";
         }
 
         public void ServerRecordLastOne(string poolId, int setNumber, ulong clientId,
@@ -444,61 +431,7 @@ namespace PickAndPlaceShop
                 new Color(0.34f, 0.23f, 0.52f), ShopAction.AppraisalDesk,
                 "보유 상품 1개 감정하기");
             BuildConsignmentCorner();
-            curationDeskFacility = BuildFacility("진열 자동 정렬", config.CurationDeskPosition,
-                new Color(0.15f, 0.44f, 0.65f), ShopAction.CurationDesk,
-                "공용 진열 상품 자동 정렬");
-            BuildCurationCoordinator();
             RefreshFacilityUnlocks();
-        }
-
-        private void BuildCurationCoordinator()
-        {
-            curationCoordinatorNpc = new GameObject("진열 코디네이터 NPC");
-            curationCoordinatorNpc.transform.SetParent(facilitiesRoot.transform, false);
-            curationCoordinatorNpc.transform.position = config.CurationCoordinatorPosition;
-            curationCoordinatorNpc.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
-
-            ShopWorkforceConfig workforce = ShopWorkforceConfig.Load();
-            GameObject[] appearances = workforce != null ? workforce.AppearancePrefabs : null;
-            GameObject appearance = appearances != null && appearances.Length > 1
-                ? appearances[1]
-                : appearances != null && appearances.Length > 0 ? appearances[0] : null;
-            if (appearance != null)
-            {
-                GameObject visual = Instantiate(appearance, curationCoordinatorNpc.transform);
-                visual.name = "Coordinator Appearance";
-                visual.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-                foreach (Collider collider in visual.GetComponentsInChildren<Collider>(true)) Destroy(collider);
-                foreach (Rigidbody body in visual.GetComponentsInChildren<Rigidbody>(true)) Destroy(body);
-                Animator animator = visual.GetComponentInChildren<Animator>(true);
-                if (animator != null)
-                {
-                    animator.applyRootMotion = false;
-                    foreach (AnimatorControllerParameter parameter in animator.parameters)
-                        if (parameter.name == "Moving" && parameter.type == AnimatorControllerParameterType.Bool)
-                            animator.SetBool(parameter.name, false);
-                }
-            }
-
-            CapsuleCollider interaction = curationCoordinatorNpc.AddComponent<CapsuleCollider>();
-            interaction.center = Vector3.up;
-            interaction.height = 2f;
-            interaction.radius = 0.48f;
-            interaction.isTrigger = true;
-            curationCoordinatorNpc.AddComponent<ShopInteractable>().Configure(
-                ShopAction.CurationCoordinator, "진열 코디네이터에게 선반 평가 듣기");
-
-            GameObject labelHost = new("Coordinator Label");
-            labelHost.transform.SetParent(curationCoordinatorNpc.transform, false);
-            labelHost.transform.localPosition = new Vector3(0f, 2.15f, 0f);
-            TextMesh label = labelHost.AddComponent<TextMesh>();
-            label.text = "진열 코디네이터";
-            label.anchor = TextAnchor.MiddleCenter;
-            label.alignment = TextAlignment.Center;
-            label.characterSize = 0.075f;
-            label.fontSize = 46;
-            label.color = new Color(0.68f, 0.94f, 1f);
-            labelHost.AddComponent<ShopWorldFacingText>();
         }
 
         private void BuildConsignmentCorner()
@@ -607,8 +540,6 @@ namespace PickAndPlaceShop
             int level = ShopProgressionManager.Instance?.ExpansionLevel ?? 1;
             if (capsuleRecyclerFacility != null) capsuleRecyclerFacility.SetActive(level >= 3);
             if (appraisalFacility != null) appraisalFacility.SetActive(level >= 4);
-            if (curationDeskFacility != null) curationDeskFacility.SetActive(level >= 4);
-            if (curationCoordinatorNpc != null) curationCoordinatorNpc.SetActive(level >= 4);
             if (consignmentFacility != null) consignmentFacility.SetActive(level >= 5);
             if (consignmentRejectFacility != null) consignmentRejectFacility.SetActive(level >= 5);
             if (consignmentVisualRoot != null) consignmentVisualRoot.gameObject.SetActive(level >= 5);
