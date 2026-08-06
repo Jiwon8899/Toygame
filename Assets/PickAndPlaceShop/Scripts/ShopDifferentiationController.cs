@@ -548,17 +548,23 @@ namespace PickAndPlaceShop
 
         private void BuildReviewBoard()
         {
-            GameObject board = BuildFacility("손님 리뷰 게시판", config.ReviewBoardPosition,
-                new Color(0.28f, 0.16f, 0.10f), ShopAction.ReviewBoard,
-                "최근 손님 리뷰 보기");
-            board.transform.localScale = new Vector3(2.8f, 1.9f, 0.24f);
+            GameObject board = GameObject.Find("손님 리뷰 게시판");
+            if (board == null || !board.scene.IsValid())
+            {
+                Debug.LogError("[Differentiation] MainStreet 씬에 손님 리뷰 게시판이 배치되지 않았습니다.", this);
+                return;
+            }
+            ShopInteractable interactable = board.GetComponent<ShopInteractable>();
+            if (interactable != null)
+                interactable.Configure(ShopAction.ReviewBoard, "최근 손님 리뷰 보기");
             Transform label = board.transform.Find("손님 리뷰 게시판_Label");
-            if (label == null) return;
+            if (label == null)
+            {
+                Debug.LogError("[Differentiation] 손님 리뷰 게시판의 TextMesh가 없습니다.", board);
+                return;
+            }
             reviewBoardText = label.GetComponent<TextMesh>();
-            label.localPosition = new Vector3(0f, 0f, -0.65f);
-            reviewBoardText.characterSize = 0.055f;
-            reviewBoardText.fontSize = 42;
-            reviewBoardText.anchor = TextAnchor.MiddleCenter;
+            ShopUiFonts.Apply(reviewBoardText, ShopUiFontWeight.Bold);
         }
 
         private GameObject BuildFacility(string objectName, Vector3 position, Color color,
@@ -576,7 +582,9 @@ namespace PickAndPlaceShop
             GameObject labelHost = new(objectName + "_Label");
             labelHost.transform.SetParent(root.transform, false);
             labelHost.transform.localPosition = new Vector3(0f, 0.8f, -0.52f);
-            labelHost.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            // TextMesh renders its readable face toward local -Z. These fixtures sit on the
+            // public/front (-Z) side of the shop, so identity is the authored readable pose.
+            labelHost.transform.localRotation = Quaternion.identity;
             TextMesh label = labelHost.AddComponent<TextMesh>();
             label.text = objectName;
             label.anchor = TextAnchor.MiddleCenter;
@@ -584,7 +592,7 @@ namespace PickAndPlaceShop
             label.characterSize = 0.12f;
             label.fontSize = 48;
             label.color = Color.white;
-            labelHost.AddComponent<ShopWorldFacingText>();
+            ShopUiFonts.Apply(label, ShopUiFontWeight.Bold);
             return root;
         }
 
@@ -594,7 +602,30 @@ namespace PickAndPlaceShop
             string reviews = ShopNetworkGame.Instance.ReviewHistory.Value.ToString();
             if (reviews == lastReviewSnapshot) return;
             lastReviewSnapshot = reviews;
-            reviewBoardText.text = "손님 리뷰\n\n" + reviews;
+            reviewBoardText.text = "손님 리뷰\n" + WrapBoardText(reviews, 14, 5);
+        }
+
+        private static string WrapBoardText(string value, int charactersPerLine, int maximumLines)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "아직 등록된 리뷰가 없습니다.";
+            value = value.Replace("\r", string.Empty).Replace("\n", " ").Trim();
+            var builder = new System.Text.StringBuilder();
+            int line = 0;
+            int column = 0;
+            for (int index = 0; index < value.Length && line < maximumLines; index++)
+            {
+                if (column >= charactersPerLine)
+                {
+                    builder.Append('\n');
+                    line++;
+                    column = 0;
+                    if (line >= maximumLines) break;
+                }
+                builder.Append(value[index]);
+                column++;
+            }
+            if (builder.Length < value.Length) builder.Append('…');
+            return builder.ToString();
         }
 
         private void RefreshUpcycleDecorations()
