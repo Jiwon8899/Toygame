@@ -122,7 +122,8 @@ namespace PickAndPlaceShop
         private void PlayAttackRpc(int combo)
         {
             if (appearance == null) appearance = GetComponent<ShopPlayerAppearance>();
-            appearance?.PlayAttack(combo);
+            if (appearance == null || config == null) return;
+            appearance.PlayAttack(combo, config.AttackTransitionSeconds);
             if (IsOwner) ApplyMovementSlow();
         }
 

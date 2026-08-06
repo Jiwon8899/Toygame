@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: ShopTheftConfig
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopTheftConfig
   attackCooldown: 0.65
+  attackTransitionSeconds: 0.06
   attackMoveMultiplier: 0.4
   attackMoveSlowSeconds: 0.5
   hitRadius: 2.2

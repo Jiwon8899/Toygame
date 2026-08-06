@@ -9,6 +9,8 @@ namespace PickAndPlaceShop
         private static readonly int SpeedParameter = Animator.StringToHash("Speed");
         private static readonly int Attack1Parameter = Animator.StringToHash("Attack1");
         private static readonly int Attack2Parameter = Animator.StringToHash("Attack2");
+        private static readonly int Attack1State = Animator.StringToHash("Attack1");
+        private static readonly int Attack2State = Animator.StringToHash("Attack2");
 
         [SerializeField] private Animator appearanceAnimator;
         [Min(0.1f)] [SerializeField] private float runThreshold = 3.8f;
@@ -19,11 +21,19 @@ namespace PickAndPlaceShop
         public float CurrentSpeed { get; private set; }
         public bool IsRunning { get; private set; }
 
-        public void PlayAttack(int comboIndex)
+        public void PlayAttack(int comboIndex, float transitionSeconds)
         {
             if (appearanceAnimator == null) return;
             appearanceAnimator.ResetTrigger(comboIndex == 0 ? Attack2Parameter : Attack1Parameter);
-            appearanceAnimator.SetTrigger(comboIndex == 0 ? Attack1Parameter : Attack2Parameter);
+            appearanceAnimator.ResetTrigger(comboIndex == 0 ? Attack1Parameter : Attack2Parameter);
+            int state = comboIndex == 0 ? Attack1State : Attack2State;
+            if (!appearanceAnimator.HasState(0, state))
+            {
+                Debug.LogError("[ShopPlayerAppearance] 공격 Animator 상태가 없습니다: " +
+                               (comboIndex == 0 ? "Attack1" : "Attack2"), this);
+                return;
+            }
+            appearanceAnimator.CrossFadeInFixedTime(state, Mathf.Max(0f, transitionSeconds), 0, 0f);
         }
 
 #if UNITY_EDITOR

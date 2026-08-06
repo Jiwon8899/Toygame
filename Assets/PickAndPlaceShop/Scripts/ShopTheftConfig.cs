@@ -16,6 +16,7 @@ namespace PickAndPlaceShop
 
         [Header("Attack")]
         [Min(0.1f)] [SerializeField] private float attackCooldown = 0.65f;
+        [Range(0f, 0.25f)] [SerializeField] private float attackTransitionSeconds = 0.06f;
         [Range(0.1f, 1f)] [SerializeField] private float attackMoveMultiplier = 0.4f;
         [Min(0.05f)] [SerializeField] private float attackMoveSlowSeconds = 0.5f;
         [Min(0.2f)] [SerializeField] private float hitRadius = 2.2f;
@@ -72,6 +73,7 @@ namespace PickAndPlaceShop
         [Range(0f, 1f)] [SerializeField] private float policeStoppingDistanceMultiplier = 0.65f;
 
         public float AttackCooldown => Mathf.Max(0.1f, attackCooldown);
+        public float AttackTransitionSeconds => Mathf.Clamp(attackTransitionSeconds, 0f, 0.25f);
         public float AttackMoveMultiplier => Mathf.Clamp(attackMoveMultiplier, 0.1f, 1f);
         public float AttackMoveSlowSeconds => Mathf.Max(0.05f, attackMoveSlowSeconds);
         public float HitRadius => Mathf.Max(0.2f, hitRadius);
