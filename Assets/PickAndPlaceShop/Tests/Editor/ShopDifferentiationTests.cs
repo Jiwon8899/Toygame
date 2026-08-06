@@ -148,5 +148,18 @@ namespace PickAndPlaceShop.Tests
                 "A product without an imported model must remain visible in the hand and fixed display.");
             Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(16));
         }
+
+        [Test]
+        public void ReviewBoard_IsAuthoredInMainStreetSceneAndRuntimeOnlyBindsIt()
+        {
+            string scene = System.IO.File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scenes/PickAndPlaceShop_MainStreetSlice_Multiplayer.unity");
+            StringAssert.Contains(@"\uC190\uB2D8 \uB9AC\uBDF0 \uAC8C\uC2DC\uD310", scene);
+            StringAssert.Contains("m_Name: Review Surface", scene);
+            string controller = System.IO.File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopDifferentiationController.cs");
+            StringAssert.Contains("GameObject.Find(\"손님 리뷰 게시판\")", controller);
+            StringAssert.Contains("interactable.Configure(ShopAction.ReviewBoard", controller);
+        }
     }
 }

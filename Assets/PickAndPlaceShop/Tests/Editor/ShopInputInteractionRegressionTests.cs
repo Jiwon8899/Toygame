@@ -162,6 +162,83 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
+        public void TutorialSkip_UsesDataDrivenYDoubleTapAndHidesNetworkStatus()
+        {
+            ShopTutorialConfig tutorial = ShopTutorialConfig.Load();
+            Assert.NotNull(tutorial);
+            Assert.AreEqual(0.5f, tutorial.SkipDoubleTapSeconds, 0.001f);
+            float previous = float.NegativeInfinity;
+            Assert.IsFalse(ShopTutorialInputRules.RegisterSkipTap(ref previous, 1f,
+                tutorial.SkipDoubleTapSeconds));
+            Assert.IsTrue(ShopTutorialInputRules.RegisterSkipTap(ref previous, 1.49f,
+                tutorial.SkipDoubleTapSeconds));
+            previous = float.NegativeInfinity;
+            Assert.IsFalse(ShopTutorialInputRules.RegisterSkipTap(ref previous, 2f,
+                tutorial.SkipDoubleTapSeconds));
+            Assert.IsFalse(ShopTutorialInputRules.RegisterSkipTap(ref previous, 2.51f,
+                tutorial.SkipDoubleTapSeconds));
+            string hud = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProgressionHUD.cs");
+            StringAssert.Contains("keyboard.yKey.wasPressedThisFrame", hud);
+            StringAssert.Contains("SkipDoubleTapSeconds", hud);
+            string network = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopNetworkHUD.cs");
+            StringAssert.Contains("networkPanel.SetActive(false)", network);
+        }
+
+        [Test]
+        public void AttackAnimation_UsesCompleteImportedClipsAndExplicitStateCrossfade()
+        {
+            string appearance = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopPlayerAppearance.cs");
+            StringAssert.Contains("CrossFadeInFixedTime", appearance);
+            StringAssert.Contains("HasState(0, state)", appearance);
+            ShopTheftConfig config = ShopTheftConfig.Load();
+            Assert.NotNull(config);
+            Assert.AreEqual(0.06f, config.AttackTransitionSeconds, 0.001f);
+
+            foreach (string path in new[] { "Assets/animation/attack1.fbx", "Assets/animation/attack2.fbx" })
+            {
+                AnimationClip clip = System.Array.Find(AssetDatabase.LoadAllAssetsAtPath(path),
+                    asset => asset is AnimationClip && !asset.name.StartsWith("__preview__")) as AnimationClip;
+                Assert.NotNull(clip, path);
+                Assert.Greater(clip.length, 1f, path);
+            }
+        }
+
+        [Test]
+        public void TrendAnnouncement_IsVisibleForDataDrivenDuration()
+        {
+            ShopOperationsConfig config = ShopOperationsConfig.Load();
+            Assert.NotNull(config);
+            Assert.AreEqual(7f, config.TrendAnnouncementSeconds, 0.001f);
+            string hud = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProgressionHUD.cs");
+            StringAssert.Contains("DayAnnouncement.Value", hud);
+            StringAssert.Contains("ShowNotificationNow", hud);
+        }
+
+        [Test]
+        public void DynamicShopText_UsesTheSharedEmbeddedFontUtility()
+        {
+            string[] paths =
+            {
+                "Assets/PickAndPlaceShop/Scripts/ShopCustomerDialogueBubble.cs",
+                "Assets/PickAndPlaceShop/Scripts/ShopCustomerDebugView.cs",
+                "Assets/PickAndPlaceShop/Scripts/ShopCustomerWaitIndicator.cs",
+                "Assets/PickAndPlaceShop/Scripts/ShopExpansionVisualController.cs",
+                "Assets/PickAndPlaceShop/Scripts/ShopMainMenuController.cs",
+                "Assets/PickAndPlaceShop/Scripts/ShopDifferentiationController.cs"
+            };
+            foreach (string path in paths)
+            {
+                string source = File.ReadAllText(path);
+                StringAssert.Contains("ShopUiFonts.Apply", source, path);
+                StringAssert.DoesNotContain("CreateDynamicFontFromOSFont", source, path);
+            }
+        }
+
+        [Test]
         public void Negotiation_IsButtonChoiceWithDataDrivenRates()
         {
             ShopOperationsConfig config = ShopOperationsConfig.Load();
