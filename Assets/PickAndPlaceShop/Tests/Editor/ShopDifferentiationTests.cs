@@ -70,13 +70,15 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void StampCard_UsesSavedPurchasesAndDataVipThreshold()
+        public void ReviewStars_UseSalesAndDailyGoalOnly()
         {
             ShopDifferentiationConfig config = ShopDifferentiationConfig.Load();
             Assert.That(config, Is.Not.Null);
-            Assert.That(config.VipPurchaseThreshold, Is.EqualTo(6));
-            ShopCustomerProfileSave profile = new() { customerId = "cat_01", purchaseCount = 6 };
-            Assert.That(profile.purchaseCount, Is.GreaterThanOrEqualTo(config.VipPurchaseThreshold));
+            Assert.That(config.ReviewStars(0, 10), Is.EqualTo(1));
+            Assert.That(config.ReviewStars(4, 10), Is.EqualTo(2));
+            Assert.That(config.ReviewStars(7, 10), Is.EqualTo(3));
+            Assert.That(config.ReviewStars(10, 10), Is.EqualTo(4));
+            Assert.That(config.ReviewStars(15, 10), Is.EqualTo(5));
         }
 
         [Test]
@@ -86,10 +88,10 @@ namespace PickAndPlaceShop.Tests
             ShopProgressionSaveData save = new()
             {
                 latestReviewDay = 10,
-                reviewHistory = "[10일차 ★★★★★ | 대기 2.0초 · 진열 5종 · 만족 94] 만족스러웠어요."
+                reviewHistory = "[10일차 ★★★★★ | 판매 15/10 · 유행 고양이 굿즈] 목표를 넘겼어요."
             };
             Assert.That(save.latestReviewDay, Is.EqualTo(10));
-            Assert.That(save.reviewHistory, Does.Contain("대기 2.0초"));
+            Assert.That(save.reviewHistory, Does.Contain("판매 15/10"));
             Assert.That(save.reviewHistory, Does.Contain("★★★★★"));
         }
 
@@ -131,37 +133,20 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void Curation_UsesDataDrivenScoresAndPersistsExactPlacement()
+        public void FixedDisplay_UsesSavedHotbarAndAnchorSlots()
         {
-            ShopDifferentiationConfig config = ShopDifferentiationConfig.Load();
-            Assert.That(config, Is.Not.Null);
-            Assert.That(config.MaximumCurationPlacements, Is.EqualTo(30));
-            Assert.That(config.AutomaticLayoutScore, Is.EqualTo(45));
-            Assert.That(config.CurationScoreWeights.x + config.CurationScoreWeights.y +
-                        config.CurationScoreWeights.z + config.CurationScoreWeights.w,
-                Is.EqualTo(1f).Within(0.001f));
-            Assert.That(config.CurationGrade(44), Is.EqualTo("C"));
-            Assert.That(config.CurationGrade(45), Is.EqualTo("B"));
-            Assert.That(config.CurationGrade(65), Is.EqualTo("A"));
-            Assert.That(config.CurationGrade(85), Is.EqualTo("S"));
-
-            ShopProgressionSaveData save = new();
-            save.curationPlacements.Add(new ShopCurationPlacementSave
-            {
-                placementId = 7,
-                productId = 2001,
-                position = new UnityEngine.Vector3(5.3f, 1.59f, 3.12f),
-                size = new UnityEngine.Vector3(0.3f, 0.4f, 0.3f),
-                yaw = 35f,
-                rarity = (int)ShopProductRarity.Rare,
-                appraisalGrade = (int)ShopAppraisalGrade.A,
-                instanceId = 99,
-                automatic = false
-            });
-            Assert.That(save.curationPlacements[0].position.x, Is.EqualTo(5.3f));
-            Assert.That(save.curationPlacements[0].yaw, Is.EqualTo(35f));
-            Assert.That(save.curationPlacements[0].automatic, Is.False);
-            Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(13));
+            ShopProgressionSaveData save = new() { hotbarProduct0 = 2001, selectedHotbarSlot = 0 };
+            Assert.That(save.hotbarProduct0, Is.EqualTo(2001));
+            Assert.That(save.selectedHotbarSlot, Is.EqualTo(0));
+            string display = System.IO.File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProductDisplayVisualController.cs");
+            StringAssert.Contains("ShopDisplayShelfAnchors", display);
+            StringAssert.DoesNotContain("ghostPosition", display);
+            string visuals = System.IO.File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProductVisuals.cs");
+            StringAssert.Contains("CreateFallbackVisual", visuals,
+                "A product without an imported model must remain visible in the hand and fixed display.");
+            Assert.That(ShopProgressionSaveStore.CurrentVersion, Is.GreaterThanOrEqualTo(16));
         }
     }
 }

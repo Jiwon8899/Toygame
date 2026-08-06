@@ -105,11 +105,6 @@ namespace PickAndPlaceShop
                 upgradeTerminal.Interact();
                 return;
             }
-            if (action == ShopAction.CurationCoordinator)
-            {
-                ShopCurationSystem.Instance?.ShowCoordinatorReport();
-                return;
-            }
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null)
             {

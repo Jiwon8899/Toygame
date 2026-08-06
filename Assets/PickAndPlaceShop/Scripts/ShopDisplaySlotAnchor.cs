@@ -26,10 +26,33 @@ namespace PickAndPlaceShop
         {
             anchors.Clear();
             anchors.AddRange(GetComponentsInChildren<ShopDisplaySlotAnchor>(true));
+            if (anchors.Count == 0) RestoreLegacyDisplayPrizeAnchors();
             if (anchors.Count == 0) BuildFromShelfSurfaces();
             anchors.Sort((left, right) => left.SlotIndex.CompareTo(right.SlotIndex));
             ShopShelfVisual legacy = GetComponent<ShopShelfVisual>();
             if (legacy != null) legacy.UseProductVisuals();
+        }
+
+        private void RestoreLegacyDisplayPrizeAnchors()
+        {
+            Transform[] sceneTransforms = Resources.FindObjectsOfTypeAll<Transform>();
+            for (int index = 0; index < 8; index++)
+            {
+                string expectedName = $"DisplayPrize_{index}";
+                Transform legacy = Array.Find(sceneTransforms, candidate =>
+                    candidate != null && candidate.name == expectedName &&
+                    candidate.gameObject.scene.IsValid() && candidate.gameObject.scene.isLoaded);
+                if (legacy == null) continue;
+
+                foreach (Renderer renderer in legacy.GetComponents<Renderer>()) renderer.enabled = false;
+                foreach (Collider collider in legacy.GetComponents<Collider>()) collider.enabled = false;
+                legacy.localScale = Vector3.one;
+                legacy.gameObject.SetActive(true);
+                ShopDisplaySlotAnchor anchor = legacy.GetComponent<ShopDisplaySlotAnchor>();
+                if (anchor == null) anchor = legacy.gameObject.AddComponent<ShopDisplaySlotAnchor>();
+                anchor.Configure(index);
+                anchors.Add(anchor);
+            }
         }
 
         private void BuildFromShelfSurfaces()

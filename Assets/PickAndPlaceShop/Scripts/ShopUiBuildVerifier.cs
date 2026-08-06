@@ -77,13 +77,11 @@ namespace PickAndPlaceShop
             yield return Capture("05_TutorialConfirm.png");
             InvokePrivate(progression, "CloseTutorialSkipConfirmation");
 
-            ShopCurationSystem curation = ShopCurationSystem.Instance;
-            Canvas scoreCanvas = GetField<Canvas>(curation, "scoreCanvas");
-            if (scoreCanvas != null) scoreCanvas.enabled = true;
-            InvokePrivate(curation, "UpdateScorePanel");
+            ShopProductHotbarSystem hotbar = ShopProductHotbarSystem.Instance;
+            Canvas hotbarCanvas = GetField<Canvas>(hotbar, "canvas");
+            if (hotbarCanvas != null) hotbarCanvas.enabled = true;
             yield return null;
             yield return Capture("06_Hotbar_Shelf.png");
-            if (scoreCanvas != null) scoreCanvas.enabled = false;
 
             ShopKujiScratchView kuji = FindFirstObjectByType<ShopKujiScratchView>(FindObjectsInactive.Include);
             if (kuji != null)

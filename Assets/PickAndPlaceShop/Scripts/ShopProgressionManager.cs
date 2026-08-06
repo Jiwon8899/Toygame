@@ -21,7 +21,6 @@ namespace PickAndPlaceShop
         public event Action<string> NotificationRaised;
 
         private ShopProgressionCatalog catalog;
-        private readonly HashSet<string> regularCustomerIds = new(StringComparer.Ordinal);
         private readonly HashSet<string> unlockedDistrictIds = new(StringComparer.Ordinal);
         private readonly HashSet<string> ownedCollectionItemIds = new(StringComparer.Ordinal);
         private readonly HashSet<int> grantedCollectionMilestones = new();
@@ -38,8 +37,6 @@ namespace PickAndPlaceShop
         private int unitsSold;
         private int rareItemsAcquired;
         private int rareItemsSold;
-        private int satisfactionTotal;
-        private int satisfactionSamples;
         private int onlineOrdersCompleted;
         private int clawSuccesses;
         private int currentStageIndex;
@@ -73,10 +70,6 @@ namespace PickAndPlaceShop
         public int UnitsSold => unitsSold;
         public int RareItemsAcquired => rareItemsAcquired;
         public int RareItemsSold => rareItemsSold;
-        public int RegularCustomerCount => regularCustomerIds.Count;
-        public int AverageSatisfaction => satisfactionSamples <= 0
-            ? 0
-            : Mathf.RoundToInt(satisfactionTotal / (float)satisfactionSamples);
         public int OnlineOrdersCompleted => onlineOrdersCompleted;
         public int ClawSuccesses => clawSuccesses;
         public int CurrentStageIndex => currentStageIndex;
@@ -223,8 +216,6 @@ namespace PickAndPlaceShop
                 ShopProgressConditionType.UnitsSold => unitsSold,
                 ShopProgressConditionType.RareItemsAcquired => rareItemsAcquired,
                 ShopProgressConditionType.RareItemsSold => rareItemsSold,
-                ShopProgressConditionType.RegularCustomers => regularCustomerIds.Count,
-                ShopProgressConditionType.AverageSatisfaction => AverageSatisfaction,
                 ShopProgressConditionType.OnlineOrdersCompleted => onlineOrdersCompleted,
                 ShopProgressConditionType.CollectionPercent => CollectionPercent,
                 ShopProgressConditionType.CategoryItemsOwned => CountOwnedInCategory(categoryId),
@@ -294,16 +285,11 @@ namespace PickAndPlaceShop
         }
 
         public void RecordSale(string itemId, string displayName, string categoryId,
-            int revenue, bool rare, int satisfaction)
+            int revenue, bool rare)
         {
             lifetimeRevenue += Mathf.Max(0, revenue);
             unitsSold++;
             if (rare) rareItemsSold++;
-            if (satisfaction >= 0)
-            {
-                satisfactionTotal += Mathf.Clamp(satisfaction, 0, 100);
-                satisfactionSamples++;
-            }
             MarkChanged();
             ShopTutorialRuntime.Report(ShopTutorialAction.ProductSold);
         }
@@ -315,12 +301,6 @@ namespace PickAndPlaceShop
             if (rare) rareItemsAcquired += positiveAmount;
             string registeredId = ResolveCollectionItemId(itemId, displayName, categoryId);
             if (!string.IsNullOrWhiteSpace(registeredId)) ownedCollectionItemIds.Add(registeredId);
-            MarkChanged();
-        }
-
-        public void RecordRegularCustomer(string customerId)
-        {
-            if (string.IsNullOrWhiteSpace(customerId) || !regularCustomerIds.Add(customerId)) return;
             MarkChanged();
         }
 
@@ -455,8 +435,6 @@ namespace PickAndPlaceShop
             unitsSold = 0;
             rareItemsAcquired = 0;
             rareItemsSold = 0;
-            satisfactionTotal = 0;
-            satisfactionSamples = 0;
             onlineOrdersCompleted = 0;
             clawSuccesses = 0;
             currentStageIndex = 0;
@@ -473,7 +451,6 @@ namespace PickAndPlaceShop
             tutorialCompleted = false;
             for (int i = 0; i < hotbarProductIds.Length; i++) hotbarProductIds[i] = -1;
             selectedHotbarSlot = -1;
-            regularCustomerIds.Clear();
             unlockedDistrictIds.Clear();
             ownedCollectionItemIds.Clear();
             grantedCollectionMilestones.Clear();
@@ -569,7 +546,6 @@ namespace PickAndPlaceShop
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, loadedSaveData.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, loadedSaveData.appraisalSequence);
                 RestoreConsignment(boundGame, loadedSaveData);
-                RestoreCuration(boundGame, loadedSaveData);
             }
             observedGameFunds = teamFunds;
             observedGameReputation = reputation;
@@ -742,9 +718,7 @@ namespace PickAndPlaceShop
                         conditionType = (int)definition.ConditionType,
                         target = targetValue,
                         categoryId = definition.CategoryId,
-                        baseline = definition.ConditionType == ShopProgressConditionType.AverageSatisfaction
-                            ? 0
-                            : GetConditionValue(definition.ConditionType, definition.CategoryId),
+                        baseline = GetConditionValue(definition.ConditionType, definition.CategoryId),
                         completed = false
                     });
                 }
@@ -772,8 +746,6 @@ namespace PickAndPlaceShop
                 unitsSold = unitsSold,
                 rareItemsAcquired = rareItemsAcquired,
                 rareItemsSold = rareItemsSold,
-                satisfactionTotal = satisfactionTotal,
-                satisfactionSamples = satisfactionSamples,
                 onlineOrdersCompleted = onlineOrdersCompleted,
                 clawSuccesses = clawSuccesses,
                 currentStageIndex = currentStageIndex,
@@ -784,7 +756,6 @@ namespace PickAndPlaceShop
                 weeklyGoalCycle = weeklyGoalCycle,
                 dailySetRewardClaimed = dailySetRewardClaimed,
                 weeklySetRewardClaimed = weeklySetRewardClaimed,
-                regularCustomerIds = regularCustomerIds.ToList(),
                 unlockedDistrictIds = unlockedDistrictIds.ToList(),
                 ownedCollectionItemIds = ownedCollectionItemIds.ToList(),
                 grantedCollectionMilestones = grantedCollectionMilestones.ToList(),
@@ -793,7 +764,6 @@ namespace PickAndPlaceShop
                 containerItems = CaptureContainerItems(),
                 clawMachines = CaptureClawMachines(),
                 kujiStations = CaptureKujiStations(),
-                curationPlacements = CaptureCurationPlacements(),
                 playerUpgradeLevel = boundGame != null ? boundGame.PlayerUpgradeLevel.Value : 0,
                 operationsUpgradeLevel = boundGame != null ? boundGame.ShopUpgradeLevel.Value : 0,
                 facilityUpgradeLevel = boundGame != null ? boundGame.FacilityUpgradeLevel.Value : 0,
@@ -819,12 +789,6 @@ namespace PickAndPlaceShop
                 consignmentOfferPrice2 = boundGame != null ? boundGame.ConsignmentOfferPrice2.Value : 0,
                 consignmentSecondsRemaining = boundGame != null ? boundGame.ConsignmentSecondsRemaining.Value : 0f,
                 consignmentOfferSerial = boundGame != null ? boundGame.ConsignmentOfferSerial.Value : 0,
-                curationNextPlacementId = boundGame != null ? boundGame.CurationNextPlacementId.Value : 1,
-                curationClusterScore = boundGame != null ? boundGame.CurationClusterScore.Value : 0,
-                curationSymmetryScore = boundGame != null ? boundGame.CurationSymmetryScore.Value : 0,
-                curationRarityScore = boundGame != null ? boundGame.CurationRarityScore.Value : 0,
-                curationDensityScore = boundGame != null ? boundGame.CurationDensityScore.Value : 0,
-                curationAutomatic = boundGame != null && boundGame.CurationAutomatic.Value,
                 hotbarProduct0 = hotbarProductIds[0],
                 hotbarProduct1 = hotbarProductIds[1],
                 hotbarProduct2 = hotbarProductIds[2],
@@ -843,8 +807,6 @@ namespace PickAndPlaceShop
             unitsSold = Mathf.Max(0, save.unitsSold);
             rareItemsAcquired = Mathf.Max(0, save.rareItemsAcquired);
             rareItemsSold = Mathf.Max(0, save.rareItemsSold);
-            satisfactionTotal = Mathf.Max(0, save.satisfactionTotal);
-            satisfactionSamples = Mathf.Max(0, save.satisfactionSamples);
             onlineOrdersCompleted = Mathf.Max(0, save.onlineOrdersCompleted);
             clawSuccesses = Mathf.Max(0, save.clawSuccesses);
             currentStageIndex = catalog != null
@@ -857,7 +819,6 @@ namespace PickAndPlaceShop
             weeklyGoalCycle = Mathf.Max(0, save.weeklyGoalCycle);
             dailySetRewardClaimed = save.dailySetRewardClaimed;
             weeklySetRewardClaimed = save.weeklySetRewardClaimed;
-            ReplaceSet(regularCustomerIds, save.regularCustomerIds);
             ReplaceSet(unlockedDistrictIds, save.unlockedDistrictIds);
             ReplaceSet(ownedCollectionItemIds, save.ownedCollectionItemIds);
             grantedCollectionMilestones.Clear();
@@ -892,7 +853,6 @@ namespace PickAndPlaceShop
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, save.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, save.appraisalSequence);
                 RestoreConsignment(boundGame, save);
-                RestoreCuration(boundGame, save);
             }
         }
 
@@ -908,38 +868,6 @@ namespace PickAndPlaceShop
             game.ConsignmentOfferPrice2.Value = Mathf.Max(0, save.consignmentOfferPrice2);
             game.ConsignmentSecondsRemaining.Value = Mathf.Max(0f, save.consignmentSecondsRemaining);
             game.ConsignmentOfferSerial.Value = Mathf.Max(0, save.consignmentOfferSerial);
-        }
-
-        private static void RestoreCuration(ShopNetworkGame game, ShopProgressionSaveData save)
-        {
-            if (game == null || save == null) return;
-            game.CurationPlacements.Clear();
-            if (save.curationPlacements != null)
-            {
-                for (int i = 0; i < save.curationPlacements.Count; i++)
-                {
-                    ShopCurationPlacementSave source = save.curationPlacements[i];
-                    if (source == null) continue;
-                    game.CurationPlacements.Add(new ShopCurationPlacement
-                    {
-                        PlacementId = source.placementId,
-                        ProductId = source.productId,
-                        Position = source.position,
-                        Size = source.size,
-                        Yaw = source.yaw,
-                        Rarity = (ShopProductRarity)Mathf.Clamp(source.rarity, 0, 3),
-                        AppraisalGrade = (ShopAppraisalGrade)Mathf.Clamp(source.appraisalGrade, 0, 4),
-                        InstanceId = source.instanceId,
-                        Automatic = source.automatic
-                    });
-                }
-            }
-            game.CurationNextPlacementId.Value = Mathf.Max(1, save.curationNextPlacementId);
-            game.CurationClusterScore.Value = Mathf.Clamp(save.curationClusterScore, 0, 100);
-            game.CurationSymmetryScore.Value = Mathf.Clamp(save.curationSymmetryScore, 0, 100);
-            game.CurationRarityScore.Value = Mathf.Clamp(save.curationRarityScore, 0, 100);
-            game.CurationDensityScore.Value = Mathf.Clamp(save.curationDensityScore, 0, 100);
-            game.CurationAutomatic.Value = save.curationAutomatic;
         }
 
         public bool TryConsumeClawMachineSave(int machineId, out ShopClawMachineSave saved)
@@ -1045,30 +973,6 @@ namespace PickAndPlaceShop
             {
                 if (station == null || !station.IsSpawned || !station.IsServer) continue;
                 result.Add(station.CaptureSaveState());
-            }
-            return result;
-        }
-
-        private static List<ShopCurationPlacementSave> CaptureCurationPlacements()
-        {
-            var result = new List<ShopCurationPlacementSave>();
-            ShopNetworkGame game = ShopNetworkGame.Instance;
-            if (game == null || !game.IsServer) return result;
-            for (int i = 0; i < game.CurationPlacements.Count; i++)
-            {
-                ShopCurationPlacement source = game.CurationPlacements[i];
-                result.Add(new ShopCurationPlacementSave
-                {
-                    placementId = source.PlacementId,
-                    productId = source.ProductId,
-                    position = source.Position,
-                    size = source.Size,
-                    yaw = source.Yaw,
-                    rarity = (int)source.Rarity,
-                    appraisalGrade = (int)source.AppraisalGrade,
-                    instanceId = source.InstanceId,
-                    automatic = source.Automatic
-                });
             }
             return result;
         }

@@ -73,23 +73,6 @@ namespace PickAndPlaceShop
             return true;
         }
 
-        public static int CalculateSatisfaction(float matchScore, int price, int budget,
-            float queueWaitSeconds, float patienceSeconds, bool stockAvailable)
-        {
-            float match = Mathf.Clamp01(matchScore / 100f);
-            float priceFairness = price <= 0 || budget <= 0 ? 0f : Mathf.Clamp01(1f - price / (float)budget * 0.55f);
-            float wait = Mathf.Clamp01(1f - queueWaitSeconds / Mathf.Max(1f, patienceSeconds));
-            float stock = stockAvailable ? 1f : 0f;
-            return Mathf.RoundToInt(Mathf.Clamp01(match * 0.4f + priceFairness * 0.25f + wait * 0.25f + stock * 0.1f) * 100f);
-        }
-
-        public static int ReputationDelta(int satisfaction)
-        {
-            if (satisfaction >= 75) return 2;
-            if (satisfaction < 40) return -1;
-            return 0;
-        }
-
         public static bool CanSpawn(ShopPhase phase, bool spawnEnabled, float remainingSeconds, int active, int maximum)
         {
             return phase == ShopPhase.Open && spawnEnabled && remainingSeconds > 0f && active < maximum;

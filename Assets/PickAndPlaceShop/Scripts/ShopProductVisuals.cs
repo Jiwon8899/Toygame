@@ -26,10 +26,21 @@ namespace PickAndPlaceShop
 
         public static GameObject Instantiate(ShopProductDefinition product, Transform parent)
         {
-            if (product == null || product.VisualPrefab == null) return null;
-            GameObject visual = Object.Instantiate(product.VisualPrefab, parent);
+            if (product == null) return null;
+            GameObject visual = product.VisualPrefab != null
+                ? Object.Instantiate(product.VisualPrefab, parent)
+                : CreateFallbackVisual(product, parent);
             DisablePhysics(visual);
             ApplyTint(visual, product.Tint);
+            return visual;
+        }
+
+        private static GameObject CreateFallbackVisual(ShopProductDefinition product, Transform parent)
+        {
+            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            visual.name = $"Fallback Product {product.ProductId}";
+            visual.transform.SetParent(parent, false);
+            visual.transform.localScale = new Vector3(0.22f, 0.18f, 0.22f);
             return visual;
         }
 

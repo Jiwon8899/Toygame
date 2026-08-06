@@ -76,7 +76,7 @@ namespace PickAndPlaceShop
         public void OnPointerClick(PointerEventData eventData)
         {
             if (!eventData.dragging && eventData.button == PointerEventData.InputButton.Left &&
-                ActiveSlot && Item.HasValue) owner?.SelectForCuration(this);
+                ActiveSlot && Item.HasValue) owner?.SelectForDisplay(this);
         }
     }
 
@@ -388,20 +388,20 @@ namespace PickAndPlaceShop
         {
             if (entered && slot != null && slot.ActiveSlot && slot.Item.HasValue &&
                 slot.Container == ShopContainerKind.PersonalInventory)
-                ShopCurationSystem.Instance?.SetHotbarAssignmentCandidate(slot.Item.Value);
+                ShopProductHotbarSystem.Instance?.SetHotbarAssignmentCandidate(slot.Item.Value);
             if (dragSource == null || slot == null || !slot.ActiveSlot) return;
             slot.SetHighlight(entered, CanDrop(slot));
             if (entered) SetPanelHighlight(slot.Container, CanDrop(slot));
             else ResetPanelHighlights();
         }
 
-        public void SelectForCuration(ShopContainerSlotView slot)
+        public void SelectForDisplay(ShopContainerSlotView slot)
         {
             if (slot == null || !slot.Item.HasValue ||
                 slot.Container != ShopContainerKind.PersonalInventory &&
                 slot.Container != ShopContainerKind.SharedStorage) return;
-            ShopCurationSystem.Instance?.BeginHolding(slot.Container, slot.SlotIndex, slot.Item.Value);
-            feedback.text = "상품을 들었습니다. 선반 앞으로 이동해 배치하세요.";
+            ShopProductHotbarSystem.Instance?.BeginHolding(slot.Container, slot.SlotIndex, slot.Item.Value);
+            feedback.text = "상품을 들었습니다. 진열대 앞에서 E를 눌러 고정 슬롯에 진열하세요.";
             SetOpen(false);
         }
 

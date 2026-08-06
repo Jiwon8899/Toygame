@@ -119,28 +119,30 @@ namespace PickAndPlaceShop.Tests
             string game = File.ReadAllText(
                 "Assets/PickAndPlaceShop/Scripts/ShopNetworkGame.cs");
             StringAssert.Contains("AutoAssignHotbarProduct(product.ProductId)", game);
-            string curation = File.ReadAllText(
-                "Assets/PickAndPlaceShop/Scripts/ShopCurationSystem.cs");
-            StringAssert.Contains("!TryFindPersonalProduct(productId, out _)", curation);
-            StringAssert.Contains("stripRect.anchoredPosition = new Vector2(0f, 126f)", curation);
+            string hotbar = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProductHotbarSystem.cs");
+            StringAssert.Contains("!TryFindPersonalProduct(productId, out _)", hotbar);
+            StringAssert.Contains("stripRect.anchoredPosition = new Vector2(0f, 126f)", hotbar);
         }
 
         [Test]
-        public void HeldProduct_PlacementUsesShelfPlaneAndFallbackAnchors()
+        public void HeldProduct_UsesFixedShelfRequestAndDisablesColliders()
         {
-            string curation = File.ReadAllText(
-                "Assets/PickAndPlaceShop/Scripts/ShopCurationSystem.cs");
-            StringAssert.Contains("tierPlane.Raycast(aimRay", curation);
-            StringAssert.Contains("nearestValidIndex", curation);
-            StringAssert.Contains("collider.enabled = false", curation);
+            string hotbar = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProductHotbarSystem.cs");
+            string interactor = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopPlayerInteractor.cs");
+            StringAssert.Contains("collider.enabled = false", hotbar);
+            StringAssert.Contains("RequestDisplayProduct", interactor);
+            StringAssert.DoesNotContain("ghostPosition", hotbar);
         }
 
         [Test]
         public void FullscreenUi_HidesHotbarAndClosingAdvancesDay()
         {
-            string curation = File.ReadAllText(
-                "Assets/PickAndPlaceShop/Scripts/ShopCurationSystem.cs");
-            StringAssert.Contains("gameplayActive && !ShopInputModeManager.IsUiOpen", curation);
+            string hotbar = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProductHotbarSystem.cs");
+            StringAssert.Contains("!ShopInputModeManager.AllowsGameplay", hotbar);
             string summary = File.ReadAllText(
                 "Assets/PickAndPlaceShop/Scripts/ShopClosingSummaryPresenter.cs");
             StringAssert.Contains("RequestInteraction(ShopAction.EndDay)", summary);

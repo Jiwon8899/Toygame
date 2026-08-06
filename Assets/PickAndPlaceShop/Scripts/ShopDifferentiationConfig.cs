@@ -19,19 +19,21 @@ namespace PickAndPlaceShop
         [SerializeField] private Vector2 kujiRefillSeconds = new(5f, 8f);
         [SerializeField] private int[] lastOneTitleThresholds = { 1, 10, 30, 100 };
 
-        [Header("단골 발도장 카드")]
-        [SerializeField, Min(2)] private int vipPurchaseThreshold = 6;
-        [SerializeField, Min(1)] private int visibleStampCardCount = 8;
-
         [Header("리뷰 게시판")]
         [SerializeField, Min(1)] private int reviewHistoryCapacity = 5;
         [SerializeField] private Vector3 reviewBoardPosition = new(1.25f, 0f, -3.8f);
+        [SerializeField, Range(1, 5)] private int reviewNoSalesStars = 1;
+        [SerializeField, Range(0f, 1f)] private float reviewLowSalesGoalRatio = 0.5f;
+        [SerializeField, Range(1, 5)] private int reviewLowSalesStars = 2;
+        [SerializeField, Range(1, 5)] private int reviewBelowGoalStars = 3;
+        [SerializeField, Range(1, 5)] private int reviewGoalMetStars = 4;
+        [SerializeField, Min(1f)] private float reviewExcellentGoalRatio = 1.5f;
+        [SerializeField, Range(1, 5)] private int reviewExcellentStars = 5;
 
         [Header("굿즈 감정소")]
         [SerializeField] private Vector3 appraisalPosition = new(12.7f, 0f, 0.2f);
         [SerializeField] private int[] appraisalFees = { 20, 40, 80, 140 };
         [SerializeField] private float[] appraisalPriceMultipliers = { 1f, 1.05f, 1.2f, 1.4f };
-        [SerializeField] private float[] appraisalCurationMultipliers = { 1f, 1.02f, 1.08f, 1.15f };
         [SerializeField] private Vector4[] appraisalGradeWeights =
         {
             new(60f, 28f, 10f, 2f),
@@ -51,16 +53,6 @@ namespace PickAndPlaceShop
         [SerializeField] private int[] consignmentMachineAverageCosts = { 100, 130, 170, 230 };
         [SerializeField, Min(0)] private int consignmentUnlockReputation = 30;
 
-        [Header("진열 큐레이션")]
-        [SerializeField] private Vector2 idealDensityPercent = new(30f, 90f);
-        [SerializeField] private int automaticLayoutScore = 45;
-        [SerializeField] private float shelfPlacementRotationSpeed = 90f;
-        [SerializeField, Min(1)] private int maximumCurationPlacements = 30;
-        [SerializeField] private Vector4 curationScoreWeights = new(0.25f, 0.25f, 0.25f, 0.25f);
-        [SerializeField] private Vector3Int curationGradeThresholds = new(45, 65, 85);
-        [SerializeField] private Vector3 curationDeskPosition = new(10.5f, 0f, 7.2f);
-        [SerializeField] private Vector3 curationCoordinatorPosition = new(10.15f, 0f, -0.55f);
-
         public ShopProductDefinition EmptyCapsuleProduct => emptyCapsuleProduct;
         public int CapsuleRecyclerSlots => Mathf.Max(1, capsuleRecyclerSlots);
         public int[] UpcycleThresholds => upcycleThresholds ?? System.Array.Empty<int>();
@@ -69,16 +61,23 @@ namespace PickAndPlaceShop
         public Vector2 KujiRefillSeconds => new(Mathf.Max(0.1f, kujiRefillSeconds.x),
             Mathf.Max(kujiRefillSeconds.x, kujiRefillSeconds.y));
         public int[] LastOneTitleThresholds => lastOneTitleThresholds ?? System.Array.Empty<int>();
-        public int VipPurchaseThreshold => Mathf.Max(2, vipPurchaseThreshold);
-        public int VisibleStampCardCount => Mathf.Max(1, visibleStampCardCount);
         public int ReviewHistoryCapacity => Mathf.Max(1, reviewHistoryCapacity);
         public Vector3 ReviewBoardPosition => reviewBoardPosition;
+        public int ReviewStars(int sold, int goal)
+        {
+            sold = Mathf.Max(0, sold);
+            goal = Mathf.Max(1, goal);
+            if (sold <= 0) return Mathf.Clamp(reviewNoSalesStars, 1, 5);
+            float ratio = sold / (float)goal;
+            if (ratio >= reviewExcellentGoalRatio) return Mathf.Clamp(reviewExcellentStars, 1, 5);
+            if (sold >= goal) return Mathf.Clamp(reviewGoalMetStars, 1, 5);
+            if (ratio < reviewLowSalesGoalRatio) return Mathf.Clamp(reviewLowSalesStars, 1, 5);
+            return Mathf.Clamp(reviewBelowGoalStars, 1, 5);
+        }
         public Vector3 AppraisalPosition => appraisalPosition;
         public int AppraisalFee(ShopProductRarity rarity) => ValueAt(appraisalFees, (int)rarity, 20);
         public float AppraisalPriceMultiplier(ShopAppraisalGrade grade) =>
             ValueAt(appraisalPriceMultipliers, Mathf.Max(0, (int)grade - 1), 1f);
-        public float AppraisalCurationMultiplier(ShopAppraisalGrade grade) =>
-            ValueAt(appraisalCurationMultipliers, Mathf.Max(0, (int)grade - 1), 1f);
         public ShopAppraisalGrade AppraisalGradeFor(ShopProductRarity rarity, float roll01)
         {
             int count = appraisalGradeWeights != null ? appraisalGradeWeights.Length : 0;
@@ -104,16 +103,6 @@ namespace PickAndPlaceShop
         public int ConsignmentUnlockReputation => Mathf.Max(0, consignmentUnlockReputation);
         public int ConsignmentPrice(ShopProductRarity rarity) => Mathf.CeilToInt(
             ValueAt(consignmentMachineAverageCosts, (int)rarity, 100) * ConsignmentPriceMultiplier);
-        public Vector2 IdealDensityPercent => idealDensityPercent;
-        public int AutomaticLayoutScore => Mathf.Clamp(automaticLayoutScore, 0, 100);
-        public float ShelfPlacementRotationSpeed => Mathf.Max(1f, shelfPlacementRotationSpeed);
-        public int MaximumCurationPlacements => Mathf.Max(1, maximumCurationPlacements);
-        public Vector4 CurationScoreWeights => curationScoreWeights;
-        public string CurationGrade(int score) => score >= curationGradeThresholds.z ? "S"
-            : score >= curationGradeThresholds.y ? "A"
-            : score >= curationGradeThresholds.x ? "B" : "C";
-        public Vector3 CurationDeskPosition => curationDeskPosition;
-        public Vector3 CurationCoordinatorPosition => curationCoordinatorPosition;
 
         public static ShopDifferentiationConfig Load() => Resources.Load<ShopDifferentiationConfig>(ResourcePath);
 

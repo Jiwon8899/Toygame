@@ -25,13 +25,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> Budget = new(100);
         public NetworkVariable<int> DesiredProductId = new(-1);
         public NetworkVariable<FixedString64Bytes> DesiredProductName = new(new FixedString64Bytes("찾는 중..."));
-        public NetworkVariable<int> Satisfaction = new(0);
         public NetworkVariable<int> AppearanceIndex = new(0);
-        public NetworkVariable<FixedString64Bytes> PersistentCustomerId =
-            new(new FixedString64Bytes("customer:unassigned"));
-        public NetworkVariable<int> PreferredCategory = new((int)ShopProductCategory.CatGoods);
-        public NetworkVariable<int> PurchaseCount = new(0);
-        public NetworkVariable<int> LastSatisfaction = new(70);
         public NetworkVariable<FixedString512Bytes> DialogueText =
             new(new FixedString512Bytes(string.Empty));
         public NetworkVariable<int> DialogueRevision = new(0);
@@ -79,7 +73,7 @@ namespace PickAndPlaceShop
         public int ActiveAppearanceIndex => AppearanceIndex.Value;
         public string ActiveAppearanceName => activeAppearance != null ? activeAppearance.name : string.Empty;
         public float VisualSpeed => visualSpeed;
-        public string CustomerId => PersistentCustomerId.Value.ToString();
+        public string CustomerId => "customer:" + NetworkObjectId;
 
 #if UNITY_EDITOR
         public void EditorConfigureAppearance(Transform root, GameObject[] prefabs, CharacterController controller)
@@ -117,30 +111,18 @@ namespace PickAndPlaceShop
         public void ServerInitialize(ShopCustomerArchetypeDefinition archetype, int budget,
             Vector3 entrance, Vector3 firstBrowsePoint)
         {
-            ServerInitialize(archetype, budget, entrance, firstBrowsePoint,
-                new ShopCustomerProfileSelection("customer:" + NetworkObjectId,
-                    archetype != null && ShopProductLocalization.IsCatTheme(archetype.PreferredCategory)
-                        ? archetype.PreferredCategory : ShopProductCategory.CatGoods, 0, 70));
-        }
-
-        public void ServerInitialize(ShopCustomerArchetypeDefinition archetype, int budget,
-            Vector3 entrance, Vector3 firstBrowsePoint, ShopCustomerProfileSelection profile)
-        {
             if (!IsServer || archetype == null) return;
 
             CustomerType.Value = archetype.CustomerType;
             Budget.Value = budget;
             movementSpeed = archetype.MovementSpeed;
             patienceSeconds = archetype.PatienceSeconds;
-            PersistentCustomerId.Value = new FixedString64Bytes(profile.CustomerId ?? "customer:unassigned");
-            PreferredCategory.Value = (int)profile.PreferredCategory;
-            PurchaseCount.Value = Mathf.Max(0, profile.PurchaseCount);
-            LastSatisfaction.Value = Mathf.Clamp(profile.LastSatisfaction, 0, 100);
             preference = new ShopCustomerPreference(
                 budget,
                 archetype.PreferredPrice,
                 archetype.PriceSensitivity,
-                profile.PreferredCategory,
+                ShopProductLocalization.IsCatTheme(archetype.PreferredCategory)
+                    ? archetype.PreferredCategory : ShopProductCategory.CatGoods,
                 archetype.RarityPreference,
                 archetype.ConditionPreference,
                 archetype.GiftPreference);
@@ -235,19 +217,14 @@ namespace PickAndPlaceShop
             SetState(ShopCustomerState.Checkout);
         }
 
-        public void ServerCompleteCheckout(int satisfaction)
+        public void ServerCompleteCheckout()
         {
             if (!IsServer || State.Value != ShopCustomerState.Checkout) return;
-            Satisfaction.Value = satisfaction;
-            if (ShopLiveOperationsNetwork.Instance != null &&
-                satisfaction >= ShopLiveOperationsNetwork.Instance.Config.HighSatisfactionDialogueThreshold)
-            {
-                ShopLiveOperationsNetwork.Instance.ServerRequestCustomerDialogue(this,
-                    ShopCustomerDialogueEvent.HighSatisfactionPurchase,
-                    DesiredProductName.Value.ToString(), satisfaction, QueueWaitSeconds,
-                    ShopNightSalesSystem.Instance != null &&
-                    ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
-            }
+            ShopLiveOperationsNetwork.Instance?.ServerRequestCustomerDialogue(this,
+                ShopCustomerDialogueEvent.PurchaseCompleted,
+                DesiredProductName.Value.ToString(), true,
+                ShopNightSalesSystem.Instance != null &&
+                ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
             target = ShopNightSalesSystem.Instance.ExitPosition;
             SetState(ShopCustomerState.Leave);
         }
@@ -256,12 +233,9 @@ namespace PickAndPlaceShop
         {
             if (!IsServer || giveUpReported || State.Value == ShopCustomerState.Leave) return;
             giveUpReported = true;
-            bool longWait = reason != null &&
-                            reason.IndexOf("patience", System.StringComparison.OrdinalIgnoreCase) >= 0;
             ShopLiveOperationsNetwork.Instance?.ServerRequestCustomerDialogue(this,
-                longWait ? ShopCustomerDialogueEvent.LongWaitComplaint :
-                    ShopCustomerDialogueEvent.ExitWithoutPurchase,
-                DesiredProductName.Value.ToString(), Satisfaction.Value, QueueWaitSeconds,
+                ShopCustomerDialogueEvent.ExitWithoutPurchase,
+                DesiredProductName.Value.ToString(), false,
                 ShopNightSalesSystem.Instance != null &&
                 ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
             ShopNightSalesSystem.Instance.ServerRegisterGiveUp(this, reason);

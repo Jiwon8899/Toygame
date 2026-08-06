@@ -28,9 +28,7 @@ namespace PickAndPlaceShop
         AppraisalDesk,
         ConsignmentCorner,
         ReviewBoard,
-        CurationDesk,
-        ConsignmentReject,
-        CurationCoordinator
+        ConsignmentReject
     }
 
     public enum ShopUpgradeCategory
@@ -68,13 +66,6 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> RareInventory = new(0);
         public NetworkList<int> ClawInventoryVisuals = new();
         public NetworkList<ShopContainerItem> ItemContainers = new();
-        public NetworkList<ShopCurationPlacement> CurationPlacements = new();
-        public NetworkVariable<int> CurationNextPlacementId = new(1);
-        public NetworkVariable<int> CurationClusterScore = new(0);
-        public NetworkVariable<int> CurationSymmetryScore = new(0);
-        public NetworkVariable<int> CurationRarityScore = new(0);
-        public NetworkVariable<int> CurationDensityScore = new(0);
-        public NetworkVariable<bool> CurationAutomatic = new(false);
         public NetworkVariable<int> Displayed = new(0);
         public NetworkVariable<int> SoldToday = new(0);
         public NetworkVariable<int> RareSoldToday = new(0);
@@ -113,8 +104,6 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> CampaignSold = new(0);
         public NetworkVariable<int> CampaignAcquired = new(0);
         public NetworkVariable<int> CampaignGiveUps = new(0);
-        public NetworkVariable<int> CampaignSatisfactionTotal = new(0);
-        public NetworkVariable<int> CampaignSatisfactionSamples = new(0);
         public NetworkVariable<int> CampaignClawSuccesses = new(0);
         public NetworkVariable<int> CampaignClawFailures = new(0);
         public NetworkVariable<int> CampaignTopProductSales = new(0);
@@ -274,31 +263,17 @@ namespace PickAndPlaceShop
             MoveContainerSlotRpc(sourceContainer, sourceSlot, destinationContainer, destinationSlot);
         }
 
-        public void RequestCurationPlacement(ShopContainerKind sourceContainer, int sourceSlot,
-            Vector3 position, float yaw, Vector3 size)
+        public void RequestDisplayProduct(int productId)
         {
             if (!IsSpawned) return;
-            CurationPlacementRpc(sourceContainer, sourceSlot, position, yaw, size);
-        }
-
-        public void RequestCurationRemoval(int placementId)
-        {
-            if (!IsSpawned) return;
-            CurationRemovalRpc(placementId);
+            DisplayProductRpc(productId);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-        private void CurationPlacementRpc(ShopContainerKind sourceContainer, int sourceSlot,
-            Vector3 position, float yaw, Vector3 size, RpcParams rpcParams = default)
+        private void DisplayProductRpc(int productId, RpcParams rpcParams = default)
         {
-            ShopCurationSystem.Instance?.ServerTryPlace(rpcParams.Receive.SenderClientId,
-                sourceContainer, sourceSlot, position, yaw, size);
-        }
-
-        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-        private void CurationRemovalRpc(int placementId, RpcParams rpcParams = default)
-        {
-            ShopCurationSystem.Instance?.ServerTryRemove(rpcParams.Receive.SenderClientId, placementId);
+            ShopNightSalesSystem.Instance?.ServerTryRestockDisplay(
+                rpcParams.Receive.SenderClientId, productId);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -398,8 +373,6 @@ namespace PickAndPlaceShop
                 case ShopAction.ConsignmentCorner:
                 case ShopAction.ConsignmentReject:
                 case ShopAction.ReviewBoard:
-                case ShopAction.CurationDesk:
-                case ShopAction.CurationCoordinator:
                     ShopDifferentiationController.Instance?.ServerHandleInteraction(action, sender);
                     break;
             }
@@ -770,7 +743,7 @@ namespace PickAndPlaceShop
             else
                 progression.RecordSale(rareSale ? "sale:rare" : "sale:common",
                     rareSale ? "희귀 상품" : "일반 상품", rareSale ? "rare" : "general",
-                    price, rareSale, rareSale ? 95 : 80);
+                    price, rareSale);
             SetEvent((rareSale ? "Rare customer sale! +" : "Customer served! +") + price + " coins.");
 
             if (Displayed.Value == 0)
@@ -865,8 +838,6 @@ namespace PickAndPlaceShop
             CampaignSold.Value = 0;
             CampaignAcquired.Value = 0;
             CampaignGiveUps.Value = 0;
-            CampaignSatisfactionTotal.Value = 0;
-            CampaignSatisfactionSamples.Value = 0;
             CampaignClawSuccesses.Value = 0;
             CampaignClawFailures.Value = 0;
             CampaignTopProductSales.Value = 0;
@@ -1084,37 +1055,6 @@ namespace PickAndPlaceShop
             sourceItem.Quantity--;
             if (sourceItem.Quantity <= 0) ItemContainers.RemoveAt(sourceIndex);
             else ItemContainers[sourceIndex] = sourceItem;
-            SyncLegacyContainerCounts();
-            ShopNightSalesSystem.Instance?.ServerRefreshDisplayLedger();
-            return true;
-        }
-
-        public bool ServerTryReturnCurationPlacement(ulong requester, ShopCurationPlacement placement)
-        {
-            if (!IsServer) return false;
-            int displayIndex = -1;
-            for (int i = 0; i < ItemContainers.Count; i++)
-            {
-                ShopContainerItem candidate = ItemContainers[i];
-                if (candidate.Container != ShopContainerKind.SharedDisplay ||
-                    candidate.ProductId != placement.ProductId || candidate.Quantity <= 0) continue;
-                if (placement.InstanceId != 0 && candidate.InstanceId != placement.InstanceId) continue;
-                displayIndex = i;
-                break;
-            }
-            if (displayIndex < 0) return false;
-            ShopContainerItem source = ItemContainers[displayIndex];
-            source.Quantity = 1;
-            bool stored = TryAddExistingToContainer(requester, ShopContainerKind.PersonalInventory,
-                source, ShopContainerRules.PersonalCapacity, out _);
-            if (!stored)
-                stored = TryAddExistingToContainer(ShopContainerRules.SharedOwner,
-                    ShopContainerKind.SharedStorage, source, SharedStorageCapacity, out _);
-            if (!stored) return false;
-            ShopContainerItem remaining = ItemContainers[displayIndex];
-            remaining.Quantity--;
-            if (remaining.Quantity <= 0) ItemContainers.RemoveAt(displayIndex);
-            else ItemContainers[displayIndex] = remaining;
             SyncLegacyContainerCounts();
             ShopNightSalesSystem.Instance?.ServerRefreshDisplayLedger();
             return true;
@@ -1400,7 +1340,6 @@ namespace PickAndPlaceShop
             remaining.Quantity--;
             if (remaining.Quantity <= 0) ItemContainers.RemoveAt(index);
             else ItemContainers[index] = remaining;
-            ShopCurationSystem.Instance?.ServerRemoveSoldPlacement(consumed);
             SyncLegacyContainerCounts();
             return true;
         }
@@ -1619,15 +1558,12 @@ namespace PickAndPlaceShop
             return null;
         }
 
-        public void ServerRecordNightSummary(int revenue, int sold, int giveUps,
-            int satisfactionTotal, int satisfactionSamples)
+        public void ServerRecordNightSummary(int revenue, int sold, int giveUps)
         {
             if (!IsServer) return;
             CampaignRevenue.Value += Mathf.Max(0, revenue);
             CampaignSold.Value += Mathf.Max(0, sold);
             CampaignGiveUps.Value += Mathf.Max(0, giveUps);
-            CampaignSatisfactionTotal.Value += Mathf.Max(0, satisfactionTotal);
-            CampaignSatisfactionSamples.Value += Mathf.Max(0, satisfactionSamples);
         }
 
         public void ServerRecordProductSale(string productName, int amount)
@@ -1650,9 +1586,6 @@ namespace PickAndPlaceShop
                 TotalSold = CampaignSold.Value,
                 TotalAcquired = CampaignAcquired.Value,
                 FinalReputation = Reputation.Value,
-                AverageSatisfaction = CampaignSatisfactionSamples.Value <= 0
-                    ? 0
-                    : Mathf.RoundToInt(CampaignSatisfactionTotal.Value / (float)CampaignSatisfactionSamples.Value),
                 GiveUpCustomers = CampaignGiveUps.Value,
                 ClawSuccesses = CampaignClawSuccesses.Value,
                 ClawFailures = CampaignClawFailures.Value,

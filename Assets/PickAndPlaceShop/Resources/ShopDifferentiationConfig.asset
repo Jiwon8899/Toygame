@@ -19,10 +19,15 @@ MonoBehaviour:
   kujiSetSize: 40
   kujiRefillSeconds: {x: 5, y: 8}
   lastOneTitleThresholds: 010000000a0000001e00000064000000
-  vipPurchaseThreshold: 6
-  visibleStampCardCount: 8
   reviewHistoryCapacity: 5
   reviewBoardPosition: {x: 1.25, y: 0, z: -3.8}
+  reviewNoSalesStars: 1
+  reviewLowSalesGoalRatio: 0.5
+  reviewLowSalesStars: 2
+  reviewBelowGoalStars: 3
+  reviewGoalMetStars: 4
+  reviewExcellentGoalRatio: 1.5
+  reviewExcellentStars: 5
   appraisalPosition: {x: 12.7, y: 0, z: 0.2}
   appraisalFees: 1400000028000000500000008c000000
   appraisalPriceMultipliers:
@@ -30,11 +35,6 @@ MonoBehaviour:
   - 1.05
   - 1.2
   - 1.4
-  appraisalCurationMultipliers:
-  - 1
-  - 1.02
-  - 1.08
-  - 1.15
   appraisalGradeWeights:
   - {x: 60, y: 28, z: 10, w: 2}
   - {x: 45, y: 32, z: 18, w: 5}
@@ -49,11 +49,3 @@ MonoBehaviour:
   consignmentPriceMultiplier: 1.35
   consignmentMachineAverageCosts: 6400000082000000aa000000e6000000
   consignmentUnlockReputation: 30
-  idealDensityPercent: {x: 30, y: 90}
-  automaticLayoutScore: 45
-  shelfPlacementRotationSpeed: 90
-  maximumCurationPlacements: 30
-  curationScoreWeights: {x: 0.25, y: 0.25, z: 0.25, w: 0.25}
-  curationGradeThresholds: {x: 45, y: 65, z: 85}
-  curationDeskPosition: {x: 10.5, y: 0, z: 7.2}
-  curationCoordinatorPosition: {x: 10.15, y: 0, z: -0.55}

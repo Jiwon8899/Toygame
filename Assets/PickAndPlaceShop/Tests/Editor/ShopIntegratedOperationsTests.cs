@@ -33,8 +33,8 @@ namespace PickAndPlaceShop.Tests
         [Test]
         public void CustomerAndAutomationBalance_MatchesConfirmedRules()
         {
-            Assert.GreaterOrEqual(operations.PersistentCustomerCount, 30);
-            Assert.AreEqual(3, operations.RegularPurchaseThreshold);
+            Assert.AreEqual(1, operations.SuccessfulSaleReputationReward);
+            Assert.AreEqual(1, operations.NoPurchaseReputationPenalty);
             Assert.AreEqual(0.15f, operations.TrendPriceBonus, 0.0001f);
             Assert.AreEqual(60f, operations.AutomationAttemptInterval);
             Assert.AreEqual(0.5f, operations.AutomationSuccessMultiplier, 0.0001f);
@@ -121,11 +121,6 @@ namespace PickAndPlaceShop.Tests
                 dailySalesGoal = 12,
                 dailySalesProgress = 5
             };
-            source.customerProfiles.Add(new ShopCustomerProfileSave
-            {
-                customerId = "customer:007", preferredCategory = (int)ShopProductCategory.CatPlush,
-                purchaseCount = 3, regular = true, lastSatisfaction = 88
-            });
             source.automationMachines.Add(new ShopAutomationMachineSave
             {
                 machineId = 101, installed = true, enabled = true, elapsedSeconds = 24f
@@ -135,7 +130,6 @@ namespace PickAndPlaceShop.Tests
             Assert.AreEqual(ShopProgressionSaveStore.CurrentVersion, restored.version);
             Assert.AreEqual(155f, restored.livePhaseSecondsRemaining);
             Assert.AreEqual("복고풍 고양이 굿즈가 화제예요.", restored.trendNews);
-            Assert.IsTrue(restored.customerProfiles.Single().regular);
             Assert.IsTrue(restored.automationMachines.Single().installed);
         }
 

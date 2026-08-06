@@ -12,7 +12,6 @@ namespace PickAndPlaceShop
         public int TotalSold;
         public int TotalAcquired;
         public int FinalReputation;
-        public int AverageSatisfaction;
         public int GiveUpCustomers;
         public int ClawSuccesses;
         public int ClawFailures;
@@ -27,7 +26,6 @@ namespace PickAndPlaceShop
             serializer.SerializeValue(ref TotalSold);
             serializer.SerializeValue(ref TotalAcquired);
             serializer.SerializeValue(ref FinalReputation);
-            serializer.SerializeValue(ref AverageSatisfaction);
             serializer.SerializeValue(ref GiveUpCustomers);
             serializer.SerializeValue(ref ClawSuccesses);
             serializer.SerializeValue(ref ClawFailures);
@@ -40,7 +38,7 @@ namespace PickAndPlaceShop
         {
             return FinalCoins == other.FinalCoins && TotalRevenue == other.TotalRevenue &&
                    TotalSold == other.TotalSold && TotalAcquired == other.TotalAcquired &&
-                   FinalReputation == other.FinalReputation && AverageSatisfaction == other.AverageSatisfaction &&
+                   FinalReputation == other.FinalReputation &&
                    GiveUpCustomers == other.GiveUpCustomers && ClawSuccesses == other.ClawSuccesses &&
                    ClawFailures == other.ClawFailures && Score == other.Score &&
                    TopProductName.Equals(other.TopProductName) && Grade.Equals(other.Grade);

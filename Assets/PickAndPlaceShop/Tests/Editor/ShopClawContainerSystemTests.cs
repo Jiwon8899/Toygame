@@ -304,24 +304,26 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void DisplayShelfAnchors_AreGeneratedFromShelfSurfacesNotWorldFloor()
+        public void DisplayShelfAnchors_RestoreLegacyFixedSlotsBeforeGeneratingFallbacks()
         {
             GameObject root = new("Shared Display Shelves");
             try
             {
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < 8; i++)
                 {
-                    GameObject shelf = new("Shelf_0_" + i);
-                    shelf.transform.SetParent(root.transform, false);
-                    shelf.transform.localPosition = new Vector3(0f, 0.45f + i * 0.9f, 0f);
-                    shelf.transform.localScale = new Vector3(2f, 0.14f, 1.25f);
+                    GameObject slot = new("DisplayPrize_" + i);
+                    slot.transform.SetParent(root.transform, false);
+                    slot.transform.localPosition = new Vector3(i, 0.8f, 0f);
+                    slot.transform.localScale = Vector3.one * 0.48f;
+                    slot.SetActive(false);
                 }
                 ShopDisplayShelfAnchors provider = root.AddComponent<ShopDisplayShelfAnchors>();
                 provider.EnsureAnchors();
-                Assert.AreEqual(6, provider.Anchors.Count);
+                Assert.AreEqual(8, provider.Anchors.Count);
                 Assert.IsTrue(provider.Anchors.All(anchor =>
-                    anchor.transform.parent == root.transform &&
-                    anchor.transform.localPosition.y >= 0.69f));
+                    anchor.name.StartsWith("DisplayPrize_") &&
+                    anchor.gameObject.activeSelf &&
+                    anchor.transform.localScale == Vector3.one));
             }
             finally
             {

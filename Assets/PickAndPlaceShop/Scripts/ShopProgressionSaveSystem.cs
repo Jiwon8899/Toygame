@@ -69,20 +69,6 @@ namespace PickAndPlaceShop
     }
 
     [Serializable]
-    public sealed class ShopCurationPlacementSave
-    {
-        public int placementId;
-        public int productId;
-        public Vector3 position;
-        public Vector3 size;
-        public float yaw;
-        public int rarity;
-        public int appraisalGrade;
-        public ulong instanceId;
-        public bool automatic;
-    }
-
-    [Serializable]
     public sealed class ShopProgressionSaveData
     {
         public int version = ShopProgressionSaveStore.CurrentVersion;
@@ -93,8 +79,6 @@ namespace PickAndPlaceShop
         public int unitsSold;
         public int rareItemsAcquired;
         public int rareItemsSold;
-        public int satisfactionTotal;
-        public int satisfactionSamples;
         public int onlineOrdersCompleted;
         public int clawSuccesses;
         public int currentStageIndex;
@@ -105,7 +89,6 @@ namespace PickAndPlaceShop
         public int weeklyGoalCycle;
         public bool dailySetRewardClaimed;
         public bool weeklySetRewardClaimed;
-        public List<string> regularCustomerIds = new();
         public List<string> unlockedDistrictIds = new();
         public List<string> ownedCollectionItemIds = new();
         public List<int> grantedCollectionMilestones = new();
@@ -114,7 +97,6 @@ namespace PickAndPlaceShop
         public List<ShopContainerItemSave> containerItems = new();
         public List<ShopClawMachineSave> clawMachines = new();
         public List<ShopKujiStationSave> kujiStations = new();
-        public List<ShopCurationPlacementSave> curationPlacements = new();
         public int livePhase;
         public float livePhaseSecondsRemaining;
         public int trendCategory;
@@ -123,7 +105,6 @@ namespace PickAndPlaceShop
         public int dailySalesGoal = 1;
         public int dailySalesProgress;
         public int nextOrderId = 1;
-        public List<ShopCustomerProfileSave> customerProfiles = new();
         public List<ShopOnlineOrderSave> onlineOrders = new();
         public List<ShopAutomationMachineSave> automationMachines = new();
         public int playerUpgradeLevel;
@@ -151,12 +132,6 @@ namespace PickAndPlaceShop
         public int consignmentOfferPrice2;
         public float consignmentSecondsRemaining;
         public int consignmentOfferSerial;
-        public int curationNextPlacementId = 1;
-        public int curationClusterScore;
-        public int curationSymmetryScore;
-        public int curationRarityScore;
-        public int curationDensityScore;
-        public bool curationAutomatic;
         public int hotbarProduct0 = -1;
         public int hotbarProduct1 = -1;
         public int hotbarProduct2 = -1;
@@ -167,7 +142,7 @@ namespace PickAndPlaceShop
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 15;
+        public const int CurrentVersion = 16;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 
@@ -268,7 +243,6 @@ namespace PickAndPlaceShop
 
         private static void EnsureCollections(ShopProgressionSaveData data)
         {
-            data.regularCustomerIds ??= new List<string>();
             data.unlockedDistrictIds ??= new List<string>();
             data.ownedCollectionItemIds ??= new List<string>();
             data.grantedCollectionMilestones ??= new List<int>();
@@ -277,8 +251,6 @@ namespace PickAndPlaceShop
             data.containerItems ??= new List<ShopContainerItemSave>();
             data.clawMachines ??= new List<ShopClawMachineSave>();
             data.kujiStations ??= new List<ShopKujiStationSave>();
-            data.curationPlacements ??= new List<ShopCurationPlacementSave>();
-            data.customerProfiles ??= new List<ShopCustomerProfileSave>();
             data.onlineOrders ??= new List<ShopOnlineOrderSave>();
             data.automationMachines ??= new List<ShopAutomationMachineSave>();
         }
@@ -291,14 +263,6 @@ namespace PickAndPlaceShop
             MigrateGoals(data.dailyGoals);
             MigrateGoals(data.weeklyGoals);
             data.trendCategory = (int)MigrateCategory((ShopProductCategory)data.trendCategory);
-            for (int i = 0; i < data.customerProfiles.Count; i++)
-            {
-                ShopCustomerProfileSave profile = data.customerProfiles[i];
-                if (profile != null)
-                    profile.preferredCategory = (int)MigrateCategory(
-                        (ShopProductCategory)profile.preferredCategory);
-            }
-
             // 기존 주문은 구 상품 이름과 ProductId를 함께 저장하므로 새 테마에서 재생성한다.
             data.onlineOrders.Clear();
         }

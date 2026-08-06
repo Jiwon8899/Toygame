@@ -185,7 +185,6 @@ namespace PickAndPlaceShop.Tests
                 unitsSold = 67,
                 rareItemsAcquired = 8,
                 rareItemsSold = 4,
-                regularCustomerIds = new List<string> { "regular:a" },
                 unlockedDistrictIds = new List<string> { "district:gacha" },
                 ownedCollectionItemIds = new List<string> { "item:a" },
                 grantedCollectionMilestones = new List<int> { 25 },
@@ -201,7 +200,6 @@ namespace PickAndPlaceShop.Tests
             Assert.That(restored.currentDay, Is.EqualTo(8));
             Assert.That(restored.teamFunds, Is.EqualTo(4321));
             Assert.That(restored.reputation, Is.EqualTo(44));
-            Assert.That(restored.regularCustomerIds, Is.EquivalentTo(source.regularCustomerIds));
             Assert.That(restored.unlockedDistrictIds, Is.EquivalentTo(source.unlockedDistrictIds));
             Assert.That(restored.ownedCollectionItemIds, Is.EquivalentTo(source.ownedCollectionItemIds));
             Assert.That(restored.grantedCollectionMilestones, Is.EquivalentTo(new[] { 25 }));

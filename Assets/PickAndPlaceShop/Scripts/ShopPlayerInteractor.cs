@@ -61,20 +61,26 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            if (ShopCurationSystem.IsHoldingLocal || ShopCurationSystem.IsTargetingPlacedLocal)
-            {
-                LocalPrompt = ShopCurationSystem.IsHoldingLocal
-                    ? "Q/E 회전 · E/Space 배치 · F 취소"
-                    : "[E] 진열 상품 다시 들기";
-                return;
-            }
-
             if (playerCamera == null || !playerCamera.isActiveAndEnabled)
             {
                 playerCamera = Camera.main;
             }
 
             UpdateTarget();
+            if (ShopProductHotbarSystem.IsHoldingLocal)
+            {
+                bool facingShelf = currentTarget != null && currentTarget.Action == ShopAction.DisplayShelf;
+                LocalPrompt = facingShelf
+                    ? "[E] 고정 슬롯에 진열 · [F] 취소"
+                    : "진열대 앞으로 이동하세요 · [F] 취소";
+                if (facingShelf && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+                {
+                    ShopNetworkGame.Instance?.RequestDisplayProduct(
+                        ShopProductHotbarSystem.Instance.HeldProductId);
+                    ShopProductHotbarSystem.Instance.CancelHolding();
+                }
+                return;
+            }
             if (currentTarget != null && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
                 bool shiftHeld = Keyboard.current.leftShiftKey.isPressed ||

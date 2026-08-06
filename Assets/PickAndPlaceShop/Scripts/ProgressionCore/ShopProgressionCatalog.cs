@@ -6,17 +6,15 @@ namespace PickAndPlaceShop
 {
     public enum ShopProgressConditionType
     {
-        Reputation,
-        LifetimeRevenue,
-        UnitsSold,
-        RareItemsAcquired,
-        RareItemsSold,
-        RegularCustomers,
-        AverageSatisfaction,
-        OnlineOrdersCompleted,
-        CollectionPercent,
-        CategoryItemsOwned,
-        ClawSuccesses
+        Reputation = 0,
+        LifetimeRevenue = 1,
+        UnitsSold = 2,
+        RareItemsAcquired = 3,
+        RareItemsSold = 4,
+        OnlineOrdersCompleted = 7,
+        CollectionPercent = 8,
+        CategoryItemsOwned = 9,
+        ClawSuccesses = 10
     }
 
     public enum ShopProgressRewardType

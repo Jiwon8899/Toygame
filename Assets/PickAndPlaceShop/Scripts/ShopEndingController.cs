@@ -50,7 +50,6 @@ namespace PickAndPlaceShop
                              "판매한 상품          " + result.TotalSold + "개\n" +
                              "획득한 상품          " + result.TotalAcquired + "개\n" +
                              "최종 평판            " + result.FinalReputation + "\n" +
-                             "평균 손님 만족도     " + result.AverageSatisfaction + "\n" +
                              "가장 많이 판 상품    " + result.TopProductName + "\n" +
                              "구매 포기 손님       " + result.GiveUpCustomers + "명\n" +
                              "인형뽑기 성공/실패   " + result.ClawSuccesses + " / " + result.ClawFailures;

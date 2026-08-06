@@ -46,10 +46,9 @@ namespace PickAndPlaceShop
             int targetCoins = config != null ? Mathf.Max(1, config.targetCoins) : 10000;
             int targetReputation = config != null ? Mathf.Max(1, config.targetReputation) : 100;
             int targetSold = config != null ? Mathf.Max(1, config.targetSold) : 50;
-            float score = Mathf.Clamp01(result.FinalCoins / (float)targetCoins) * 25f;
-            score += Mathf.Clamp01(result.FinalReputation / (float)targetReputation) * 25f;
-            score += Mathf.Clamp01(result.AverageSatisfaction / 100f) * 30f;
-            score += Mathf.Clamp01(result.TotalSold / (float)targetSold) * 20f;
+            float score = Mathf.Clamp01(result.FinalCoins / (float)targetCoins) * 35f;
+            score += Mathf.Clamp01(result.FinalReputation / (float)targetReputation) * 30f;
+            score += Mathf.Clamp01(result.TotalSold / (float)targetSold) * 35f;
             return Mathf.Clamp(Mathf.RoundToInt(score), 0, 100);
         }
 

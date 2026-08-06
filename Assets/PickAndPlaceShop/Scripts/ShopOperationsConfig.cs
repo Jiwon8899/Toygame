@@ -33,8 +33,7 @@ namespace PickAndPlaceShop
     public enum ShopCustomerDialogueEvent
     {
         ExitWithoutPurchase,
-        HighSatisfactionPurchase,
-        LongWaitComplaint
+        PurchaseCompleted
     }
 
     [System.Serializable]
@@ -107,17 +106,10 @@ namespace PickAndPlaceShop
         [Header("Trend")]
         [Range(0f, 1f)] [SerializeField] private float trendPriceBonus = 0.15f;
         [Range(1f, 4f)] [SerializeField] private float trendCustomerWeight = 1.7f;
-        [Range(0f, 20f)] [SerializeField] private float trendSatisfactionBonus = 4f;
-
         [Header("Customers")]
-        [Min(30)] [SerializeField] private int persistentCustomerCount = 30;
-        [Min(1)] [SerializeField] private int regularPurchaseThreshold = 3;
         [Range(1, 24)] [SerializeField] private int maximumConcurrentCustomers = 6;
-        [Range(0f, 1f)] [SerializeField] private float satisfactionWaitWeight = 0.55f;
-        [Range(0f, 1f)] [SerializeField] private float satisfactionVarietyWeight = 0.30f;
-        [Range(0f, 1f)] [SerializeField] private float satisfactionRarityWeight = 0.15f;
-        [Range(1f, 2f)] [SerializeField] private float regularPriceMultiplier = 1.1f;
-        [Range(0f, 1f)] [SerializeField] private float regularExtraPurchaseChance = 0.25f;
+        [Min(0)] [SerializeField] private int successfulSaleReputationReward = 1;
+        [Min(0)] [SerializeField] private int noPurchaseReputationPenalty = 1;
 
         [Header("Interaction")]
         [Min(0.5f)] [SerializeField] private float interactionDistance = 2.5f;
@@ -175,7 +167,6 @@ namespace PickAndPlaceShop
         [Range(1, 60)] [SerializeField] private int narrativeRequestsPerMinute = 10;
         [Range(1f, 10f)] [SerializeField] private float dialogueBubbleSeconds = 3f;
         [Range(1, 5)] [SerializeField] private int maximumDialogueBubbles = 2;
-        [Range(50, 100)] [SerializeField] private int highSatisfactionDialogueThreshold = 85;
         [SerializeField] private string[] exitWithoutPurchaseFallbacks =
         {
             "{선호카테고리} 상품이 진열되면 다음에는 꼭 들를게요.",
@@ -184,21 +175,13 @@ namespace PickAndPlaceShop
             "제 취향인 {선호카테고리} 진열을 다음에는 기대할게요.",
             "오늘은 빈손이지만 {선호카테고리} 상품이 들어오면 다시 올게요."
         };
-        [SerializeField] private string[] highSatisfactionPurchaseFallbacks =
+        [SerializeField] private string[] purchaseCompletedFallbacks =
         {
             "{상품명}을 찾아서 정말 만족스러워요.",
             "제 취향인 {선호카테고리} 상품을 잘 골랐어요.",
             "{오늘뉴스} 소문처럼 {상품명}이 마음에 쏙 들어요.",
             "기다린 보람이 있을 만큼 {상품명}이 마음에 들어요.",
             "다음 방문에도 이런 {선호카테고리} 상품을 만나고 싶어요."
-        };
-        [SerializeField] private string[] longWaitComplaintFallbacks =
-        {
-            "{대기시간}초나 기다려서 조금 지쳤어요.",
-            "{상품명}을 사고 싶었지만 줄이 너무 오래 걸렸어요.",
-            "{오늘뉴스} 소문 때문에 붐비는 건 알지만 계산은 더 빨랐으면 해요.",
-            "{선호카테고리} 상품은 좋았지만 대기 시간이 아쉬워요.",
-            "다음에는 {대기시간}초보다 빨리 계산할 수 있으면 좋겠어요."
         };
         [SerializeField] private string[] trendNewsFallbacks =
         {
@@ -234,15 +217,9 @@ namespace PickAndPlaceShop
         public int NewGameStartingFunds => Mathf.Max(0, newGameStartingFunds);
         public float TrendPriceBonus => trendPriceBonus;
         public float TrendCustomerWeight => trendCustomerWeight;
-        public float TrendSatisfactionBonus => trendSatisfactionBonus;
-        public int PersistentCustomerCount => Mathf.Max(30, persistentCustomerCount);
-        public int RegularPurchaseThreshold => Mathf.Max(1, regularPurchaseThreshold);
         public int MaximumConcurrentCustomers => Mathf.Max(1, maximumConcurrentCustomers);
-        public float SatisfactionWaitWeight => satisfactionWaitWeight;
-        public float SatisfactionVarietyWeight => satisfactionVarietyWeight;
-        public float SatisfactionRarityWeight => satisfactionRarityWeight;
-        public float RegularPriceMultiplier => regularPriceMultiplier;
-        public float RegularExtraPurchaseChance => regularExtraPurchaseChance;
+        public int SuccessfulSaleReputationReward => Mathf.Max(0, successfulSaleReputationReward);
+        public int NoPurchaseReputationPenalty => Mathf.Max(0, noPurchaseReputationPenalty);
         public float InteractionDistance => Mathf.Max(0.5f, interactionDistance);
         public float InteractionFacingThreshold => interactionFacingThreshold;
         public int OrderUnlockExpansionLevel => orderUnlockExpansionLevel;
@@ -286,15 +263,13 @@ namespace PickAndPlaceShop
         public int NarrativeRequestsPerMinute => Mathf.Max(1, narrativeRequestsPerMinute);
         public float DialogueBubbleSeconds => Mathf.Max(1f, dialogueBubbleSeconds);
         public int MaximumDialogueBubbles => Mathf.Max(1, maximumDialogueBubbles);
-        public int HighSatisfactionDialogueThreshold => Mathf.Clamp(highSatisfactionDialogueThreshold, 50, 100);
         public ShopRarityWeights StandardRarityWeights => standardRarityWeights;
 
         public string CustomerDialogueFallback(ShopCustomerDialogueEvent eventType, int seed)
         {
             string[] source = eventType switch
             {
-                ShopCustomerDialogueEvent.HighSatisfactionPurchase => highSatisfactionPurchaseFallbacks,
-                ShopCustomerDialogueEvent.LongWaitComplaint => longWaitComplaintFallbacks,
+                ShopCustomerDialogueEvent.PurchaseCompleted => purchaseCompletedFallbacks,
                 _ => exitWithoutPurchaseFallbacks
             };
             if (source == null || source.Length == 0) return "오늘 가게 경험을 다음 방문에도 기억할게요.";

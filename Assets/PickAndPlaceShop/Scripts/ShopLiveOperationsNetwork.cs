@@ -9,16 +9,6 @@ using UnityEngine;
 namespace PickAndPlaceShop
 {
     [Serializable]
-    public sealed class ShopCustomerProfileSave
-    {
-        public string customerId;
-        public int preferredCategory;
-        public int purchaseCount;
-        public int lastSatisfaction = 70;
-        public bool regular;
-    }
-
-    [Serializable]
     public sealed class ShopOnlineOrderSave
     {
         public int orderId;
@@ -66,23 +56,6 @@ namespace PickAndPlaceShop
             DeadlineDay == other.DeadlineDay && ProductName.Equals(other.ProductName);
     }
 
-    public readonly struct ShopCustomerProfileSelection
-    {
-        public readonly string CustomerId;
-        public readonly ShopProductCategory PreferredCategory;
-        public readonly int PurchaseCount;
-        public readonly int LastSatisfaction;
-
-        public ShopCustomerProfileSelection(string id, ShopProductCategory category,
-            int purchases, int satisfaction)
-        {
-            CustomerId = id;
-            PreferredCategory = category;
-            PurchaseCount = purchases;
-            LastSatisfaction = satisfaction;
-        }
-    }
-
     [RequireComponent(typeof(NetworkObject))]
     public sealed class ShopLiveOperationsNetwork : NetworkBehaviour
     {
@@ -108,7 +81,6 @@ namespace PickAndPlaceShop
             new(new FixedString128Bytes(string.Empty));
         public NetworkList<ShopOnlineOrderState> OnlineOrders = new();
 
-        private readonly List<ShopCustomerProfileSave> customerProfiles = new();
         private readonly List<ShopAutomationMachineSave> pendingAutomation = new();
         private float phaseRemaining;
         private int observedDay;
@@ -123,17 +95,6 @@ namespace PickAndPlaceShop
             ShopProductLocalization.IsCatTheme((ShopProductCategory)TrendCategory.Value)
                 ? (ShopProductCategory)TrendCategory.Value
                 : ShopProductCategory.CatPlush;
-        public int RegularCustomerCount
-        {
-            get
-            {
-                int count = 0;
-                for (int i = 0; i < customerProfiles.Count; i++)
-                    if (customerProfiles[i].regular) count++;
-                return count;
-            }
-        }
-
         private void Awake()
         {
             Instance = this;
@@ -149,7 +110,6 @@ namespace PickAndPlaceShop
 
             ShopProgressionSaveData save = ShopProgressionManager.Instance?.GetLoadedSaveData();
             if (save != null) Restore(save);
-            EnsureCustomerPool();
             ShopNetworkGame game = ShopNetworkGame.Instance;
             observedDay = game != null ? game.Day.Value : 1;
             observedPhase = game != null ? game.Phase.Value : ShopPhase.Setup;
@@ -348,20 +308,20 @@ namespace PickAndPlaceShop
         }
 
         public void ServerRequestCustomerDialogue(ShopCustomerNetwork customer,
-            ShopCustomerDialogueEvent eventType, string productName, int satisfaction,
-            float waitSeconds, bool preferredCategoryDisplayed)
+            ShopCustomerDialogueEvent eventType, string productName, bool purchased,
+            bool preferredProductAvailable)
         {
             if (!IsServer || customer == null || Config == null || ShopNetworkGame.Instance == null) return;
             int day = ShopNetworkGame.Instance.Day.Value;
-            ShopCustomerProfileSave profile = FindProfile(customer.CustomerId);
-            int visits = profile != null ? profile.purchaseCount : customer.PurchaseCount.Value;
-            bool regular = profile != null && profile.regular;
             string category = ShopProductLocalization.CategoryLabel(customer.Preference.PreferredCategory);
             string itemName = string.IsNullOrWhiteSpace(productName) ? "원하던 상품" : productName;
             string fallback = FormatDialogueFallback(
                 Config.CustomerDialogueFallback(eventType, day * 397 + customer.CustomerId.GetHashCode()),
-                category, itemName, waitSeconds, TrendNews.Value.ToString());
-            string generationKey = day + "|" + customer.CustomerId;
+                category, itemName, 0f, TrendNews.Value.ToString());
+            string generationKey = day + "|" + customer.CustomerId +
+                                   "|purchased=" + (purchased ? "1" : "0") +
+                                   "|preferred=" + (preferredProductAvailable ? "1" : "0") +
+                                   "|event=" + eventType;
             if (!generatedCustomerDialogueDays.Add(generationKey))
             {
                 NarrativeFallbacksToday.Value++;
@@ -371,15 +331,12 @@ namespace PickAndPlaceShop
 
             string prompt = "손님 대사 한 문장을 작성하세요. 이벤트=" + eventType +
                             ", 선호=" + category +
-                            ", 단골=" + (regular ? "예" : "아니오") +
-                            ", 누적구매=" + visits +
                             ", 구매상품=" + itemName +
-                            ", 대기=" + Mathf.RoundToInt(waitSeconds) + "초" +
-                            ", 만족도=" + satisfaction +
-                            ", 선호카테고리진열=" + (preferredCategoryDisplayed ? "있음" : "없음") +
+                            ", 구매완료=" + (purchased ? "예" : "아니오") +
+                            ", 선호상품재고=" + (preferredProductAvailable ? "있음" : "없음") +
                             ", 오늘뉴스=" + TrendNews.Value +
                             ". 상태를 드러내되 시스템 설명이나 새 사실은 만들지 마세요.";
-            string contextKey = "customer:" + generationKey + ":" + eventType;
+            string contextKey = "customer:" + generationKey;
             ShopNarrativeAIService.Instance?.Request(contextKey, prompt, result =>
             {
                 if (!IsServer || customer == null) return;
@@ -417,116 +374,6 @@ namespace PickAndPlaceShop
         {
             if (product == null || !IsTrend(product.Category)) return Mathf.Max(1, basePrice);
             return Mathf.Max(1, Mathf.RoundToInt(basePrice * (1f + Config.TrendPriceBonus)));
-        }
-
-        public int CalculateSatisfaction(ShopCustomerNetwork customer, int displayedVariety,
-            bool rareDisplayed)
-        {
-            if (customer == null || Config == null) return 0;
-            float waitScore = Mathf.Clamp01(1f - customer.QueueWaitSeconds /
-                Mathf.Max(1f, customer.PatienceSeconds));
-            float varietyScore = ShopCurationSystem.Instance != null &&
-                                 ShopNetworkGame.Instance != null &&
-                                 ShopNetworkGame.Instance.CurationPlacements.Count > 0
-                ? Mathf.Clamp01(ShopCurationSystem.Instance.CurrentScoreAverage / 100f)
-                : Mathf.Clamp01(displayedVariety / 5f);
-            float rarityScore = rareDisplayed ? 1f : 0f;
-            float totalWeight = Mathf.Max(0.01f, Config.SatisfactionWaitWeight +
-                Config.SatisfactionVarietyWeight + Config.SatisfactionRarityWeight);
-            float score = (waitScore * Config.SatisfactionWaitWeight +
-                           varietyScore * Config.SatisfactionVarietyWeight +
-                           rarityScore * Config.SatisfactionRarityWeight) / totalWeight;
-            if (IsTrend(customer.Preference.PreferredCategory))
-                score += Config.TrendSatisfactionBonus / 100f;
-            return Mathf.Clamp(Mathf.RoundToInt(score * 100f), 0, 100);
-        }
-
-        public ShopCustomerProfileSelection ServerSelectCustomerProfile()
-        {
-            EnsureCustomerPool();
-            if (customerProfiles.Count == 0)
-                return new ShopCustomerProfileSelection("customer:001", ShopProductCategory.CatPlush, 0, 70);
-            float total = 0f;
-            for (int i = 0; i < customerProfiles.Count; i++) total += ProfileWeight(customerProfiles[i]);
-            float roll = UnityEngine.Random.value * Mathf.Max(0.01f, total);
-            ShopCustomerProfileSave selected = customerProfiles[0];
-            for (int i = 0; i < customerProfiles.Count; i++)
-            {
-                selected = customerProfiles[i];
-                roll -= ProfileWeight(selected);
-                if (roll <= 0f) break;
-            }
-            return new ShopCustomerProfileSelection(selected.customerId,
-                (ShopProductCategory)selected.preferredCategory,
-                selected.purchaseCount, selected.lastSatisfaction);
-        }
-
-        private float ProfileWeight(ShopCustomerProfileSave profile)
-        {
-            float satisfactionWeight = Mathf.Lerp(0.5f, 1.8f,
-                Mathf.Clamp01(profile.lastSatisfaction / 100f));
-            float trendWeight = profile.preferredCategory == TrendCategory.Value
-                ? Config.TrendCustomerWeight
-                : 1f;
-            float regularWeight = profile.regular ? 1.35f : 1f;
-            return satisfactionWeight * trendWeight * regularWeight;
-        }
-
-        public void ServerRecordCustomerPurchase(string customerId,
-            ShopProductCategory preferredCategory, int satisfaction)
-        {
-            if (!IsServer || string.IsNullOrWhiteSpace(customerId)) return;
-            ShopCustomerProfileSave profile = FindProfile(customerId);
-            if (profile == null) return;
-            profile.preferredCategory = (int)preferredCategory;
-            profile.purchaseCount++;
-            profile.lastSatisfaction = Mathf.Clamp(satisfaction, 0, 100);
-            if (!profile.regular && profile.purchaseCount >= Config.RegularPurchaseThreshold)
-            {
-                profile.regular = true;
-                ShopProgressionManager.Instance?.RecordRegularCustomer(profile.customerId);
-            }
-        }
-
-        public float RegularPriceMultiplier(string customerId)
-        {
-            ShopCustomerProfileSave profile = FindProfile(customerId);
-            return profile != null && profile.regular ? Config.RegularPriceMultiplier : 1f;
-        }
-
-        public bool ShouldRegularBuyExtra(string customerId, ShopProductCategory category)
-        {
-            ShopCustomerProfileSave profile = FindProfile(customerId);
-            return profile != null && profile.regular && profile.preferredCategory == (int)category &&
-                   UnityEngine.Random.value < Config.RegularExtraPurchaseChance;
-        }
-
-        private ShopCustomerProfileSave FindProfile(string id)
-        {
-            for (int i = 0; i < customerProfiles.Count; i++)
-                if (string.Equals(customerProfiles[i].customerId, id, StringComparison.Ordinal))
-                    return customerProfiles[i];
-            return null;
-        }
-
-        private void EnsureCustomerPool()
-        {
-            if (Config == null) return;
-            ShopProductCategory[] categories =
-            {
-                ShopProductCategory.CatPlush, ShopProductCategory.CatFigure,
-                ShopProductCategory.CatGoods, ShopProductCategory.CatSeasonal,
-                ShopProductCategory.CatRetro
-            };
-            for (int i = customerProfiles.Count; i < Config.PersistentCustomerCount; i++)
-            {
-                customerProfiles.Add(new ShopCustomerProfileSave
-                {
-                    customerId = "customer:" + (i + 1).ToString("D3"),
-                    preferredCategory = (int)categories[i % categories.Length],
-                    lastSatisfaction = 70
-                });
-            }
         }
 
         public void ServerHandlePackingStation(ulong senderClientId)
@@ -644,16 +491,6 @@ namespace PickAndPlaceShop
                             " · 판매가 +" + Mathf.RoundToInt(Config.TrendPriceBonus * 100f) + "%");
             text.AppendLine("유행 소식: " + TrendNews.Value);
             text.AppendLine("일일 판매 목표: " + DailySalesProgress.Value + " / " + DailySalesGoal.Value);
-            text.AppendLine("단골: " + RegularCustomerCount + " / " + Config.PersistentCustomerCount);
-            int shown = 0;
-            for (int i = 0; i < customerProfiles.Count && shown < 8; i++)
-            {
-                if (!customerProfiles[i].regular) continue;
-                text.AppendLine("  · " + customerProfiles[i].customerId + " · " +
-                                ShopProductLocalization.CategoryLabel(
-                                    (ShopProductCategory)customerProfiles[i].preferredCategory));
-                shown++;
-            }
             text.AppendLine("온라인 주문: " + OnlineOrders.Count + "건");
             text.AppendLine("자동화: 오늘 획득 " + AutomatedAcquiredToday.Value + "개 · 소모 " +
                             AutomatedCostToday.Value + "원");
@@ -663,38 +500,6 @@ namespace PickAndPlaceShop
                             " · 실패 " + NarrativeFailuresToday.Value);
             if (ShopNetworkGame.Instance != null)
                 text.AppendLine(ShopNetworkGame.Instance.StaffStatusSummary());
-        }
-
-        public void AppendStampCards(StringBuilder text)
-        {
-            if (text == null || Config == null) return;
-            ShopDifferentiationConfig differentiation = ShopDifferentiationConfig.Load();
-            int regularThreshold = Mathf.Max(1, Config.RegularPurchaseThreshold);
-            int vipThreshold = differentiation != null
-                ? Mathf.Max(regularThreshold + 1, differentiation.VipPurchaseThreshold)
-                : regularThreshold * 2;
-            int visible = differentiation != null ? differentiation.VisibleStampCardCount : 8;
-
-            text.AppendLine();
-            text.AppendLine("<color=#FFCF6B><b>단골 발도장 카드</b></color>");
-            int shown = 0;
-            for (int i = 0; i < customerProfiles.Count && shown < visible; i++)
-            {
-                ShopCustomerProfileSave profile = customerProfiles[i];
-                if (profile == null || profile.purchaseCount <= 0) continue;
-                int purchases = Mathf.Max(0, profile.purchaseCount);
-                int stamps = Mathf.Min(purchases, vipThreshold);
-                string paws = new string('●', stamps) + new string('○', Mathf.Max(0, vipThreshold - stamps));
-                string rank = purchases >= vipThreshold ? "VIP 단골"
-                    : purchases >= regularThreshold ? "단골" : "방문 손님";
-                text.AppendLine("  " + profile.customerId + "  " + paws + "  " +
-                                purchases + "회 · " + rank + " · " +
-                                ShopProductLocalization.CategoryLabel(
-                                    (ShopProductCategory)profile.preferredCategory));
-                shown++;
-            }
-            if (shown == 0) text.AppendLine("  첫 구매를 기다리고 있어요.");
-            text.AppendLine("  " + regularThreshold + "회 단골 · " + vipThreshold + "회 VIP 단골");
         }
 
         public void WriteSave(ShopProgressionSaveData save)
@@ -708,7 +513,6 @@ namespace PickAndPlaceShop
             save.dailySalesGoal = DailySalesGoal.Value;
             save.dailySalesProgress = DailySalesProgress.Value;
             save.nextOrderId = nextOrderId;
-            save.customerProfiles = CloneProfiles(customerProfiles);
             save.onlineOrders = new List<ShopOnlineOrderSave>();
             for (int i = 0; i < OnlineOrders.Count; i++)
             {
@@ -752,8 +556,6 @@ namespace PickAndPlaceShop
             DailySalesGoal.Value = Mathf.Max(1, save.dailySalesGoal);
             DailySalesProgress.Value = Mathf.Max(0, save.dailySalesProgress);
             nextOrderId = Mathf.Max(1, save.nextOrderId);
-            customerProfiles.Clear();
-            if (save.customerProfiles != null) customerProfiles.AddRange(CloneProfiles(save.customerProfiles));
             OnlineOrders.Clear();
             if (save.onlineOrders != null)
             {
@@ -777,26 +579,6 @@ namespace PickAndPlaceShop
             if (ShopNetworkGame.Instance != null)
                 ShopNetworkGame.Instance.ServerSetPhase((ShopPhase)Mathf.Clamp(save.livePhase,
                     (int)ShopPhase.PrizeHunt, (int)ShopPhase.Summary));
-        }
-
-        private static List<ShopCustomerProfileSave> CloneProfiles(IReadOnlyList<ShopCustomerProfileSave> source)
-        {
-            List<ShopCustomerProfileSave> result = new();
-            if (source == null) return result;
-            for (int i = 0; i < source.Count; i++)
-            {
-                ShopCustomerProfileSave profile = source[i];
-                if (profile == null) continue;
-                result.Add(new ShopCustomerProfileSave
-                {
-                    customerId = profile.customerId,
-                    preferredCategory = profile.preferredCategory,
-                    purchaseCount = profile.purchaseCount,
-                    lastSatisfaction = profile.lastSatisfaction,
-                    regular = profile.regular
-                });
-            }
-            return result;
         }
 
         private static string BuildSummary(ShopNetworkGame game)

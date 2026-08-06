@@ -1171,26 +1171,6 @@ MonoBehaviour:
       amount: 1
       targetId: 
       displayName: "\uB79C\uB364 \uBC15\uC2A4"
-  - goalId: daily_satisfaction
-    displayName: "\uD3C9\uADE0 \uB9CC\uC871\uB3C4"
-    weekly: 0
-    conditionType: 6
-    minimumTarget: 70
-    maximumTarget: 90
-    categoryId: 
-    rewards:
-    - type: 0
-      amount: 1
-      targetId: 
-      displayName: "\uD3C9\uD310"
-    - type: 1
-      amount: 100
-      targetId: 
-      displayName: "\uACF5\uB3D9 \uC790\uAE08"
-    - type: 2
-      amount: 1
-      targetId: 
-      displayName: "\uB79C\uB364 \uBC15\uC2A4"
   - goalId: daily_claw_collection
     displayName: "\uC778\uD615\uBF51\uAE30 \uC0C1\uD488 \uD655\uBCF4"
     weekly: 0
