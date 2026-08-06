@@ -106,6 +106,7 @@ namespace PickAndPlaceShop
         [Header("Trend")]
         [Range(0f, 1f)] [SerializeField] private float trendPriceBonus = 0.15f;
         [Range(1f, 4f)] [SerializeField] private float trendCustomerWeight = 1.7f;
+        [Range(3f, 12f)] [SerializeField] private float trendAnnouncementSeconds = 7f;
         [Header("Customers")]
         [Range(1, 24)] [SerializeField] private int maximumConcurrentCustomers = 6;
         [Min(0)] [SerializeField] private int successfulSaleReputationReward = 1;
@@ -217,6 +218,7 @@ namespace PickAndPlaceShop
         public int NewGameStartingFunds => Mathf.Max(0, newGameStartingFunds);
         public float TrendPriceBonus => trendPriceBonus;
         public float TrendCustomerWeight => trendCustomerWeight;
+        public float TrendAnnouncementSeconds => Mathf.Clamp(trendAnnouncementSeconds, 3f, 12f);
         public int MaximumConcurrentCustomers => Mathf.Max(1, maximumConcurrentCustomers);
         public int SuccessfulSaleReputationReward => Mathf.Max(0, successfulSaleReputationReward);
         public int NoPurchaseReputationPenalty => Mathf.Max(0, noPurchaseReputationPenalty);

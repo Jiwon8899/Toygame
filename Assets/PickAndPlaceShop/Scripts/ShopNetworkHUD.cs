@@ -51,7 +51,7 @@ namespace PickAndPlaceShop
 
             HideLegacyStatusObjects();
             if (statusPanel != null) statusPanel.SetActive(!modalOpen);
-            if (networkPanel != null) networkPanel.SetActive(!modalOpen);
+            if (networkPanel != null) networkPanel.SetActive(false);
 
             if (!connected || game == null || !game.IsSpawned)
             {
@@ -150,6 +150,7 @@ namespace PickAndPlaceShop
             ShopUiSkin.AddIcon("Network", networkPanel.transform, ShopUiIcon.People, ShopUiSkin.Teal,
                 new Vector2(48f, 48f), new Vector2(14f, -12f), new Vector2(0f, 1f));
             networkLabel = CreateStackText("NetworkLabel", networkPanel.transform, 74f, 16f, 18);
+            networkPanel.SetActive(false);
 
             nightOwner = new GameObject("NightSalesStackOwner");
             nightOwner.transform.SetParent(transform, false);

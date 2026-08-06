@@ -40,8 +40,10 @@ namespace PickAndPlaceShop
         private GameObject canvasRoot;
         private string visibleSceneName = string.Empty;
         private string objectiveKey = string.Empty;
+        private int observedAnnouncementDay = -1;
         private float nextRefresh;
         private float hideNotificationAt;
+        private float lastTutorialSkipTap = float.NegativeInfinity;
         private int activeTab;
         private bool open;
         private bool resetScroll;
@@ -101,6 +103,7 @@ namespace PickAndPlaceShop
                 Attach(ShopProgressionManager.Instance);
 
             HandleInput();
+            ObserveDayAnnouncement();
             UpdateNotification();
             if (objectiveGroup != null && objectivePanel.activeSelf)
                 objectiveGroup.alpha = Mathf.MoveTowards(
@@ -130,6 +133,19 @@ namespace PickAndPlaceShop
 
             if (manager != null && keyboard.f6Key.wasPressedThisFrame)
                 manager.SaveNowWithFeedback();
+
+            if (manager != null && !manager.TutorialCompleted && keyboard.yKey.wasPressedThisFrame)
+            {
+                ShopTutorialConfig tutorialConfig = ShopTutorialConfig.Load();
+                if (tutorialConfig == null) return;
+                float window = tutorialConfig.SkipDoubleTapSeconds;
+                if (ShopTutorialInputRules.RegisterSkipTap(
+                        ref lastTutorialSkipTap, Time.unscaledTime, window))
+                {
+                    OpenTutorialSkipConfirmation();
+                }
+                return;
+            }
 
             if (!open) return;
             if (keyboard.escapeKey.wasPressedThisFrame)
@@ -356,18 +372,32 @@ namespace PickAndPlaceShop
         private void BuildNotification(Transform parent)
         {
             notificationPanel = CreatePanel("ProgressionNotification", parent,
-                new Vector2(980f, 92f), new Color(0.02f, 0.08f, 0.12f, 0.96f));
+                new Vector2(1120f, 142f), new Color(0.02f, 0.08f, 0.12f, 0.96f));
             SetRect(notificationPanel.GetComponent<RectTransform>(), new Vector2(0f, -76f),
-                new Vector2(980f, 92f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(1120f, 142f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f));
             notificationText = CreateText("Content", notificationPanel.transform, string.Empty,
-                32, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
+                27, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
             RectTransform textRect = notificationText.rectTransform;
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
             textRect.offsetMin = new Vector2(20f, 8f);
             textRect.offsetMax = new Vector2(-20f, -8f);
             notificationPanel.SetActive(false);
+        }
+
+        private void ObserveDayAnnouncement()
+        {
+            ShopLiveOperationsNetwork live = ShopLiveOperationsNetwork.Instance;
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (live == null || game == null || !live.IsSpawned || game.Phase.Value != ShopPhase.Setup) return;
+            string announcement = live.DayAnnouncement.Value.ToString().Trim();
+            int day = game.Day.Value;
+            if (string.IsNullOrWhiteSpace(announcement) || day == observedAnnouncementDay) return;
+            observedAnnouncementDay = day;
+            ShopOperationsConfig config = ShopOperationsConfig.Load();
+            if (config != null) ShowNotificationNow(announcement, config.TrendAnnouncementSeconds);
+            else EnqueueNotification(announcement);
         }
 
         private void BuildTutorialSkipConfirmation(Transform parent)
@@ -710,6 +740,14 @@ namespace PickAndPlaceShop
         private void EnqueueNotification(string message)
         {
             if (!string.IsNullOrWhiteSpace(message)) notificationQueue.Enqueue(message);
+        }
+
+        private void ShowNotificationNow(string message, float duration)
+        {
+            if (notificationPanel == null || notificationText == null || string.IsNullOrWhiteSpace(message)) return;
+            notificationText.text = message;
+            notificationPanel.SetActive(true);
+            hideNotificationAt = Time.unscaledTime + Mathf.Max(0.1f, duration);
         }
 
         private void UpdateNotification()

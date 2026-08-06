@@ -18,12 +18,28 @@ namespace PickAndPlaceShop
     {
         [SerializeField, Min(0.1f)] private float movementDistance = 2.5f;
         [SerializeField, Min(0)] private int completionReward = 200;
+        [SerializeField, Range(0.2f, 1f)] private float skipDoubleTapSeconds = 0.5f;
 
         public float MovementDistance => movementDistance;
         public int CompletionReward => completionReward;
+        public float SkipDoubleTapSeconds => Mathf.Clamp(skipDoubleTapSeconds, 0.2f, 1f);
 
         public static ShopTutorialConfig Load() =>
             Resources.Load<ShopTutorialConfig>("Progression/ShopTutorialConfig");
+    }
+
+    public static class ShopTutorialInputRules
+    {
+        public static bool RegisterSkipTap(ref float previousTapTime, float currentTime, float window)
+        {
+            if (currentTime - previousTapTime <= Mathf.Max(0f, window))
+            {
+                previousTapTime = float.NegativeInfinity;
+                return true;
+            }
+            previousTapTime = currentTime;
+            return false;
+        }
     }
 
     [DefaultExecutionOrder(350)]

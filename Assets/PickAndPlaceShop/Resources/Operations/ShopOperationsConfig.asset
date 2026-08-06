@@ -19,6 +19,7 @@ MonoBehaviour:
   newGameStartingFunds: 10000
   trendPriceBonus: 0.15
   trendCustomerWeight: 1.7
+  trendAnnouncementSeconds: 7
   maximumConcurrentCustomers: 6
   successfulSaleReputationReward: 1
   noPurchaseReputationPenalty: 1
