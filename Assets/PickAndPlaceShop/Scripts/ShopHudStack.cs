@@ -18,6 +18,7 @@ namespace PickAndPlaceShop
     {
         private static ShopHudStack instance;
         private readonly Dictionary<Object, GameObject> items = new();
+        private readonly Dictionary<GameObject, ShopHudStackSlot> slots = new();
         private RectTransform stack;
         private GameObject canvasRoot;
         private string observedScene = string.Empty;
@@ -70,7 +71,7 @@ namespace PickAndPlaceShop
             GameObject panel = new(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image),
                 typeof(LayoutElement));
             panel.transform.SetParent(stack, false);
-            panel.transform.SetSiblingIndex((int)slot);
+            slots[panel] = slot;
             LayoutElement layout = panel.GetComponent<LayoutElement>();
             layout.preferredHeight = height;
             layout.minHeight = height;
@@ -79,6 +80,7 @@ namespace PickAndPlaceShop
             background.color = ShopUiSkin.CreamCard;
             ShopUiSkin.Round(background, 20);
             items[owner] = panel;
+            Reorder();
             return panel;
         }
 
@@ -86,7 +88,16 @@ namespace PickAndPlaceShop
         {
             if (owner == null || !items.TryGetValue(owner, out GameObject item)) return;
             items.Remove(owner);
+            if (item != null) slots.Remove(item);
             if (item != null) Destroy(item);
+        }
+
+        private void Reorder()
+        {
+            List<GameObject> ordered = new(slots.Keys);
+            ordered.Sort((left, right) => slots[left].CompareTo(slots[right]));
+            for (int i = 0; i < ordered.Count; i++)
+                if (ordered[i] != null) ordered[i].transform.SetSiblingIndex(i);
         }
 
         private void Build()

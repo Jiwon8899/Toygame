@@ -178,7 +178,7 @@ namespace PickAndPlaceShop
             open = value;
             if (overlay != null) overlay.SetActive(value);
             if (objectivePanel != null) objectivePanel.SetActive(!value);
-            if (tabHint != null) tabHint.gameObject.SetActive(!value);
+            if (tabHint != null) tabHint.gameObject.SetActive(false);
             if (value) ShopInputModeManager.Push(this, ShopInputMode.UI);
             else ShopInputModeManager.Pop(this);
             if (value)
@@ -487,7 +487,7 @@ namespace PickAndPlaceShop
                     objectiveKey = tutorialKey;
                     objectiveGroup.alpha = 0.25f;
                 }
-                objectiveText.text = "튜토리얼 · " + tutorialLabel + "\n" +
+                objectiveText.text = tutorialLabel + "\n" +
                                      (manager.TutorialStep == 0
                                          ? (tutorialCurrent / 10f).ToString("0.0") + "m / " +
                                            (tutorialTarget / 10f).ToString("0.0") + "m"

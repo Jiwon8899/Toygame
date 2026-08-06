@@ -116,8 +116,25 @@ namespace PickAndPlaceShop
                 promptText.alignment = TextAnchor.MiddleCenter;
                 promptText.color = Color.white;
                 Image background = promptText.GetComponent<Image>();
-                if (background == null) background = promptText.gameObject.AddComponent<Image>();
-                background.color = new Color(ShopUiSkin.BrownDeep.r, ShopUiSkin.BrownDeep.g, ShopUiSkin.BrownDeep.b, 0.94f);
+                if (background == null)
+                {
+                    Transform oldParent = promptText.transform.parent;
+                    GameObject backdrop = new("InteractionPromptBackground", typeof(RectTransform), typeof(Image));
+                    backdrop.transform.SetParent(oldParent, false);
+                    RectTransform backdropRect = backdrop.GetComponent<RectTransform>();
+                    backdropRect.anchorMin = backdropRect.anchorMax = new Vector2(0.5f, 0f);
+                    backdropRect.pivot = new Vector2(0.5f, 0f);
+                    backdropRect.anchoredPosition = new Vector2(0f, 38f);
+                    backdropRect.sizeDelta = new Vector2(920f, 64f);
+                    promptText.transform.SetParent(backdrop.transform, false);
+                    rect.anchorMin = Vector2.zero;
+                    rect.anchorMax = Vector2.one;
+                    rect.offsetMin = new Vector2(18f, 4f);
+                    rect.offsetMax = new Vector2(-18f, -4f);
+                    background = backdrop.GetComponent<Image>();
+                }
+                Color brown = ShopUiSkin.BrownDeep;
+                background.color = new Color(brown.r, brown.g, brown.b, 0.94f);
                 background.raycastTarget = false;
                 ShopUiSkin.Pill(background);
             }
