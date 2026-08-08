@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e00b408a6707d3f40a06f5f06a5ff456, type: 3}
+  m_Name: ShopAudioConfig
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopAudioConfig
+  backgroundMusic: {fileID: 8300000, guid: 0497db6aebae34a4281ee3d6f71725eb, type: 3}
+  titleButtonClick: {fileID: 8300000, guid: e3297173a26e96545beb7465fee2e1f9, type: 3}
+  moneyIncrease: {fileID: 8300000, guid: b518076079f62ed42b556b0928174a84, type: 3}
+  backgroundMusicVolume: 0.55
+  titleButtonVolume: 0.8
+  moneyIncreaseVolume: 0.85
+  moneyMinimumIntervalSeconds: 0.14
