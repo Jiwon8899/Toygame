@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:baby_rake
   prizePrefab: {fileID: 2186757100407443295, guid: 7fa9977163867d34fb529e514deb20a7, type: 3}
   physicsProfile: {fileID: 11400000, guid: a03839957176f7748abbcd8b9181edfb, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: 68963a62064e31443b4c1cd74b0e0995, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

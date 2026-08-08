@@ -23,7 +23,7 @@ MonoBehaviour:
   prizePrefab: {fileID: 466804505766871455, guid: 39f308fcce348b44b93e5e25d07e7a97, type: 3}
   physicsProfile: {fileID: 11400000, guid: 5c8474869e64dc7458701361319eca26, type: 2}
   visualPrefab: {fileID: 0}
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 3254bf51409ff9a4eb9b1be3724e4cab, type: 3}
   tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
   placeholderArtwork: 0

@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:tower_ruler
   prizePrefab: {fileID: 5128935317894173258, guid: fdfe137a613e7af4eaa53acb91dab830, type: 3}
   physicsProfile: {fileID: 11400000, guid: a03839957176f7748abbcd8b9181edfb, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: ec062da5b37045c42a2e652120aea7e2, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

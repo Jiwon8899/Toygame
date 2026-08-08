@@ -154,6 +154,76 @@ namespace PickAndPlaceShop.Editor
             Debug.Log("[ProductIcons] COMPLETE front-facing=" + products.Length);
         }
 
+        [MenuItem("Tools/Pick And Place Shop/Repair Missing Product Icons")]
+        public static void RepairMissingProductIcons()
+        {
+            EnsureFolder(IconFolder);
+            ShopProductVisualConfig config = EnsureConfig();
+            ShopProductDefinition[] products = AssetDatabase.FindAssets("t:ShopProductDefinition",
+                    new[] { "Assets/PickAndPlaceShop/Resources/Products" })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(AssetDatabase.LoadAssetAtPath<ShopProductDefinition>)
+                .Where(product => product != null && product.Icon == null)
+                .OrderBy(product => product.ProductId)
+                .ToArray();
+            var repaired = new List<string>(products.Length);
+            try
+            {
+                for (int index = 0; index < products.Length; index++)
+                {
+                    ShopProductDefinition product = products[index];
+                    EditorUtility.DisplayProgressBar("Repair product icons", product.DisplayName,
+                        index / (float)Mathf.Max(1, products.Length));
+                    GameObject source = product.VisualPrefab != null
+                        ? product.VisualPrefab
+                        : product.PrizePrefab;
+                    Sprite icon = source != null
+                        ? RenderIcon(product.ProductId, source, product.Tint,
+                            config.ThumbnailResolution)
+                        : RenderFallbackIcon(product.ProductId, config.ThumbnailResolution);
+                    SerializedObject serialized = new(product);
+                    serialized.FindProperty("icon").objectReferenceValue = icon;
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(product);
+                    repaired.Add(product.ProductId + "|" + product.DisplayName);
+                }
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+            Debug.Log("[ProductCatalogAudit] repairedMissingIcons=" + repaired.Count + "\n" +
+                      string.Join("\n", repaired));
+        }
+
+        [MenuItem("Tools/Pick And Place Shop/Audit Complete Product Catalog")]
+        public static void AuditCompleteProductCatalog()
+        {
+            ShopProductDefinition[] products = AssetDatabase.FindAssets("t:ShopProductDefinition",
+                    new[] { "Assets/PickAndPlaceShop/Resources/Products" })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(AssetDatabase.LoadAssetAtPath<ShopProductDefinition>)
+                .Where(product => product != null)
+                .OrderBy(product => product.ProductId)
+                .ToArray();
+            string[] missingIcons = products.Where(product => product.Icon == null)
+                .Select(product => product.ProductId + "|" + product.DisplayName).ToArray();
+            string[] missingModels = products
+                .Where(product => product.VisualPrefab == null && product.PrizePrefab == null &&
+                                  product.ProductId != 9001)
+                .Select(product => product.ProductId + "|" + product.DisplayName).ToArray();
+            int duplicateIds = products.GroupBy(product => product.ProductId)
+                .Count(group => group.Count() > 1);
+            Debug.Log("[ProductCatalogAudit] total=" + products.Length +
+                      " missingIcons=" + missingIcons.Length +
+                      " missingModels=" + missingModels.Length +
+                      " duplicateIds=" + duplicateIds +
+                      (missingIcons.Length > 0 ? "\nMissing icons:\n" + string.Join("\n", missingIcons) : "") +
+                      (missingModels.Length > 0 ? "\nMissing models:\n" + string.Join("\n", missingModels) : ""));
+        }
+
         private static GameObject BuildWrapper(GameObject source, int index, float targetSize,
             out int unreadableMeshes)
         {
@@ -367,6 +437,39 @@ namespace PickAndPlaceShop.Editor
             RenderTexture.ReleaseTemporary(render);
             UnityEngine.Object.DestroyImmediate(texture);
             UnityEngine.Object.DestroyImmediate(stage);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.isReadable = false;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        private static Sprite RenderFallbackIcon(int productId, int resolution)
+        {
+            int size = Mathf.Max(64, resolution);
+            Texture2D texture = new(size, size, TextureFormat.RGBA32, false);
+            Color clear = new(0f, 0f, 0f, 0f);
+            Color shell = new(0.92f, 0.94f, 0.98f, 1f);
+            Color seam = new(0.13f, 0.42f, 0.66f, 1f);
+            Vector2 center = Vector2.one * (size - 1) * 0.5f;
+            float radius = size * 0.34f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                Vector2 delta = new Vector2(x, y) - center;
+                Color color = delta.sqrMagnitude <= radius * radius ? shell : clear;
+                if (Mathf.Abs(delta.y) <= size * 0.018f && Mathf.Abs(delta.x) <= radius)
+                    color = seam;
+                texture.SetPixel(x, y, color);
+            }
+            texture.Apply(false, false);
+            string path = IconFolder + "/ProductIcon_" + productId.ToString("D4") + ".png";
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            UnityEngine.Object.DestroyImmediate(texture);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
             importer.textureType = TextureImporterType.Sprite;

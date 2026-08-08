@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:soccer_boot
   prizePrefab: {fileID: 6099014536301349831, guid: 970df29d7f4e80d41921807f54b2ad20, type: 3}
   physicsProfile: {fileID: 11400000, guid: a03839957176f7748abbcd8b9181edfb, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: c9285d76fbbd51d48a189a22918f2408, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

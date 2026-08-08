@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:steering_wheel
   prizePrefab: {fileID: 4793726832030652070, guid: 0d5fb734c1f41e44eb0335fd8749a18f, type: 3}
   physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: 94f316a9da469554ba1597dee638df8a, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

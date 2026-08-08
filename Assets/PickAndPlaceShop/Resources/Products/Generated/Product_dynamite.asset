@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:dynamite
   prizePrefab: {fileID: 4363486469503496788, guid: 9eb1e8d8bc222724aad1384327bfae45, type: 3}
   physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: 2eba173b64d5424488795a5fc772aa22, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

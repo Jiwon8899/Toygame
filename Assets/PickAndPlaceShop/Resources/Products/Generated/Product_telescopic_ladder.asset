@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:telescopic_ladder
   prizePrefab: {fileID: 466804505766871455, guid: 39f308fcce348b44b93e5e25d07e7a97, type: 3}
   physicsProfile: {fileID: 11400000, guid: 5c8474869e64dc7458701361319eca26, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: 47abdf2264959a141b9310c606ad69ad, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

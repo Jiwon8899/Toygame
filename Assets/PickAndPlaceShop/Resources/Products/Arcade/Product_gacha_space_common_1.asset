@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: arcade:gacha_space:common_1
   prizePrefab: {fileID: 2383931432749388934, guid: e559347ee97196a44807af895a6e93f6, type: 3}
   physicsProfile: {fileID: 11400000, guid: 5c8474869e64dc7458701361319eca26, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: b27983d7c5d4ee94ea3a1f79a0cb689d, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

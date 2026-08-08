@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:headphones
   prizePrefab: {fileID: 3553982997934565529, guid: b0daaf59a023be841ad83dac190168b1, type: 3}
   physicsProfile: {fileID: 11400000, guid: a03839957176f7748abbcd8b9181edfb, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: d59fec9573ec32d4393b65888f3bcb57, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

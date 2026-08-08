@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:backpack
   prizePrefab: {fileID: 7184543449208884085, guid: 32699a72b41c9eb40b27a235463abd70, type: 3}
   physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: 093f6f0c16008db429b33df6c884eb1a, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

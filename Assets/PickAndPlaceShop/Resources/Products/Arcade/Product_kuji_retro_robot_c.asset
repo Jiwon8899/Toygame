@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: arcade:kuji_retro_robot:c
   prizePrefab: {fileID: 2838039208871010524, guid: d272fc212e8e1c949bc79d9ac3bafb8b, type: 3}
   physicsProfile: {fileID: 11400000, guid: 88616b3a5bab4c445920a49666c9d81a, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: d16f68bb81182e8458de3e2292fd2b56, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

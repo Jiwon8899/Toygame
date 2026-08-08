@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: lowpoly:symbol_-
   prizePrefab: {fileID: 6024192056410823723, guid: 63f0b3be6d0971c4285ec8c70b592a34, type: 3}
   physicsProfile: {fileID: 11400000, guid: 5c8474869e64dc7458701361319eca26, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: f02575e743d720a40b0306a5f7093c25, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0

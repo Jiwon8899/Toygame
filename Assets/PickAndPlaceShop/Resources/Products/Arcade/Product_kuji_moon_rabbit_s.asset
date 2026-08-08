@@ -22,4 +22,9 @@ MonoBehaviour:
   stableItemId: arcade:kuji_moon_rabbit:s
   prizePrefab: {fileID: 7359648400202469059, guid: a7f5d405641ea7643b269f94008fd2f0, type: 3}
   physicsProfile: {fileID: 11400000, guid: 5c8474869e64dc7458701361319eca26, type: 2}
+  visualPrefab: {fileID: 0}
+  icon: {fileID: 21300000, guid: 738cc8fb21ae2ba4f81d2d416850b1e9, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
   maxStack: 10
+  placeholderArtwork: 0
+  exclusiveReward: 0
