@@ -25,7 +25,7 @@ MonoBehaviour:
   firstRoomFloorColor: {r: 0.56, g: 0.34, b: 0.22, a: 1}
   secondRoomFloorColor: {r: 0.25, g: 0.46, b: 0.48, a: 1}
   roomWallColor: {r: 0.19, g: 0.12, b: 0.18, a: 1}
-  level3ZoneCenter: {x: 11.7, y: 0, z: 3.2}
-  level4ZoneCenter: {x: 11.7, y: 0, z: 0.2}
+  level3ZoneCenter: {x: 3.2, y: 0, z: 0.2}
+  level4ZoneCenter: {x: 10.8, y: 0, z: -1.6}
   level5ZoneCenter: {x: 11.7, y: 0, z: 6.1}
   zoneFloorSize: {x: 6, y: 2.6}

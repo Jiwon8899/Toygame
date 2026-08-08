@@ -15,7 +15,7 @@ MonoBehaviour:
   emptyCapsuleProduct: {fileID: 11400000, guid: 635bdee2ea91a35458086d8a9e057965, type: 2}
   capsuleRecyclerSlots: 10
   upcycleThresholds: 140000003200000064000000
-  capsuleRecyclerPosition: {x: 12.7, y: 0, z: 3.2}
+  capsuleRecyclerPosition: {x: 4.2, y: 0, z: 0.2}
   kujiSetSize: 40
   kujiRefillSeconds: {x: 5, y: 8}
   lastOneTitleThresholds: 010000000a0000001e00000064000000
@@ -28,7 +28,7 @@ MonoBehaviour:
   reviewGoalMetStars: 4
   reviewExcellentGoalRatio: 1.5
   reviewExcellentStars: 5
-  appraisalPosition: {x: 12.7, y: 0, z: 0.2}
+  appraisalPosition: {x: 11.8, y: 0, z: -1.6}
   appraisalFees: 1400000028000000500000008c000000
   appraisalPriceMultipliers:
   - 1
