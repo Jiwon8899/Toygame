@@ -73,6 +73,10 @@ namespace PickAndPlaceShop
         private readonly HashSet<int> chargedAttempts = new();
         private readonly ShopClawAwardLedger awardLedger = new();
         private readonly List<ShopClawPrizeNetwork> activePrizes = new();
+        private readonly List<ShopClawPrizeNetwork> activePrizeSnapshot = new();
+        private readonly List<Vector3> spawnOccupiedPositions = new();
+        private readonly List<float> spawnOccupiedRadii = new();
+        private readonly List<Transform> validPrizeSpawnPoints = new();
         private Vector2 railVelocity;
         private float aimRemaining;
         private float stateElapsed;
@@ -886,7 +890,9 @@ namespace PickAndPlaceShop
                 chuteAwardVolume = trigger != null ? trigger.GetComponent<Collider>() : null;
             }
             if (chuteAwardVolume == null || !chuteAwardVolume.enabled) return;
-            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            activePrizeSnapshot.Clear();
+            activePrizeSnapshot.AddRange(activePrizes);
+            foreach (ShopClawPrizeNetwork prize in activePrizeSnapshot)
             {
                 if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
                 ServerObserveChutePrize(prize, chuteAwardVolume);
@@ -1400,14 +1406,35 @@ namespace PickAndPlaceShop
         {
             position = transform.position;
             rotation = Quaternion.identity;
+            if (definition == null || config == null || occupied == null) return false;
+            prizeRandom ??= new System.Random(unchecked(GetInstanceID() * 73856093 ^ observedDay));
+
+            validPrizeSpawnPoints.Clear();
+            if (prizeSpawnPoints != null)
+            {
+                foreach (Transform spawnPoint in prizeSpawnPoints)
+                    if (spawnPoint != null) validPrizeSpawnPoints.Add(spawnPoint);
+            }
+            if (validPrizeSpawnPoints.Count == 0) return false;
+
+            spawnOccupiedPositions.Clear();
+            spawnOccupiedRadii.Clear();
+            foreach ((Vector3 otherPosition, float otherRadius) in occupied)
+            {
+                if (!IsFinite(otherPosition) || !float.IsFinite(otherRadius)) continue;
+                spawnOccupiedPositions.Add(otherPosition);
+                spawnOccupiedRadii.Add(Mathf.Max(0f, otherRadius));
+            }
+
             float radius = Mathf.Max(0.16f, definition.Size * 0.48f) + clearance;
-            int spawnCount = prizeSpawnPoints != null ? prizeSpawnPoints.Length : 0;
-            int spawnOffset = spawnCount > 0 ? prizeRandom.Next(spawnCount) : 0;
+            int spawnCount = validPrizeSpawnPoints.Count;
+            int spawnOffset = prizeRandom.Next(spawnCount);
             for (int attempt = 0; attempt < Mathf.Max(1, attempts); attempt++)
             {
-                Transform spawn = spawnCount > 0
-                    ? prizeSpawnPoints[(spawnOffset + attempt) % spawnCount]
-                    : transform;
+                int spawnIndex = (spawnOffset + attempt) % spawnCount;
+                if (spawnIndex < 0 || spawnIndex >= validPrizeSpawnPoints.Count) continue;
+                Transform spawn = validPrizeSpawnPoints[spawnIndex];
+                if (spawn == null) continue;
                 float jitterX = (float)(prizeRandom.NextDouble() * 2.0 - 1.0) * 0.16f;
                 float jitterZ = (float)(prizeRandom.NextDouble() * 2.0 - 1.0) * 0.16f;
                 Vector3 candidate = spawn.position + transform.right * jitterX + transform.forward * jitterZ;
@@ -1418,7 +1445,7 @@ namespace PickAndPlaceShop
                 {
                     float halfWidth = config.SpawnGuardWidth * 0.5f - radius;
                     float halfDepth = config.SpawnGuardDepth * 0.5f - radius * 0.35f;
-                    int slot = occupied.Count;
+                    int slot = spawnOccupiedPositions.Count;
                     const int guardCapacity = 6;
                     if (slot < guardCapacity)
                     {
@@ -1459,23 +1486,17 @@ namespace PickAndPlaceShop
                         config.ZBounds.y - 0.05f);
                 }
                 candidate = transform.TransformPoint(candidateLocal);
-                var occupiedPositions = new List<Vector3>(occupied.Count);
-                var occupiedRadii = new List<float>(occupied.Count);
-                foreach ((Vector3 otherPosition, float otherRadius) in occupied)
-                {
-                    occupiedPositions.Add(otherPosition);
-                    occupiedRadii.Add(otherRadius);
-                }
                 bool canPlace = true;
                 if (config.SpawnGuardEnabled)
                 {
                     // Guard tiers are deliberately separated vertically, so validate the
                     // real 3D distance here.  The legacy helper is planar by design and
                     // would reject every safe tier above the first three capsules.
-                    for (int i = 0; i < occupiedPositions.Count; i++)
+                    int occupiedCount = Mathf.Min(spawnOccupiedPositions.Count, spawnOccupiedRadii.Count);
+                    for (int i = 0; i < occupiedCount; i++)
                     {
-                        float required = radius + occupiedRadii[i];
-                        if ((candidate - occupiedPositions[i]).sqrMagnitude < required * required)
+                        float required = radius + spawnOccupiedRadii[i];
+                        if ((candidate - spawnOccupiedPositions[i]).sqrMagnitude < required * required)
                         {
                             canPlace = false;
                             break;
@@ -1484,8 +1505,8 @@ namespace PickAndPlaceShop
                 }
                 else
                 {
-                    canPlace = ShopClawSpawnRules.CanPlace(candidate, radius, occupiedPositions,
-                        occupiedRadii);
+                    canPlace = ShopClawSpawnRules.CanPlace(candidate, radius, spawnOccupiedPositions,
+                        spawnOccupiedRadii);
                 }
                 if (!canPlace) continue;
                 position = candidate;
@@ -1493,6 +1514,11 @@ namespace PickAndPlaceShop
                 return true;
             }
             return false;
+        }
+
+        private static bool IsFinite(Vector3 value)
+        {
+            return float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
         }
 
         private bool TryResolvePlayfieldFloor(Vector3 sample, out float floorY)
@@ -1525,7 +1551,9 @@ namespace PickAndPlaceShop
         private void ServerRecoverOutOfBoundsPrizes()
         {
             if (!IsServer || config == null || prizeSpawnPoints == null || prizeSpawnPoints.Length == 0) return;
-            foreach (ShopClawPrizeNetwork prize in activePrizes)
+            activePrizeSnapshot.Clear();
+            activePrizeSnapshot.AddRange(activePrizes);
+            foreach (ShopClawPrizeNetwork prize in activePrizeSnapshot)
             {
                 if (prize == null || !prize.IsSpawned || prize.Awarded.Value) continue;
                 Vector3 local = transform.InverseTransformPoint(prize.transform.position);
@@ -1565,7 +1593,7 @@ namespace PickAndPlaceShop
 
         private void ServerReturnPrizeToField(ShopClawPrizeNetwork prize)
         {
-            if (prize == null || prizeSpawnPoints == null || prizeSpawnPoints.Length == 0) return;
+            if (prize == null || !prize.IsSpawned || prize.Awarded.Value) return;
             ShopClawPrizeDefinition definition = FindDefinitionByProductId(prize.ProductId.Value);
             if (definition != null)
             {
@@ -1587,15 +1615,23 @@ namespace PickAndPlaceShop
                 }
             }
             Vector3 local = transform.InverseTransformPoint(prize.transform.position);
-            Transform nearest = prizeSpawnPoints[0];
+            Transform nearest = null;
             float nearestDistance = float.MaxValue;
-            foreach (Transform spawn in prizeSpawnPoints)
+            if (prizeSpawnPoints != null)
             {
-                if (spawn == null) continue;
-                float distance = (spawn.localPosition - local).sqrMagnitude;
-                if (distance >= nearestDistance) continue;
-                nearestDistance = distance;
-                nearest = spawn;
+                foreach (Transform spawn in prizeSpawnPoints)
+                {
+                    if (spawn == null) continue;
+                    float distance = (spawn.localPosition - local).sqrMagnitude;
+                    if (distance >= nearestDistance) continue;
+                    nearestDistance = distance;
+                    nearest = spawn;
+                }
+            }
+            if (nearest == null)
+            {
+                Debug.LogWarning("[ClawMachine] RETURN_SKIPPED no valid prize spawn point", this);
+                return;
             }
             // A full field can exhaust the non-overlap retries.  The old fallback
             // placed the capsule centre only 12 cm above the authored point, which
