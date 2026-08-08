@@ -320,19 +320,37 @@ namespace PickAndPlaceShop
                 return;
             }
             EnsurePoliceVisual(IsServer);
+            Vector3 facingDirection = Vector3.zero;
             if (!IsServer && policeVisual != null)
             {
                 Vector3 delta = PolicePosition.Value - policeVisual.transform.position;
                 policeVisual.transform.position = Vector3.Lerp(policeVisual.transform.position,
                     PolicePosition.Value, config.PoliceProxyLerpSpeed * Time.deltaTime);
-                if (delta.sqrMagnitude > 0.01f)
-                    policeVisual.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(delta, Vector3.up));
+                facingDirection = delta;
             }
+            else if (policeVisual != null)
+            {
+                facingDirection = policeAgent != null && policeAgent.enabled && policeAgent.isOnNavMesh &&
+                                  policeAgent.velocity.sqrMagnitude > 0.01f
+                    ? policeAgent.velocity
+                    : transform.position - policeVisual.transform.position;
+            }
+            RotatePoliceTowards(facingDirection);
             if (policeAnimator != null)
             {
                 policeAnimator.SetBool("Moving", PoliceActive.Value);
                 policeAnimator.SetFloat("Speed", config.PoliceSpeed);
             }
+        }
+
+        private void RotatePoliceTowards(Vector3 direction)
+        {
+            if (policeVisual == null) return;
+            direction = Vector3.ProjectOnPlane(direction, Vector3.up);
+            if (direction.sqrMagnitude <= 0.01f) return;
+            Quaternion target = Quaternion.LookRotation(direction.normalized, Vector3.up);
+            policeVisual.transform.rotation = Quaternion.RotateTowards(policeVisual.transform.rotation,
+                target, config.PoliceAngularSpeed * Time.deltaTime);
         }
 
         private void EnsurePoliceVisual(bool authoritative)
@@ -350,6 +368,7 @@ namespace PickAndPlaceShop
             policeAgent.speed = config.PoliceSpeed;
             policeAgent.acceleration = config.PoliceSpeed * config.PoliceAccelerationMultiplier;
             policeAgent.angularSpeed = config.PoliceAngularSpeed;
+            policeAgent.updateRotation = false;
             policeAgent.stoppingDistance = config.ArrestDistance * config.PoliceStoppingDistanceMultiplier;
             if (SampleNavMesh(PolicePosition.Value, out Vector3 sampled)) policeAgent.Warp(sampled);
             else policeAgent.enabled = false;
