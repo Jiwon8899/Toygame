@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ShopTitlePresentationConfig
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopTitlePresentationConfig
   background: {fileID: 21300000, guid: 621f6174931862641a2429aec6e77465, type: 3}
-  logo: {fileID: 21300000, guid: a5887895885166b44bd9a782607eecc6, type: 3}
+  logo: {fileID: 21300000, guid: 0a6b2592cc768e941bfa7728ffd827c9, type: 3}
   backgroundVeilAlpha: 0.58
   logoSize: {x: 920, y: 280}
   logoOffset: {x: 0, y: 50}
