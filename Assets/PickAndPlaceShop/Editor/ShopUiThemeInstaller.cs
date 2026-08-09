@@ -10,9 +10,9 @@ namespace PickAndPlaceShop.EditorTools
     public static class ShopUiThemeInstaller
     {
         private const string ThemePath = "Assets/PickAndPlaceShop/Resources/ShopUiTheme.asset";
-        private const string FontRoot = "Assets/PickAndPlaceShop/Art/Fonts/";
         private const string UiRoot = "Assets/PickAndPlaceShop/Art/UI/";
-        private const string ExistingTmpFontPath = "Assets/Shooter/GFCRedSpirit-Medium SDF.asset";
+        private const string GfcFontPath = "Assets/Core/Resources/Fonts/GFCRedSpirit-Medium.otf";
+        private const string ExistingTmpFontPath = "Assets/Core/Resources/Fonts/GFCRedSpirit-Medium SDF.asset";
         private const string GlobalFontSettingsPath = "Assets/Core/Resources/GlobalGameFontSettings.asset";
 
         [MenuItem("Tools/Pick And Place Shop/UI/Install Warm UI Theme")]
@@ -32,9 +32,7 @@ namespace PickAndPlaceShop.EditorTools
             };
             foreach (string icon in icons) ConfigureSprite(UiRoot + "Icons/" + icon + ".png", Vector4.zero);
 
-            Font regular = Require<Font>(FontRoot + "NotoSansKR-Regular.otf");
-            Font medium = Require<Font>(FontRoot + "NotoSansKR-Medium.otf");
-            Font bold = Require<Font>(FontRoot + "NotoSansKR-Bold.otf");
+            Font gfc = Require<Font>(GfcFontPath);
             TMP_FontAsset tmpFont = Require<TMP_FontAsset>(ExistingTmpFontPath);
 
             Directory.CreateDirectory("Assets/PickAndPlaceShop/Resources");
@@ -46,9 +44,9 @@ namespace PickAndPlaceShop.EditorTools
             }
 
             SerializedObject serializedTheme = new(theme);
-            Set(serializedTheme, "regularFont", regular);
-            Set(serializedTheme, "mediumFont", medium);
-            Set(serializedTheme, "boldFont", bold);
+            Set(serializedTheme, "regularFont", gfc);
+            Set(serializedTheme, "mediumFont", gfc);
+            Set(serializedTheme, "boldFont", gfc);
             Set(serializedTheme, "radius12", Require<Sprite>(UiRoot + "Sprites/radius_12.png"));
             Set(serializedTheme, "radius20", Require<Sprite>(UiRoot + "Sprites/radius_20.png"));
             Set(serializedTheme, "radius28", Require<Sprite>(UiRoot + "Sprites/radius_28.png"));
@@ -61,16 +59,16 @@ namespace PickAndPlaceShop.EditorTools
 
             GlobalGameFontSettings global = Require<GlobalGameFontSettings>(GlobalFontSettingsPath);
             SerializedObject serializedGlobal = new(global);
-            Set(serializedGlobal, "legacyFont", regular);
-            Set(serializedGlobal, "legacyMediumFont", medium);
-            Set(serializedGlobal, "legacyBoldFont", bold);
+            Set(serializedGlobal, "legacyFont", gfc);
+            Set(serializedGlobal, "legacyMediumFont", gfc);
+            Set(serializedGlobal, "legacyBoldFont", gfc);
             Set(serializedGlobal, "textMeshProFont", tmpFont);
             serializedGlobal.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(global);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[ShopUI] Warm theme installed with embedded Noto Sans KR fonts, 14 icons, and 6 UI sprites.");
+            Debug.Log("[ShopUI] Warm theme installed with the project GFC Red Spirit font, 14 icons, and 6 UI sprites.");
         }
 
         private static void ConfigureSprite(string path, Vector4 border)

@@ -14,6 +14,7 @@ namespace Blocks.Gameplay.Core
 
         private static GlobalGameFontApplier instance;
         private static GlobalGameFontSettings settings;
+        private static bool readinessLogged;
         private float nextRefreshTime;
 
         public static Font LegacyFont => LoadSettings() != null ? settings.LegacyFont : null;
@@ -24,6 +25,7 @@ namespace Blocks.Gameplay.Core
         {
             instance = null;
             settings = null;
+            readinessLogged = false;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -40,6 +42,7 @@ namespace Blocks.Gameplay.Core
             GameObject host = new GameObject("[Global] Game Font Applier");
             DontDestroyOnLoad(host);
             instance = host.AddComponent<GlobalGameFontApplier>();
+            LogReadiness(loadedSettings);
         }
 
         private static GlobalGameFontSettings LoadSettings()
@@ -100,6 +103,18 @@ namespace Blocks.Gameplay.Core
             ApplyTextMeshes(Resources.FindObjectsOfTypeAll<TextMesh>(), loadedSettings.LegacyFont);
             ApplyTextMeshPro(Resources.FindObjectsOfTypeAll<TMP_Text>(), loadedSettings.TextMeshProFont);
             ApplyUiDocuments(Resources.FindObjectsOfTypeAll<UIDocument>(), loadedSettings.LegacyFont);
+        }
+
+        private static void LogReadiness(GlobalGameFontSettings loadedSettings)
+        {
+            if (readinessLogged || loadedSettings == null) return;
+            readinessLogged = true;
+            TMP_FontAsset tmp = loadedSettings.TextMeshProFont;
+            Debug.Log("[GlobalGameFont] READY legacy=" + loadedSettings.LegacyFont.name +
+                      " tmp=" + tmp.name +
+                      " source=" + (tmp.sourceFontFile != null ? tmp.sourceFontFile.name : "MISSING") +
+                      " population=" + tmp.atlasPopulationMode +
+                      " multiAtlas=" + tmp.isMultiAtlasTexturesEnabled);
         }
 
         private static bool IsLoaded(Component component)

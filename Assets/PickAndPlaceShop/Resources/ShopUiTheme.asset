@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 263f0a06947c5c94f8d106b4aa98e7d6, type: 3}
   m_Name: ShopUiTheme
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopUiTheme
-  regularFont: {fileID: 12800000, guid: 9691f34fd09158045b164a770323dd56, type: 3}
-  mediumFont: {fileID: 12800000, guid: 10926f19f16c7a04ea5b9f48ac1fecf7, type: 3}
-  boldFont: {fileID: 12800000, guid: 65d3108b1d4238b4f852cb73f44e329b, type: 3}
+  regularFont: {fileID: 12800000, guid: 2ef0b417c3f6029429bc266024c9543d, type: 3}
+  mediumFont: {fileID: 12800000, guid: 2ef0b417c3f6029429bc266024c9543d, type: 3}
+  boldFont: {fileID: 12800000, guid: 2ef0b417c3f6029429bc266024c9543d, type: 3}
   radius12: {fileID: 21300000, guid: 38a657ab47b10c84da7fbed2c5ed772c, type: 3}
   radius20: {fileID: 21300000, guid: b45f568cb2097224fa467ac84b015bb0, type: 3}
   radius28: {fileID: 21300000, guid: 2b9db0bf5e8172045b7003ed4af75747, type: 3}
