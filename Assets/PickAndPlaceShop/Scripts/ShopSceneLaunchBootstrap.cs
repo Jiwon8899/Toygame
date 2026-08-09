@@ -87,6 +87,9 @@ namespace PickAndPlaceShop
                 ShopProgressionManager.Instance?.ResetProgressionForNewProfile(true);
                 ShopNetworkGame.Instance?.ServerResetCampaign();
                 ShopCampaignResultStore.Clear();
+                ShopStoreNamingSystem naming = ShopStoreNamingSystem.Instance;
+                naming.BeginNewGameNaming();
+                while (naming != null && naming.IsNaming) yield return null;
             }
 
             Debug.Log("[ShopFlow] SOLO_STARTED");
