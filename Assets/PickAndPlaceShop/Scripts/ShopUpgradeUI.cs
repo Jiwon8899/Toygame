@@ -113,6 +113,14 @@ namespace PickAndPlaceShop
             if (category == ShopUpgradeCategory.Staff) StartCoroutine(OpenStaffAssignmentsAfterPurchase());
         }
 
+        public static void OpenStaffManagement()
+        {
+            if (instance == null || ShopNetworkGame.Instance == null) return;
+            instance.SetOpen(true);
+            if (ShopNetworkGame.Instance.GetUpgradeLevel(ShopUpgradeCategory.Staff) >= 2)
+                instance.OpenStaffAssignments();
+        }
+
         private IEnumerator OpenStaffAssignmentsAfterPurchase()
         {
             yield return new WaitForSecondsRealtime(0.3f);

@@ -24,6 +24,8 @@ namespace PickAndPlaceShop
         private GameObject nightOwner;
         private Text nightLabel;
         private GameObject promptPanel;
+        private Button staffButton;
+        private Text staffButtonLabel;
 
         private void Awake() => PrepareWarmLayout();
 
@@ -74,6 +76,13 @@ namespace PickAndPlaceShop
             SetChip(dayChipText, $"{game.Day.Value}일차 · {TimePeriod(game.Phase.Value)}{remaining}");
             SetChip(moneyChipText, game.Coins.Value.ToString("N0") + "원");
             SetChip(reputationChipText, "평판 " + game.Reputation.Value.ToString("N0"));
+            if (staffButton != null)
+            {
+                int staffLevel = game.GetUpgradeLevel(ShopUpgradeCategory.Staff);
+                staffButton.interactable = true;
+                if (staffButtonLabel != null)
+                    staffButtonLabel.text = staffLevel >= 2 ? "배치 관리" : "알바 고용";
+            }
             if (networkLabel != null)
                 networkLabel.text = net.IsHost ? "호스트 연결됨" : "서버 연결됨";
 
@@ -106,12 +115,15 @@ namespace PickAndPlaceShop
                 RectTransform rect = statusPanel.GetComponent<RectTransform>();
                 rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
                 rect.anchoredPosition = new Vector2(24f, -24f);
-                rect.sizeDelta = new Vector2(808f, 64f);
+                rect.sizeDelta = new Vector2(1040f, 64f);
                 Image oldBackground = statusPanel.GetComponent<Image>();
                 if (oldBackground != null) oldBackground.color = Color.clear;
                 dayChipText = CreateChip("DayChip", statusPanel.transform, ShopUiIcon.Moon, 0f, 288f);
                 moneyChipText = CreateChip("MoneyChip", statusPanel.transform, ShopUiIcon.Coin, 300f, 236f);
                 reputationChipText = CreateChip("ReputationChip", statusPanel.transform, ShopUiIcon.Star, 548f, 248f);
+                staffButton = CreateActionChip("StaffManagement", statusPanel.transform,
+                    ShopUiIcon.People, 808f, 220f, out staffButtonLabel);
+                staffButton.onClick.AddListener(ShopUpgradeUI.OpenStaffManagement);
             }
 
             if (promptText != null)
@@ -200,6 +212,36 @@ namespace PickAndPlaceShop
             text.rectTransform.offsetMin = new Vector2(60f, 4f);
             text.rectTransform.offsetMax = new Vector2(-12f, -4f);
             return text;
+        }
+
+        private static Button CreateActionChip(string name, Transform parent, ShopUiIcon icon,
+            float x, float width, out Text label)
+        {
+            GameObject chip = new(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            chip.transform.SetParent(parent, false);
+            RectTransform rect = chip.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, 0f);
+            rect.sizeDelta = new Vector2(width, 60f);
+            Image image = chip.GetComponent<Image>();
+            image.color = ShopUiSkin.Orange;
+            ShopUiSkin.Pill(image);
+            ShopUiSkin.AddIcon(name, chip.transform, icon, ShopUiSkin.BrownMid,
+                new Vector2(42f, 42f), new Vector2(9f, -9f), new Vector2(0f, 1f));
+            Button button = chip.GetComponent<Button>();
+            button.targetGraphic = image;
+            label = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            label.transform.SetParent(chip.transform, false);
+            label.font = ShopUiFonts.Bold;
+            label.fontSize = 18;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            label.rectTransform.offsetMin = new Vector2(52f, 4f);
+            label.rectTransform.offsetMax = new Vector2(-12f, -4f);
+            return button;
         }
 
         private static Text CreateStackText(string name, Transform parent, float left, float right, int fontSize)
