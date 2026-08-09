@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19f7c9b9f3d99104d90d91d452418490, type: 3}
+  m_Name: ShopWarehouseVisualConfig
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopWarehouseVisualConfig
+  itemsRepresentedPerVisual: 1
+  maximumVisibleProducts: 18
+  refreshInterval: 0.25
+  normalizedFloorAnchor: {x: 0.14, y: 0.84}
+  columns: 6
+  columnSpacing: 0.58
+  rowSpacing: 0.54
+  layerSpacing: 0.42
+  rowsPerLayer: 2
+  targetLongestSide: 0.42
+  yawRange: {x: -18, y: 18}
+  labelOffset: {x: 1.45, y: 1.35, z: -0.35}
