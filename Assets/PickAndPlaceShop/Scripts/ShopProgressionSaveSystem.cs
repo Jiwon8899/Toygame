@@ -154,23 +154,44 @@ namespace PickAndPlaceShop
         {
             get
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                // Unity's WebGL auto-sync only watches Application.persistentDataPath.
+                // Saving beside that directory reports success in MEMFS but is not restored
+                // from IndexedDB after a browser refresh.
+                return Application.persistentDataPath;
+#else
                 DirectoryInfo companyDirectory = Directory.GetParent(Application.persistentDataPath);
                 return companyDirectory != null
                     ? Path.Combine(companyDirectory.FullName, StableSaveFolderName)
                     : Application.persistentDataPath;
+#endif
             }
         }
 
         public static string SavePath => Path.Combine(SaveDirectory, FileName);
         public static bool HasUsableSave => TryLoad(out _);
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private static string LegacyWebGlSavePath
+        {
+            get
+            {
+                DirectoryInfo parent = Directory.GetParent(Application.persistentDataPath);
+                return parent != null
+                    ? Path.Combine(parent.FullName, StableSaveFolderName, FileName)
+                    : null;
+            }
+        }
+#endif
+
         public static bool TryLoad(out ShopProgressionSaveData data)
         {
             data = null;
             try
             {
-                if (!File.Exists(SavePath)) return false;
-                string json = File.ReadAllText(SavePath);
+                string loadPath = ResolveLoadPath();
+                if (string.IsNullOrEmpty(loadPath)) return false;
+                string json = File.ReadAllText(loadPath);
                 data = JsonUtility.FromJson<ShopProgressionSaveData>(json);
                 if (data == null || data.version < 1 || data.version > CurrentVersion)
                 {
@@ -191,6 +212,11 @@ namespace PickAndPlaceShop
                     }
                 }
                 data.version = CurrentVersion;
+#if UNITY_WEBGL && !UNITY_EDITOR
+                if (!string.Equals(loadPath, SavePath, StringComparison.Ordinal) && Save(data))
+                    Debug.Log("[Progression] WEBGL_LEGACY_SAVE_MIGRATED source=" + loadPath +
+                              " destination=" + SavePath);
+#endif
                 return true;
             }
             catch (Exception exception)
@@ -233,14 +259,36 @@ namespace PickAndPlaceShop
         {
             try
             {
-                if (File.Exists(SavePath)) File.Delete(SavePath);
-                if (File.Exists(SavePath + ".tmp")) File.Delete(SavePath + ".tmp");
-                if (File.Exists(SavePath + ".bak")) File.Delete(SavePath + ".bak");
+                DeleteArtifacts(SavePath);
+#if UNITY_WEBGL && !UNITY_EDITOR
+                string legacyPath = LegacyWebGlSavePath;
+                if (!string.IsNullOrEmpty(legacyPath) &&
+                    !string.Equals(legacyPath, SavePath, StringComparison.Ordinal))
+                    DeleteArtifacts(legacyPath);
+#endif
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
             }
+        }
+
+        private static string ResolveLoadPath()
+        {
+            if (File.Exists(SavePath)) return SavePath;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            string legacyPath = LegacyWebGlSavePath;
+            if (!string.IsNullOrEmpty(legacyPath) && File.Exists(legacyPath)) return legacyPath;
+#endif
+            return null;
+        }
+
+        private static void DeleteArtifacts(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path + ".tmp")) File.Delete(path + ".tmp");
+            if (File.Exists(path + ".bak")) File.Delete(path + ".bak");
         }
 
         private static void EnsureCollections(ShopProgressionSaveData data)
