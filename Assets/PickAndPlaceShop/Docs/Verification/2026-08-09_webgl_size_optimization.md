@@ -134,3 +134,31 @@ PART B~G 결과는 각 단계 검증 후 이 문서에 이어서 기록한다.
 - 정리 후 `Assets/PickAndPlaceShop`은 2,051.35 MiB에서 445.52 MiB로 감소했다.
 - 검증: 상품 정의 262개 중 아이콘 누락 0, 외형 누락 0, 래퍼 80개 중 렌더러 누락 0, 레거시 메시 폴더 없음, Console 컴파일 오류 0.
 - 패키지 제거는 보류했다. `2D Sprite`, `Visual Effect Graph`, terrain/tilemap/VR/XR 계열 모듈은 제거 후보지만, 현재 씬·플러그인의 간접 의존성을 단정할 근거가 부족하고 빌드 본체도 아니므로 목록만 남긴다.
+
+## PART D. 상품 GLB 및 텍스처 최적화
+
+- 상품 GLB 80개는 파일명과 `.meta` GUID를 유지한 채, 임시 폴더에서 전 파일 변환 성공을 확인한 뒤에만 원본 경로에 일괄 반영했다.
+- 기준: 화면상 최장변 0.3m, 아이콘 256px이라는 실제 사용 크기를 기준으로 텍스처 최장변을 512px로 제한했다.
+- 메시 기준: weld/prune 후 목표 비율 6%, 허용 오차 0.2%. Draco/Meshopt 런타임 확장은 추가하지 않아 WebGL 호환성을 유지했다.
+- GLB 합계: **628.02 MiB → 78.91 MiB (-549.11 MiB, -87.4%)**.
+- 상품 래퍼 재생성 후: 80 래퍼 / 80 고유 메시 / 1,984,901 정점 / 2,239,202 삼각형. 래퍼 메시 누락 0, Console error 0.
+- 비교 샘플: `PART_D_before_baseball.png`, `PART_D_after_baseball.png`.
+- SpawnPad는 게임 씬에서 실제 사용하므로 삭제하지 않았다. 6개 4096x4096 텍스처에만 WebGL override를 적용해 max size 512, 압축 활성화, quality 70, Read/Write off, 3D용 mipmap 유지로 설정했다.
+- SpawnPad 비교: `PART_D_spawnpad_before.png`, `PART_D_spawnpad_after.png`. 외형/발광 구조 유지 확인.
+- UI 아이콘은 이미 256px, Read/Write off, mipmap off여서 추가 축소하지 않았다. GFCRedSpirit 및 한글/TMP 폰트도 변경하지 않았다.
+
+## PART E. 오디오 최적화
+
+- Build Report의 Sounds는 1.5 MiB로 주원인은 아니므로 에셋 삭제 없이 임포트 방식만 정리했다.
+- `배경음.wav`: Streaming / Vorbis quality 0.45 / Optimize Sample Rate / background load / preload off.
+- `메인화면 클릭음.wav`, `돈 올라가는소리.wav`: Decompress On Load / Vorbis quality 0.7 / Optimize Sample Rate / mono / preload on.
+- 오디오 참조 GUID와 게임 재생 코드는 변경하지 않았다.
+
+## PART F. 빌드 설정 점검
+
+- 활성 빌드 씬은 `PickAndPlaceShop_MainMenu`와 `PickAndPlaceShop_MainStreetSlice_Multiplayer` 2개다.
+- `이미지생성.unity`는 Build Settings에 있으나 disabled 상태라 빌드에 포함되지 않는다.
+- Managed Stripping Level: **Minimal (변경 금지 준수)**.
+- WebGL compression: Gzip, Decompression Fallback: enabled.
+- Development Build: false. Exception Support: ExplicitlyThrownExceptionsOnly.
+- 스트리핑 레벨은 현재 값만 기록했고 올리지 않았다.
