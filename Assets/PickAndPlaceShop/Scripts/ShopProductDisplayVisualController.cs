@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -12,6 +13,10 @@ namespace PickAndPlaceShop
         private ShopNetworkGame observed;
         private bool dirty = true;
         public static int ActiveVisualCount => instance != null ? instance.visuals.Count : 0;
+        public static void RequestRefresh()
+        {
+            if (instance != null) instance.dirty = true;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -48,32 +53,60 @@ namespace PickAndPlaceShop
             dirty = false;
             foreach (GameObject visual in visuals) if (visual != null) Destroy(visual);
             visuals.Clear();
-            ShopDisplayShelfAnchors provider = FindFirstObjectByType<ShopDisplayShelfAnchors>();
-            if (provider == null)
+            EnsureMainShelfProvider();
+            ShopDisplayShelfAnchors[] providers = FindObjectsByType<ShopDisplayShelfAnchors>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (providers.Length == 0)
             {
                 ShopShelfVisual shelf = FindFirstObjectByType<ShopShelfVisual>();
-                if (shelf != null) provider = shelf.gameObject.AddComponent<ShopDisplayShelfAnchors>();
+                if (shelf != null) providers = new[] { shelf.gameObject.AddComponent<ShopDisplayShelfAnchors>() };
             }
-            if (provider == null) return;
-            provider.EnsureAnchors();
-            IReadOnlyList<ShopDisplaySlotAnchor> anchors = provider.Anchors;
-            int index = 0;
-            for (int i = 0; i < observed.ItemContainers.Count && index < anchors.Count; i++)
+            if (providers.Length == 0) return;
+            List<ShopDisplaySlotAnchor> anchors = new();
+            foreach (ShopDisplayShelfAnchors provider in providers)
+            {
+                if (provider == null) continue;
+                provider.EnsureAnchors();
+                anchors.AddRange(provider.Anchors);
+            }
+            Dictionary<int, ShopDisplaySlotAnchor> anchorsBySlot = anchors
+                .Where(anchor => anchor != null && anchor.gameObject.activeInHierarchy)
+                .GroupBy(anchor => anchor.SlotIndex)
+                .ToDictionary(group => group.Key, group => group.First());
+            for (int i = 0; i < observed.ItemContainers.Count; i++)
             {
                 ShopContainerItem item = observed.ItemContainers[i];
                 if (item.Container != ShopContainerKind.SharedDisplay || item.Quantity <= 0) continue;
-                ShopProductDefinition product = ShopProductVisuals.Find(item.ProductId);
-                for (int quantity = 0; quantity < item.Quantity && index < anchors.Count; quantity++)
+                if (!anchorsBySlot.TryGetValue(item.SlotIndex, out ShopDisplaySlotAnchor slotAnchor))
                 {
-                    Transform anchor = anchors[index].transform;
-                    GameObject visual = ShopProductVisuals.Instantiate(product, anchor);
-                    if (visual == null) break;
-                    visual.name = $"Displayed_{item.ProductId}_{index:00}";
-                    visual.transform.SetLocalPositionAndRotation(Vector3.zero,
-                        Quaternion.Euler(0f, (index * 37f) % 55f - 27f, 0f));
-                    visuals.Add(visual);
-                    index++;
+                    Debug.LogWarning("[DisplayVisual] 진열 슬롯 앵커를 찾지 못했습니다. slot=" +
+                                     item.SlotIndex, this);
+                    continue;
                 }
+                ShopProductDefinition product = ShopProductVisuals.Find(item.ProductId);
+                GameObject visual = ShopProductVisuals.Instantiate(product, slotAnchor.transform);
+                if (visual == null) continue;
+                visual.name = $"Displayed_{item.ProductId}_{item.SlotIndex:00}";
+                visual.transform.SetLocalPositionAndRotation(Vector3.zero,
+                    Quaternion.Euler(0f, (item.SlotIndex * 37f) % 55f - 27f, 0f));
+                visuals.Add(visual);
+            }
+        }
+
+        private static void EnsureMainShelfProvider()
+        {
+            Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform candidate = transforms[i];
+                if (candidate == null || candidate.name != "Shared Display Shelves" ||
+                    !candidate.gameObject.scene.IsValid()) continue;
+                ShopDisplayShelfAnchors provider = candidate.GetComponent<ShopDisplayShelfAnchors>();
+                if (provider == null) provider = candidate.gameObject.AddComponent<ShopDisplayShelfAnchors>();
+                provider.Configure(0, 1, true);
+                provider.EnsureAnchors();
+                return;
             }
         }
 

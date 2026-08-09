@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace PickAndPlaceShop
 {
@@ -16,21 +17,37 @@ namespace PickAndPlaceShop
     [DisallowMultipleComponent]
     public sealed class ShopDisplayShelfAnchors : MonoBehaviour
     {
-        private const int AnchorsPerShelf = 3;
+        [SerializeField, Min(0)] private int firstSlotIndex;
+        [SerializeField, Min(1)] private int anchorsPerShelf = 1;
+        [SerializeField] private bool addBaseOverflowAnchor = true;
         private readonly List<ShopDisplaySlotAnchor> anchors = new();
         public IReadOnlyList<ShopDisplaySlotAnchor> Anchors => anchors;
 
         private void Awake() => EnsureAnchors();
 
+        public void Configure(int firstSlot, int perShelf, bool addOverflow)
+        {
+            firstSlotIndex = Mathf.Max(0, firstSlot);
+            anchorsPerShelf = Mathf.Max(1, perShelf);
+            addBaseOverflowAnchor = addOverflow;
+        }
+
         public void EnsureAnchors()
         {
             anchors.Clear();
-            anchors.AddRange(GetComponentsInChildren<ShopDisplaySlotAnchor>(true));
-            if (anchors.Count == 0) RestoreLegacyDisplayPrizeAnchors();
+            // DisplayPrize objects are the old placeholder meshes. ShopShelfVisual
+            // disables those objects, so using them as anchors also disables every
+            // real product instantiated below them. Only independent anchors are
+            // reusable; otherwise rebuild anchors from the actual shelf surfaces.
+            foreach (ShopDisplaySlotAnchor anchor in GetComponentsInChildren<ShopDisplaySlotAnchor>(true))
+                if (anchor != null && !anchor.name.StartsWith("DisplayPrize_", StringComparison.Ordinal))
+                    anchors.Add(anchor);
             if (anchors.Count == 0) BuildFromShelfSurfaces();
+            if (anchors.Count == 0) RestoreLegacyDisplayPrizeAnchors();
             anchors.Sort((left, right) => left.SlotIndex.CompareTo(right.SlotIndex));
             ShopShelfVisual legacy = GetComponent<ShopShelfVisual>();
             if (legacy != null) legacy.UseProductVisuals();
+            EnsureStructureBlocking();
         }
 
         private void RestoreLegacyDisplayPrizeAnchors()
@@ -46,10 +63,11 @@ namespace PickAndPlaceShop
 
                 foreach (Renderer renderer in legacy.GetComponents<Renderer>()) renderer.enabled = false;
                 foreach (Collider collider in legacy.GetComponents<Collider>()) collider.enabled = false;
-                legacy.localScale = Vector3.one;
-                legacy.gameObject.SetActive(true);
-                ShopDisplaySlotAnchor anchor = legacy.GetComponent<ShopDisplaySlotAnchor>();
-                if (anchor == null) anchor = legacy.gameObject.AddComponent<ShopDisplaySlotAnchor>();
+                GameObject host = new($"ProductSlotAnchor_{index:00}");
+                host.transform.SetParent(transform, true);
+                host.transform.SetPositionAndRotation(legacy.position, legacy.rotation);
+                host.transform.localScale = Vector3.one;
+                ShopDisplaySlotAnchor anchor = host.AddComponent<ShopDisplaySlotAnchor>();
                 anchor.Configure(index);
                 anchors.Add(anchor);
             }
@@ -58,8 +76,8 @@ namespace PickAndPlaceShop
         private void BuildFromShelfSurfaces()
         {
             var shelves = new List<Transform>();
-            foreach (Transform child in transform)
-                if (child != null && child.name.StartsWith("Shelf_", StringComparison.Ordinal))
+            foreach (Transform child in GetComponentsInChildren<Transform>(true))
+                if (child != transform && IsShelfSurface(child.name))
                     shelves.Add(child);
             shelves.Sort((left, right) =>
             {
@@ -67,22 +85,57 @@ namespace PickAndPlaceShop
                 return y != 0 ? y : left.localPosition.x.CompareTo(right.localPosition.x);
             });
 
-            int slot = 0;
+            int slot = firstSlotIndex;
             foreach (Transform shelf in shelves)
             {
-                float width = Mathf.Max(0.4f, Mathf.Abs(shelf.localScale.x));
-                for (int column = 0; column < AnchorsPerShelf; column++)
+                float width = Mathf.Max(0.4f, Mathf.Abs(shelf.lossyScale.x));
+                for (int column = 0; column < anchorsPerShelf; column++)
                 {
                     GameObject host = new($"ProductSlotAnchor_{slot:00}");
-                    host.transform.SetParent(transform, false);
-                    float x = Mathf.Lerp(-width * 0.34f, width * 0.34f,
-                        column / (float)(AnchorsPerShelf - 1));
-                    host.transform.localPosition = shelf.localPosition +
-                                                   new Vector3(x, Mathf.Abs(shelf.localScale.y) * 0.5f + 0.17f, -0.08f);
+                    host.transform.SetParent(transform, true);
+                    float x = anchorsPerShelf == 1 ? 0f : Mathf.Lerp(-width * 0.28f, width * 0.28f,
+                        column / (float)(anchorsPerShelf - 1));
+                    host.transform.SetPositionAndRotation(
+                        shelf.position + shelf.right * x + shelf.up *
+                        (Mathf.Abs(shelf.lossyScale.y) * 0.5f + 0.17f) - shelf.forward * 0.08f,
+                        shelf.rotation);
+                    host.transform.localScale = Vector3.one;
                     ShopDisplaySlotAnchor anchor = host.AddComponent<ShopDisplaySlotAnchor>();
                     anchor.Configure(slot++);
                     anchors.Add(anchor);
                 }
+            }
+            if (addBaseOverflowAnchor && shelves.Count > 0)
+            {
+                Transform shelf = shelves[shelves.Count / 2];
+                GameObject host = new($"ProductSlotAnchor_{slot:00}");
+                host.transform.SetParent(transform, true);
+                host.transform.SetPositionAndRotation(shelf.position + shelf.right * 0.48f + shelf.up *
+                    (Mathf.Abs(shelf.lossyScale.y) * 0.5f + 0.17f) - shelf.forward * 0.08f, shelf.rotation);
+                host.transform.localScale = Vector3.one;
+                ShopDisplaySlotAnchor anchor = host.AddComponent<ShopDisplaySlotAnchor>();
+                anchor.Configure(slot);
+                anchors.Add(anchor);
+            }
+        }
+
+        private static bool IsShelfSurface(string objectName) =>
+            objectName.StartsWith("Shelf_", StringComparison.Ordinal) ||
+            objectName == "Shelf0" || objectName == "Shelf1" || objectName == "Shelf2";
+
+        private void EnsureStructureBlocking()
+        {
+            foreach (Transform child in GetComponentsInChildren<Transform>(true))
+            {
+                if (child == transform || !IsShelfSurface(child.name)) continue;
+                BoxCollider collider = child.GetComponent<BoxCollider>();
+                if (collider == null) collider = child.gameObject.AddComponent<BoxCollider>();
+                collider.isTrigger = false;
+                NavMeshObstacle obstacle = child.GetComponent<NavMeshObstacle>();
+                if (obstacle == null) obstacle = child.gameObject.AddComponent<NavMeshObstacle>();
+                obstacle.shape = NavMeshObstacleShape.Box;
+                obstacle.carving = true;
+                obstacle.carveOnlyStationary = true;
             }
         }
     }

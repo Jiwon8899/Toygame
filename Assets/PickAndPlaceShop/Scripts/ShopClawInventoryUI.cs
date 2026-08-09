@@ -83,8 +83,9 @@ namespace PickAndPlaceShop
     [DefaultExecutionOrder(200)]
     public sealed class ShopClawInventoryUI : MonoBehaviour
     {
+        public static bool IsOpen => instance != null && instance.isOpen;
         private const int MaximumStorageSlots = 70;
-        private const int MaximumDisplaySlots = 10;
+        private const int MaximumDisplaySlots = 40;
         private static ShopClawInventoryUI instance;
 
         private readonly List<ShopContainerSlotView> personalSlots = new();
@@ -142,6 +143,11 @@ namespace PickAndPlaceShop
         private void Update()
         {
             AttachGameIfNeeded();
+            if (isOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                SetOpen(false);
+                return;
+            }
             if (!ShopLocalPauseState.IsPaused && Keyboard.current != null &&
                 Keyboard.current.iKey.wasPressedThisFrame && ShopNetworkGame.Instance != null)
                 SetOpen(!isOpen);
@@ -243,8 +249,26 @@ namespace PickAndPlaceShop
             displayCount = CreateText("DisplayCount", displayPanel.transform, "공용 진열 (0/4)",
                 25, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.52f, 1f, 0.7f));
             SetRect(displayCount.rectTransform, new Vector2(18f, -14f), new Vector2(430f, 44f));
-            BuildGrid(displayPanel.transform, displaySlots, ShopContainerKind.SharedDisplay,
-                MaximumDisplaySlots, new Vector2(18f, -76f), 4);
+            GameObject viewport = new("DisplayScrollViewport", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image), typeof(Mask), typeof(ScrollRect));
+            viewport.transform.SetParent(displayPanel.transform, false);
+            SetRect(viewport.GetComponent<RectTransform>(), new Vector2(12f, -70f), new Vector2(446f, 575f));
+            viewport.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.08f);
+            viewport.GetComponent<Mask>().showMaskGraphic = false;
+            GameObject content = new("DisplayScrollContent", typeof(RectTransform));
+            content.transform.SetParent(viewport.transform, false);
+            RectTransform contentRect = content.GetComponent<RectTransform>();
+            SetRect(contentRect, Vector2.zero, new Vector2(420f,
+                Mathf.CeilToInt(MaximumDisplaySlots / 4f) * 114f + 8f));
+            ScrollRect scroll = viewport.GetComponent<ScrollRect>();
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+            scroll.content = contentRect;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 34f;
+            BuildGrid(content.transform, displaySlots, ShopContainerKind.SharedDisplay,
+                MaximumDisplaySlots, new Vector2(6f, -4f), 4);
 
             feedback = CreateText("Feedback", panel.transform, string.Empty, 22, FontStyle.Bold,
                 TextAnchor.MiddleCenter, new Color(0.7f, 1f, 0.82f));

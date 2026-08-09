@@ -178,42 +178,42 @@ MonoBehaviour:
   - level: 1
     requiredReputation: 0
     requiredFunds: 0
-    displaySlots: 4
+    displaySlots: 10
     storageSlots: 30
     checkoutCount: 1
     features: 1
   - level: 2
     requiredReputation: 0
     requiredFunds: 400
-    displaySlots: 6
+    displaySlots: 16
     storageSlots: 30
     checkoutCount: 1
     features: 1
   - level: 3
     requiredReputation: 0
     requiredFunds: 800
-    displaySlots: 8
+    displaySlots: 22
     storageSlots: 30
     checkoutCount: 1
     features: 1
   - level: 4
     requiredReputation: 0
     requiredFunds: 1500
-    displaySlots: 10
+    displaySlots: 28
     storageSlots: 30
     checkoutCount: 1
     features: 1
   - level: 5
     requiredReputation: 0
     requiredFunds: 1200
-    displaySlots: 10
+    displaySlots: 34
     storageSlots: 50
     checkoutCount: 1
     features: 3
   - level: 6
     requiredReputation: 0
     requiredFunds: 2500
-    displaySlots: 10
+    displaySlots: 40
     storageSlots: 70
     checkoutCount: 2
     features: 7
