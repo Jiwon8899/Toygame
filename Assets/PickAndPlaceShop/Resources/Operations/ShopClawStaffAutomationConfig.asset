@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f70cdf933c8b9184e91dcdd79cf635d3, type: 3}
+  m_Name: ShopClawStaffAutomationConfig
+  m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopClawStaffAutomationConfig
+  targetArrivalTolerance: 0.1
+  maximumCycleSeconds: 45
+  cooldownObservationSeconds: 1
+  minimumLegacySuccessRate: 0.05
+  exposedHeightWeight: 2
+  chuteDistanceWeight: 0.35
+  measuredPhysicalSuccessRate: 0.144
+  armCycleFrequency: 4.2
+  movingArmAngle: 12
+  captureArmAngle: 28

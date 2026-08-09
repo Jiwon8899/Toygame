@@ -10,7 +10,7 @@ using UnityEngine.UI;
 namespace PickAndPlaceShop
 {
     [RequireComponent(typeof(NetworkObject))]
-    public sealed class ShopClawMachineNetwork : NetworkBehaviour
+    public sealed partial class ShopClawMachineNetwork : NetworkBehaviour
     {
         public static ShopClawMachineNetwork Instance { get; private set; }
         public static ShopClawMachineNetwork LocalActiveMachine { get; private set; }
@@ -383,7 +383,7 @@ namespace PickAndPlaceShop
             bool freeTutorialAttempt = ShopTutorialRuntime.FreeScoopAttempt;
             if (freeTutorialAttempt) chargedAttempts.Add(attemptId);
             if (!freeTutorialAttempt &&
-                !ShopClawRules.TryChargeAttempt(ref coins, config.AttemptCost, attemptId, chargedAttempts))
+                !ShopClawRules.TryChargeAttempt(ref coins, ServerGetCurrentAttemptCost(), attemptId, chargedAttempts))
             {
                 ResultMessage.Value = new FixedString128Bytes("가게 자금이 부족합니다.");
                 ShopNetworkGame.Instance.ServerSetEvent("가게 자금이 부족해 팬을 내릴 수 없습니다.");
@@ -929,8 +929,9 @@ namespace PickAndPlaceShop
             int awardedVisualIndex = product != null
                 ? ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab)
                 : prize.VisualPrefabIndex.Value;
+            bool staffAward = IsStaffAutomationActive && !theftAward;
             ulong rewardOwner = theftAward ? theftOwnerClientId : OccupantClientId.Value;
-            if (game == null || !game.ServerCanAcquireItem(rewardOwner, product))
+            if (game == null || (!staffAward && !game.ServerCanAcquireItem(rewardOwner, product)))
             {
                 ResultMessage.Value = new FixedString128Bytes("인벤토리와 창고가 가득 차 상품을 받을 수 없습니다.");
                 game?.ServerSetEvent("인벤토리와 창고가 모두 가득 차 상품을 플레이필드로 돌려보냈습니다.");
@@ -938,9 +939,11 @@ namespace PickAndPlaceShop
                 return;
             }
             ShopContainerKind destination = ShopContainerKind.PersonalInventory;
-            bool stored = game != null && game.ServerTryAcquireItem(rewardOwner, product,
-                awardedVisualIndex, theftAward ? ShopAcquisitionSource.Theft : ShopAcquisitionSource.Manual,
-                0, out destination);
+            bool stored = staffAward
+                ? ServerStoreStaffAutomationPrize(game, product, awardedVisualIndex, out destination)
+                : game != null && game.ServerTryAcquireItem(rewardOwner, product,
+                    awardedVisualIndex, theftAward ? ShopAcquisitionSource.Theft : ShopAcquisitionSource.Manual,
+                    0, out destination);
             if (!stored)
             {
                 ResultMessage.Value = new FixedString128Bytes("인벤토리와 창고가 가득 차 상품을 받을 수 없습니다.");
@@ -954,7 +957,7 @@ namespace PickAndPlaceShop
             awardedAttemptId = AttemptId.Value;
             roundAwardCount++;
             if (theftAward) theftAwardedInWindow = true;
-            game.ServerRecordAcquired(1);
+            if (!staffAward) game.ServerRecordAcquired(1);
             if (theftAward)
                 ShopPlayerTheftNetwork.ServerReportTheftSuccess(rewardOwner, ShopTheftAction.ClawChute);
             ShopProgressionManager progression = ShopProgressionManager.Instance;

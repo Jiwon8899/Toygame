@@ -23,6 +23,16 @@ namespace PickAndPlaceShop
         private int observedDay;
         private bool panelOpen;
         private Renderer indicator;
+        private Transform operatorRoot;
+        private Animator operatorAnimator;
+        private Transform operatorArm;
+        private Quaternion operatorArmRestRotation;
+        private Vector3 operatorTargetLocal;
+        private Quaternion operatorTargetLocalRotation;
+        private bool operatorArrived;
+        private float automationCycleStartedAt;
+        private ShopClawStaffAutomationConfig staffAutomationConfig;
+        private static readonly int MovingParameter = Animator.StringToHash("Moving");
 
         public int MachineId => machine != null && machine.Config != null ? machine.Config.MachineId : 0;
         public ulong BufferOwner => unchecked((ulong)(100000 + Mathf.Max(0, MachineId)));
@@ -37,6 +47,18 @@ namespace PickAndPlaceShop
                 ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage);
         }
 
+        public bool ServerTryStaffAttempt(float costMultiplier, out bool acquired)
+        {
+            acquired = false;
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (!IsServer || machine == null || game == null || Operations == null ||
+                machine.IsManuallyBusy || machine.AvailableCapsules <= 0 ||
+                !ShopClawRules.CanOperateDuring(game.Phase.Value)) return false;
+            bool started = machine.ServerBeginStaffAutomationRound(BufferOwner, false, costMultiplier);
+            if (started) automationCycleStartedAt = Time.unscaledTime;
+            return started;
+        }
+
         private ShopOperationsConfig Operations => ShopLiveOperationsNetwork.Instance != null
             ? ShopLiveOperationsNetwork.Instance.Config
             : ShopOperationsConfig.Load();
@@ -44,6 +66,10 @@ namespace PickAndPlaceShop
         private void Awake()
         {
             if (machine == null) machine = GetComponent<ShopClawMachineNetwork>();
+            ShopClawStaffAutomationDriver driver = GetComponent<ShopClawStaffAutomationDriver>();
+            if (driver == null) driver = gameObject.AddComponent<ShopClawStaffAutomationDriver>();
+            driver.Configure(machine);
+            staffAutomationConfig = ShopClawStaffAutomationConfig.Load();
             EnsureVisual();
         }
 
@@ -79,10 +105,12 @@ namespace PickAndPlaceShop
         private void Update()
         {
             if (IsClient) UpdateLocalPanelInput();
+            UpdateVisualOperator(Time.unscaledDeltaTime);
             if (!IsServer || !IsSpawned || Operations == null || machine == null) return;
 
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null) return;
+            ConsumePhysicalAutomationResult();
             if (game.Day.Value != observedDay)
             {
                 observedDay = game.Day.Value;
@@ -103,6 +131,11 @@ namespace PickAndPlaceShop
             if (game.Phase.Value == ShopPhase.Summary || game.Phase.Value == ShopPhase.Complete)
             {
                 State.Value = ShopAutomationState.PausedForClosing;
+                return;
+            }
+            if (machine.IsStaffAutomationActive)
+            {
+                State.Value = ShopAutomationState.Running;
                 return;
             }
             if (machine.IsManuallyBusy)
@@ -139,38 +172,29 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            game.Coins.Value -= cost;
-            TodayCost.Value += cost;
-            ShopLiveOperationsNetwork.Instance?.ServerRecordAutomation(0, cost);
-            if (random.NextDouble() > Operations.AutomaticSuccessRate) return;
+            if (machine.ServerBeginStaffAutomationRound(BufferOwner, true, 1f))
+                automationCycleStartedAt = Time.unscaledTime;
+        }
 
-            if (!machine.ServerTryPeekAutomationCapsule(out ShopProductRarity rarity))
-            {
-                State.Value = ShopAutomationState.StoppedSoldOut;
-                return;
-            }
-            ShopProductDefinition product = PickProduct(rarity);
-            if (product == null) return;
-            if (!game.ServerTryAcquireItem(ShopContainerRules.SharedOwner, product, 0,
-                    ShopAcquisitionSource.Automation, BufferOwner, out _))
-            {
-                State.Value = ShopAutomationState.StoppedStorageFull;
-                Enabled.Value = false;
-                return;
-            }
-            if (!machine.ServerTryConsumeAutomationCapsule(rarity))
-            {
-                Debug.LogError("[Automation] Product was stored but the shared machine capsule could not be consumed.", this);
-                State.Value = ShopAutomationState.StoppedSoldOut;
-                Enabled.Value = false;
-                return;
-            }
+        private void ConsumePhysicalAutomationResult()
+        {
+            if (!IsServer || machine == null ||
+                !machine.ServerTryConsumeStaffAutomationResult(out bool succeeded, out int chargedCost,
+                    out float elapsedSeconds, out bool usedBuffer)) return;
 
-            TodayAcquired.Value++;
-            ShopLiveOperationsNetwork.Instance?.ServerRecordAutomation(1, 0);
-            ShopProgressionManager.Instance?.RecordAcquisition(product.StableItemId,
-                product.DisplayName, ShopProductLocalization.CategoryId(product.Category),
-                product.Rarity >= ShopProductRarity.Rare);
+            TodayCost.Value += Mathf.Max(0, chargedCost);
+            if (succeeded) TodayAcquired.Value++;
+            if (usedBuffer)
+                ShopLiveOperationsNetwork.Instance?.ServerRecordAutomation(succeeded ? 1 : 0,
+                    Mathf.Max(0, chargedCost));
+            float interval = Operations != null ? Operations.AutomationAttemptInterval : 60f;
+            if (usedBuffer && staffAutomationConfig != null && Operations != null)
+                interval = staffAutomationConfig.BalancedPassiveCycleSeconds(interval,
+                    Operations.AutomaticSuccessRate);
+            float measuredElapsed = elapsedSeconds > 0f
+                ? elapsedSeconds
+                : Mathf.Max(0f, Time.unscaledTime - automationCycleStartedAt);
+            SecondsUntilAttempt.Value = Mathf.Max(0f, interval - measuredElapsed);
         }
 
         private ShopProductDefinition PickProduct(ShopProductRarity rarity)
@@ -293,6 +317,109 @@ namespace PickAndPlaceShop
 
         private void HandleVisualChanged(bool _, bool __) => ApplyVisual();
         private void HandleStateChanged(ShopAutomationState _, ShopAutomationState __) => UpdateIndicator();
+
+        private void UpdateVisualOperator(float deltaTime)
+        {
+            bool shouldShow = Installed.Value && Enabled.Value;
+            if (!shouldShow)
+            {
+                if (operatorRoot != null) operatorRoot.gameObject.SetActive(false);
+                return;
+            }
+            EnsureOperatorVisual();
+            if (operatorRoot == null) return;
+            operatorRoot.gameObject.SetActive(true);
+            if (!operatorArrived)
+            {
+                operatorRoot.localPosition = Vector3.MoveTowards(operatorRoot.localPosition,
+                    operatorTargetLocal, Mathf.Max(0f, deltaTime) * 1.4f);
+                operatorRoot.localRotation = Quaternion.Slerp(operatorRoot.localRotation,
+                    operatorTargetLocalRotation, Mathf.Max(0f, deltaTime) * 6f);
+                operatorArrived = (operatorRoot.localPosition - operatorTargetLocal).sqrMagnitude < 0.0025f;
+                SetOperatorMoving(!operatorArrived);
+                return;
+            }
+
+            SetOperatorMoving(false);
+            ShopClawStaffAutomationConfig tuning = staffAutomationConfig;
+            float frequency = tuning != null ? tuning.ArmCycleFrequency : 4.2f;
+            float movingAngle = tuning != null ? tuning.MovingArmAngle : 12f;
+            float captureAngle = tuning != null ? tuning.CaptureArmAngle : 28f;
+            float workCycle = Mathf.Sin(Time.unscaledTime * frequency);
+            ShopClawMachineState machineState = machine != null
+                ? machine.State.Value
+                : ShopClawMachineState.Idle;
+            float armAngle = machineState == ShopClawMachineState.Descend ||
+                             machineState == ShopClawMachineState.Close ||
+                             machineState == ShopClawMachineState.Ascend
+                ? captureAngle
+                : workCycle * movingAngle;
+            if (operatorArm != null)
+                operatorArm.localRotation = operatorArmRestRotation * Quaternion.Euler(0f, 0f, armAngle);
+            else
+                operatorRoot.localPosition = operatorTargetLocal + Vector3.up * (0.015f * Mathf.Max(0f, workCycle));
+        }
+
+        private void EnsureOperatorVisual()
+        {
+            if (operatorRoot != null || machine == null) return;
+            GameObject root = new("AutomationStaffVisual");
+            root.transform.SetParent(transform, false);
+            operatorRoot = root.transform;
+            operatorTargetLocal = transform.InverseTransformPoint(machine.OperatorWorldPosition);
+            operatorTargetLocalRotation = Quaternion.Inverse(transform.rotation) *
+                                          Quaternion.LookRotation(transform.position - machine.OperatorWorldPosition,
+                                              Vector3.up);
+            operatorRoot.localPosition = operatorTargetLocal + Vector3.right * 2.2f;
+            operatorRoot.localRotation = operatorTargetLocalRotation;
+
+            ShopWorkforceConfig workforce = ShopWorkforceConfig.Load();
+            GameObject[] pool = workforce != null ? workforce.AppearancePrefabs : null;
+            GameObject visual = pool != null && pool.Length > 0 ? pool[(MachineId + 2) % pool.Length] : null;
+            if (visual != null) visual = Instantiate(visual, operatorRoot);
+            else
+            {
+                visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                visual.name = "FallbackAutomationStaff";
+                visual.transform.SetParent(operatorRoot, false);
+                visual.transform.localPosition = Vector3.up;
+            }
+            foreach (Collider collider in visual.GetComponentsInChildren<Collider>(true)) Destroy(collider);
+            foreach (Rigidbody body in visual.GetComponentsInChildren<Rigidbody>(true)) Destroy(body);
+            operatorAnimator = visual.GetComponentInChildren<Animator>(true);
+            if (operatorAnimator != null)
+            {
+                operatorAnimator.applyRootMotion = false;
+                if (operatorAnimator.isHuman)
+                    operatorArm = operatorAnimator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            }
+            if (operatorArm == null)
+            {
+                Transform[] bones = visual.GetComponentsInChildren<Transform>(true);
+                for (int i = 0; i < bones.Length; i++)
+                {
+                    string boneName = bones[i].name;
+                    if (boneName == "RightArm" || boneName.EndsWith(":RightArm", StringComparison.Ordinal))
+                    {
+                        operatorArm = bones[i];
+                        break;
+                    }
+                }
+            }
+            if (operatorArm != null) operatorArmRestRotation = operatorArm.localRotation;
+        }
+
+        private void SetOperatorMoving(bool moving)
+        {
+            if (operatorAnimator == null) return;
+            for (int i = 0; i < operatorAnimator.parameterCount; i++)
+                if (operatorAnimator.parameters[i].nameHash == MovingParameter &&
+                    operatorAnimator.parameters[i].type == AnimatorControllerParameterType.Bool)
+                {
+                    operatorAnimator.SetBool(MovingParameter, moving);
+                    return;
+                }
+        }
 
         private static string StateLabel(ShopAutomationState state) => state switch
         {
