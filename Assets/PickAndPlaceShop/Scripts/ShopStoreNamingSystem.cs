@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace PickAndPlaceShop
@@ -61,11 +62,13 @@ namespace PickAndPlaceShop
             config = ShopStoreNamingConfig.Load();
             PlayerShopName = DefaultPlayerName;
             RivalShopName = DefaultRivalName;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
         }
 
         private void OnDestroy()
         {
             if (instance == this) instance = null;
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
             ShopInputModeManager.Pop(this);
         }
 
@@ -108,9 +111,91 @@ namespace PickAndPlaceShop
             rivalNameInput = null;
             confirmButton = null;
             ShopInputModeManager.Pop(this);
+            ApplyNamesToSigns();
             NamesChanged?.Invoke();
             NamingCompleted?.Invoke();
             return true;
+        }
+
+        public bool ApplyNamesToSigns()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            Transform playerSign = FindScenePath(scene,
+                "PickAndPlaceShop_Generated/Architecture/ShopSign");
+            Transform rivalSign = FindScenePath(scene, "RivalShop/ShopSign (1)");
+            if (playerSign == null || rivalSign == null) return false;
+
+            bool playerApplied = ApplySignText(playerSign, ResolvedPlayerName);
+            bool rivalApplied = ApplySignText(rivalSign, ResolvedRivalName);
+            return playerApplied && rivalApplied;
+        }
+
+        private string ResolvedPlayerName => string.IsNullOrWhiteSpace(PlayerShopName)
+            ? DefaultPlayerName
+            : PlayerShopName;
+        private string ResolvedRivalName => string.IsNullOrWhiteSpace(RivalShopName)
+            ? DefaultRivalName
+            : RivalShopName;
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode _)
+        {
+            if (scene.name == ShopLaunchContext.CompleteFlowScene ||
+                scene.name == ShopLaunchContext.MainStreetSliceScene)
+                ApplyNamesToSigns();
+        }
+
+        private bool ApplySignText(Transform sign, string value)
+        {
+            TextMesh text = sign.GetComponent<TextMesh>();
+            if (text == null)
+            {
+                Debug.LogError("[StoreNaming] TextMesh가 없는 간판입니다: " + BuildPath(sign), sign);
+                return false;
+            }
+
+            text.text = value;
+            text.characterSize = config != null ? config.SignBaseCharacterSize : 0.12f;
+            MeshRenderer renderer = text.GetComponent<MeshRenderer>();
+            if (renderer == null) return true;
+
+            float maximumWidth = config != null ? config.SignMaximumWorldWidth : 4.8f;
+            float currentWidth = renderer.bounds.size.x;
+            if (currentWidth > maximumWidth && currentWidth > 0.001f)
+            {
+                float minimum = config != null ? config.SignMinimumCharacterSize : 0.075f;
+                text.characterSize = Mathf.Max(minimum,
+                    text.characterSize * maximumWidth / currentWidth);
+            }
+            return true;
+        }
+
+        private static Transform FindScenePath(Scene scene, string path)
+        {
+            if (!scene.IsValid() || string.IsNullOrWhiteSpace(path)) return null;
+            string[] segments = path.Split('/');
+            GameObject[] roots = scene.GetRootGameObjects();
+            Transform current = null;
+            for (int i = 0; i < roots.Length; i++)
+            {
+                if (roots[i].name != segments[0]) continue;
+                current = roots[i].transform;
+                break;
+            }
+            for (int i = 1; current != null && i < segments.Length; i++)
+                current = current.Find(segments[i]);
+            return current;
+        }
+
+        private static string BuildPath(Transform target)
+        {
+            if (target == null) return "<null>";
+            string path = target.name;
+            while (target.parent != null)
+            {
+                target = target.parent;
+                path = target.name + "/" + path;
+            }
+            return path;
         }
 
         private string DefaultPlayerName => config != null

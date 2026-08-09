@@ -15,3 +15,6 @@ MonoBehaviour:
   maximumNameLength: 10
   defaultPlayerShopName: "\uD53D\uC564\uD50C\uB808\uC774\uC2A4"
   defaultRivalShopName: "\uACE0\uC591\uC774 \uC870\uB2EC\uC0C1\uC810"
+  signMaximumWorldWidth: 4.8
+  signBaseCharacterSize: 0.12
+  signMinimumCharacterSize: 0.075
