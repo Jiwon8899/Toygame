@@ -48,7 +48,8 @@ namespace PickAndPlaceShop
             ShopNetworkGame game = ShopNetworkGame.Instance;
             ShopNightSalesSystem night = ShopNightSalesSystem.Instance;
             bool connected = net != null && (net.IsHost || net.IsClient);
-            bool modalOpen = ShopProgressionHUD.IsOpen || ShopUpgradeUI.IsOpen;
+            bool modalOpen = !ShopInputModeManager.ShowsGameplayHud ||
+                             ShopProgressionHUD.IsOpen || ShopUpgradeUI.IsOpen;
 
             HideLegacyStatusObjects();
             if (statusPanel != null) statusPanel.SetActive(!modalOpen);

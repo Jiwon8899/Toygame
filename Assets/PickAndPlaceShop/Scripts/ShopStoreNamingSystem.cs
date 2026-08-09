@@ -246,7 +246,7 @@ namespace PickAndPlaceShop
             Canvas canvas = namingCanvas.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.overrideSorting = true;
-            canvas.sortingOrder = 950;
+            canvas.sortingOrder = 50000;
             CanvasScaler scaler = namingCanvas.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);

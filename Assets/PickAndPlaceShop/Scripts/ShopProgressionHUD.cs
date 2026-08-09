@@ -38,6 +38,7 @@ namespace PickAndPlaceShop
         private Text notificationText;
         private InputAction toggleStatusAction;
         private GameObject canvasRoot;
+        private Canvas hudCanvas;
         private string visibleSceneName = string.Empty;
         private string objectiveKey = string.Empty;
         private int observedAnnouncementDay = -1;
@@ -102,12 +103,20 @@ namespace PickAndPlaceShop
         {
             RefreshSceneVisibility();
             if (canvasRoot != null && !canvasRoot.activeSelf) return;
+            bool gameplayHudVisible = ShopInputModeManager.ShowsGameplayHud;
+            bool ownsModal = open || tutorialSkipConfirmation != null && tutorialSkipConfirmation.activeSelf;
+            if (hudCanvas != null) hudCanvas.enabled = gameplayHudVisible || ownsModal;
+            if (objectivePanel != null)
+                objectivePanel.SetActive(gameplayHudVisible && !open && objectiveVisible);
             if (manager == null && ShopProgressionManager.Instance != null)
                 Attach(ShopProgressionManager.Instance);
 
             HandleInput();
-            ObserveDayAnnouncement();
-            UpdateNotification();
+            if (gameplayHudVisible)
+            {
+                ObserveDayAnnouncement();
+                UpdateNotification();
+            }
             AnimateObjectiveVisibility();
 
             if (manager == null || Time.unscaledTime < nextRefresh) return;
@@ -236,9 +245,9 @@ namespace PickAndPlaceShop
                 typeof(GraphicRaycaster));
             canvasRoot = canvasObject;
             canvasObject.transform.SetParent(transform, false);
-            Canvas canvas = canvasObject.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 15000;
+            hudCanvas = canvasObject.GetComponent<Canvas>();
+            hudCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            hudCanvas.sortingOrder = 15000;
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);

@@ -55,7 +55,8 @@ namespace PickAndPlaceShop
         private void Update()
         {
             bool gameplay = ShopNetworkGame.Instance != null;
-            if (canvas != null) canvas.enabled = gameplay && !ShopLocalPauseState.IsPaused &&
+            if (canvas != null) canvas.enabled = gameplay && ShopInputModeManager.ShowsGameplayHud &&
+                                                 !ShopLocalPauseState.IsPaused &&
                                                  !ShopClawMachineNetwork.LocalOperatorActive;
             if (!gameplay) return;
             BindContainerEvents();

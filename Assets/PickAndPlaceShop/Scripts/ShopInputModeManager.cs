@@ -36,6 +36,8 @@ namespace PickAndPlaceShop
             instance != null ? instance.ResolveMode() : ShopInputMode.Gameplay;
         public static bool AllowsGameplay => CurrentMode == ShopInputMode.Gameplay;
         public static bool AllowsClaw => CurrentMode == ShopInputMode.Claw;
+        public static bool ShowsGameplayHud =>
+            CurrentMode == ShopInputMode.Gameplay || CurrentMode == ShopInputMode.Claw;
         public static bool IsUiOpen => IsPointerFreeMode(CurrentMode);
         public static bool SuppressLookThisFrame => instance != null && instance.suppressLookFrames > 0;
 
