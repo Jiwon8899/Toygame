@@ -78,17 +78,17 @@ namespace PickAndPlaceShop.Tests
             ShopProgressionCatalog catalog = AssetDatabase.LoadAssetAtPath<ShopProgressionCatalog>(
                 "Assets/PickAndPlaceShop/Resources/Progression/ShopProgressionCatalog.asset");
             Assert.NotNull(catalog);
-            Assert.AreEqual((4, 30), (catalog.ExpansionTiers[0].DisplaySlots,
+            Assert.AreEqual((10, 30), (catalog.ExpansionTiers[0].DisplaySlots,
                 catalog.ExpansionTiers[0].StorageSlots));
-            Assert.AreEqual((6, 30), (catalog.ExpansionTiers[1].DisplaySlots,
+            Assert.AreEqual((16, 30), (catalog.ExpansionTiers[1].DisplaySlots,
                 catalog.ExpansionTiers[1].StorageSlots));
-            Assert.AreEqual((8, 30), (catalog.ExpansionTiers[2].DisplaySlots,
+            Assert.AreEqual((22, 30), (catalog.ExpansionTiers[2].DisplaySlots,
                 catalog.ExpansionTiers[2].StorageSlots));
-            Assert.AreEqual((10, 30), (catalog.ExpansionTiers[3].DisplaySlots,
+            Assert.AreEqual((28, 30), (catalog.ExpansionTiers[3].DisplaySlots,
                 catalog.ExpansionTiers[3].StorageSlots));
-            Assert.AreEqual((10, 50), (catalog.ExpansionTiers[4].DisplaySlots,
+            Assert.AreEqual((34, 50), (catalog.ExpansionTiers[4].DisplaySlots,
                 catalog.ExpansionTiers[4].StorageSlots));
-            Assert.AreEqual((10, 70), (catalog.ExpansionTiers[5].DisplaySlots,
+            Assert.AreEqual((40, 70), (catalog.ExpansionTiers[5].DisplaySlots,
                 catalog.ExpansionTiers[5].StorageSlots));
         }
 
@@ -304,11 +304,19 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void DisplayShelfAnchors_RestoreLegacyFixedSlotsBeforeGeneratingFallbacks()
+        public void DisplayShelfAnchors_UseActiveIndependentAnchorsOnEveryShelfSurface()
         {
             GameObject root = new("Shared Display Shelves");
             try
             {
+                for (int i = 0; i < 5; i++)
+                {
+                    GameObject shelf = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    shelf.name = "Shelf_0_" + i;
+                    shelf.transform.SetParent(root.transform, false);
+                    shelf.transform.localPosition = new Vector3(i * 2f, i * 0.4f, 0f);
+                    shelf.transform.localScale = new Vector3(2f, 0.14f, 1.25f);
+                }
                 for (int i = 0; i < 8; i++)
                 {
                     GameObject slot = new("DisplayPrize_" + i);
@@ -319,11 +327,32 @@ namespace PickAndPlaceShop.Tests
                 }
                 ShopDisplayShelfAnchors provider = root.AddComponent<ShopDisplayShelfAnchors>();
                 provider.EnsureAnchors();
-                Assert.AreEqual(8, provider.Anchors.Count);
+                Assert.AreEqual(6, provider.Anchors.Count);
                 Assert.IsTrue(provider.Anchors.All(anchor =>
-                    anchor.name.StartsWith("DisplayPrize_") &&
+                    anchor.name.StartsWith("ProductSlotAnchor_") &&
                     anchor.gameObject.activeSelf &&
                     anchor.transform.localScale == Vector3.one));
+                Assert.IsTrue(root.transform.Cast<Transform>()
+                    .Where(child => child.name.StartsWith("DisplayPrize_"))
+                    .All(child => !child.gameObject.activeSelf));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void ProductVisuals_ReuseLegacyPrizePrefabBeforePlaceholder()
+        {
+            ShopProductDefinition legacy = Resources.LoadAll<ShopProductDefinition>("Products")
+                .First(product => product != null && product.VisualPrefab == null && product.PrizePrefab != null);
+            GameObject root = new("Visual Test Root");
+            try
+            {
+                GameObject visual = ShopProductVisuals.Instantiate(legacy, root.transform);
+                Assert.NotNull(visual);
+                Assert.IsFalse(visual.name.StartsWith("Fallback Product"));
             }
             finally
             {
