@@ -44,6 +44,10 @@ namespace PickAndPlaceShop
         private Vector3 policeActualVelocity;
         private float policeAvoidanceTimer;
         private float policeAvoidanceSign = 1f;
+        private float policeNoProgressSeconds;
+        private int policeRouteAttempt;
+        private Vector3 policeRouteWaypoint;
+        private bool hasPoliceRouteWaypoint;
         private ShopTheftHud hud;
 
         public float AlertNormalized => config == null ? 0f : Mathf.Clamp01(Alert.Value / config.MaximumAlert);
@@ -265,6 +269,9 @@ namespace PickAndPlaceShop
             PolicePosition.Value = SampleNavMesh(desired, out Vector3 sampled) ? sampled : desired;
             EnsurePoliceVisual(true);
             if (policeAgent != null && policeAgent.isOnNavMesh) policeAgent.Warp(PolicePosition.Value);
+            policeNoProgressSeconds = 0f;
+            policeRouteAttempt = 0;
+            RefreshPoliceRoute();
             PersonalStatus.Value = new FixedString128Bytes("경찰이 출동했습니다! " +
                 Mathf.CeilToInt(config.ChaseTimeoutSeconds) + "초 동안 도망치세요.");
         }
@@ -291,6 +298,7 @@ namespace PickAndPlaceShop
                 if (policeAgent != null && policeAgent.isOnNavMesh &&
                     SampleNavMesh(transform.position, out Vector3 destination))
                     policeAgent.SetDestination(destination);
+                else RefreshPoliceRoute();
             }
             MovePoliceAuthority();
 
@@ -391,10 +399,17 @@ namespace PickAndPlaceShop
         private void MovePoliceAuthority()
         {
             if (policeVisual == null || policeController == null || !policeController.enabled) return;
+            if (hasPoliceRouteWaypoint)
+            {
+                Vector3 waypointDelta = policeRouteWaypoint - policeVisual.transform.position;
+                waypointDelta.y = 0f;
+                if (waypointDelta.sqrMagnitude <= 0.35f * 0.35f) RefreshPoliceRoute();
+            }
             Vector3 desired = policeAgent != null && policeAgent.enabled && policeAgent.isOnNavMesh &&
                               policeAgent.desiredVelocity.sqrMagnitude > 0.01f
                 ? policeAgent.desiredVelocity
-                : transform.position - policeVisual.transform.position;
+                : (hasPoliceRouteWaypoint ? policeRouteWaypoint : transform.position) -
+                  policeVisual.transform.position;
             desired = Vector3.ProjectOnPlane(desired, Vector3.up);
             if (desired.sqrMagnitude <= 0.001f)
             {
@@ -421,9 +436,44 @@ namespace PickAndPlaceShop
             Vector3 actual = policeVisual.transform.position - before;
             actual.y = 0f;
             policeActualVelocity = Time.fixedDeltaTime > 0f ? actual / Time.fixedDeltaTime : Vector3.zero;
+            if (actual.sqrMagnitude > 0.000004f)
+            {
+                policeNoProgressSeconds = 0f;
+                if (policeRouteAttempt > 0) policeRouteAttempt--;
+            }
+            else
+            {
+                policeNoProgressSeconds += Time.fixedDeltaTime;
+                if (policeNoProgressSeconds >= 0.8f)
+                {
+                    policeNoProgressSeconds = 0f;
+                    policeRouteAttempt = (policeRouteAttempt + 1) % 8;
+                    RefreshPoliceRoute();
+                }
+            }
             if (policeAgent != null && policeAgent.enabled && policeAgent.isOnNavMesh)
                 policeAgent.nextPosition = policeVisual.transform.position;
             PolicePosition.Value = policeVisual.transform.position;
+        }
+
+        private void RefreshPoliceRoute()
+        {
+            if (policeVisual == null || config == null)
+            {
+                hasPoliceRouteWaypoint = false;
+                return;
+            }
+            hasPoliceRouteWaypoint = ShopNpcRoutePlanner.TryGetNextWaypoint(
+                policeVisual.transform.position, transform.position,
+                config.PoliceCollisionRadius, config.PoliceCollisionHeight,
+                policeRouteAttempt, policeVisual.transform, out policeRouteWaypoint,
+                out ShopNpcRouteStatus status);
+            if (hasPoliceRouteWaypoint && status == ShopNpcRouteStatus.Direct)
+                hasPoliceRouteWaypoint = false;
+            if (Debug.isDebugBuild && status != ShopNpcRouteStatus.Direct &&
+                status != ShopNpcRouteStatus.NavMeshComplete)
+                Debug.Log("[PoliceNavigation] route=" + status + " attempt=" + policeRouteAttempt +
+                          " waypoint=" + policeRouteWaypoint.ToString("F2"), policeVisual);
         }
 
         private void EnsurePoliceVisual(bool authoritative)

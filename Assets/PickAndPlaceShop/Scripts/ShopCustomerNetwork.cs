@@ -74,6 +74,11 @@ namespace PickAndPlaceShop
         private float avoidanceTimer;
         private float avoidanceSign = 1f;
         private float collisionStuckSeconds;
+        private float navigationNoProgressSeconds;
+        private int navigationRouteAttempt;
+        private int navigationFallbackStage;
+        private Vector3 routeWaypoint;
+        private bool hasRouteWaypoint;
         private bool movementCommanded;
         private readonly Collider[] targetOverlapBuffer = new Collider[32];
         private TextMesh robberMarker;
@@ -187,27 +192,27 @@ namespace PickAndPlaceShop
             switch (State.Value)
             {
                 case ShopCustomerState.Enter:
-                    if (MoveTo(target) || stateElapsed >= movementStateTimeoutSeconds)
+                    if (MoveTo(target))
                     {
                         SetTarget(ShopNightSalesSystem.Instance.ServerGetBrowsePoint(NetworkObjectId));
                         TraceSalesFlow("Browse", target);
                         SetState(ShopCustomerState.Browse);
                     }
+                    else if (stateElapsed >= movementStateTimeoutSeconds) ApplyNavigationFallback();
                     break;
                 case ShopCustomerState.Browse:
                     bool browseReached = MoveTo(target);
-                    if ((browseReached && stateElapsed >= 1.25f) ||
-                        stateElapsed >= movementStateTimeoutSeconds)
+                    if (browseReached && stateElapsed >= 1.25f)
                     {
                         SetTarget(ShopNightSalesSystem.Instance.ServerGetInspectPoint(NetworkObjectId));
                         TraceSalesFlow("Inspect", target);
                         SetState(ShopCustomerState.InspectProduct);
                     }
+                    else if (stateElapsed >= movementStateTimeoutSeconds) ApplyNavigationFallback();
                     break;
                 case ShopCustomerState.InspectProduct:
                     bool inspectReached = MoveTo(target);
-                    if ((inspectReached && stateElapsed >= 0.9f) ||
-                        stateElapsed >= movementStateTimeoutSeconds)
+                    if (inspectReached && stateElapsed >= 0.9f)
                     {
                         if (ShopNightSalesSystem.Instance.ServerTrySelectAndReserve(this, out int productId,
                                 out string productName, out float score))
@@ -240,6 +245,7 @@ namespace PickAndPlaceShop
                             ServerGiveUp("No suitable in-budget stock");
                         }
                     }
+                    else if (stateElapsed >= movementStateTimeoutSeconds) ApplyNavigationFallback();
                     break;
                 case ShopCustomerState.Queue:
                     SetTarget(ShopNightSalesSystem.Instance.ServerGetQueuePosition(this));
@@ -255,12 +261,11 @@ namespace PickAndPlaceShop
                 case ShopCustomerState.Leave:
                 case ShopCustomerState.GiveUp:
                     SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
-                    if (MoveTo(target) || stateElapsed >= leaveRecoveryTimeoutSeconds)
+                    if (MoveTo(target))
                     {
-                        if (stateElapsed >= leaveRecoveryTimeoutSeconds)
-                            TraceSalesFlow("ExitRecovery", target);
                         ShopNightSalesSystem.Instance.ServerCustomerReachedExit(this);
                     }
+                    else if (stateElapsed >= leaveRecoveryTimeoutSeconds) ApplyNavigationFallback();
                     break;
             }
             UpdateVisualAnimation();
@@ -287,14 +292,18 @@ namespace PickAndPlaceShop
 
         public void ServerGiveUp(string reason)
         {
-            if (!IsServer || giveUpReported || State.Value == ShopCustomerState.Leave) return;
-            giveUpReported = true;
-            ShopLiveOperationsNetwork.Instance?.ServerRequestCustomerDialogue(this,
-                ShopCustomerDialogueEvent.ExitWithoutPurchase,
-                DesiredProductName.Value.ToString(), false,
-                ShopNightSalesSystem.Instance != null &&
-                ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
-            ShopNightSalesSystem.Instance.ServerRegisterGiveUp(this, reason);
+            if (!IsServer || State.Value == ShopCustomerState.Leave ||
+                State.Value == ShopCustomerState.GiveUp) return;
+            if (!giveUpReported)
+            {
+                giveUpReported = true;
+                ShopLiveOperationsNetwork.Instance?.ServerRequestCustomerDialogue(this,
+                    ShopCustomerDialogueEvent.ExitWithoutPurchase,
+                    DesiredProductName.Value.ToString(), false,
+                    ShopNightSalesSystem.Instance != null &&
+                    ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
+                ShopNightSalesSystem.Instance.ServerRegisterGiveUp(this, reason);
+            }
             DesiredProductName.Value = new FixedString64Bytes("Gave up");
             SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
             SetState(ShopCustomerState.GiveUp);
@@ -402,6 +411,7 @@ namespace PickAndPlaceShop
         {
             State.Value = next;
             stateElapsed = 0f;
+            navigationFallbackStage = 0;
         }
 
         private void TraceSalesFlow(string stage, Vector3 position)
@@ -425,7 +435,18 @@ namespace PickAndPlaceShop
                 return false;
             }
 
-            Vector3 desiredDirection = remaining.normalized;
+            if (hasRouteWaypoint)
+            {
+                Vector3 toWaypoint = routeWaypoint - before;
+                toWaypoint.y = 0f;
+                if (toWaypoint.sqrMagnitude <= 0.3f * 0.3f) RefreshRoute(destination);
+            }
+            Vector3 movementTarget = hasRouteWaypoint ? routeWaypoint : destination;
+            Vector3 movementRemaining = movementTarget - before;
+            movementRemaining.y = 0f;
+            Vector3 desiredDirection = movementRemaining.sqrMagnitude > 0.001f
+                ? movementRemaining.normalized
+                : remaining.normalized;
             if (avoidanceTimer > 0f)
             {
                 avoidanceTimer -= Time.deltaTime;
@@ -451,10 +472,22 @@ namespace PickAndPlaceShop
             if (actualDirection.sqrMagnitude > 0.0001f)
             {
                 collisionStuckSeconds = 0f;
+                navigationNoProgressSeconds = 0f;
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,
                     Quaternion.LookRotation(actualDirection),
                     Time.deltaTime * 10f);
+            }
+            else
+            {
+                navigationNoProgressSeconds += Time.deltaTime;
+                if (navigationNoProgressSeconds >= 1.1f)
+                {
+                    navigationNoProgressSeconds = 0f;
+                    navigationRouteAttempt++;
+                    RefreshRoute(destination);
+                    if (navigationRouteAttempt >= 3) ApplyNavigationFallback();
+                }
             }
 
             Vector3 flatRemaining = destination - transform.position;
@@ -469,6 +502,63 @@ namespace PickAndPlaceShop
             requestedTarget = requested;
             nextTargetRefresh = Time.time + 0.5f;
             target = ResolveCollisionSafeTarget(requested);
+            navigationNoProgressSeconds = 0f;
+            navigationRouteAttempt = 0;
+            RefreshRoute(target);
+        }
+
+        private void RefreshRoute(Vector3 destination)
+        {
+            float radius = characterController != null ? characterController.radius : 0.3f;
+            float height = characterController != null ? characterController.height : 1.8f;
+            hasRouteWaypoint = ShopNpcRoutePlanner.TryGetNextWaypoint(transform.position, destination,
+                radius, height, navigationRouteAttempt, transform, out routeWaypoint,
+                out ShopNpcRouteStatus status);
+            if (hasRouteWaypoint && status == ShopNpcRouteStatus.Direct) hasRouteWaypoint = false;
+            if (Debug.isDebugBuild && status != ShopNpcRouteStatus.Direct &&
+                status != ShopNpcRouteStatus.NavMeshComplete)
+                Debug.Log("[CustomerNavigation] route=" + status + " attempt=" +
+                          navigationRouteAttempt + " waypoint=" + routeWaypoint.ToString("F2"), this);
+        }
+
+        private void ApplyNavigationFallback()
+        {
+            if (!IsServer || ShopNightSalesSystem.Instance == null) return;
+            stateElapsed = 0f;
+            navigationNoProgressSeconds = 0f;
+            navigationRouteAttempt = 0;
+            navigationFallbackStage++;
+            switch (State.Value)
+            {
+                case ShopCustomerState.Enter:
+                case ShopCustomerState.Browse:
+                    if (navigationFallbackStage == 1)
+                    {
+                        SetTarget(ShopNightSalesSystem.Instance.ServerGetBrowsePoint(
+                            NetworkObjectId + 7919UL));
+                        return;
+                    }
+                    ServerGiveUp("Navigation route unavailable");
+                    return;
+                case ShopCustomerState.InspectProduct:
+                    if (navigationFallbackStage == 1)
+                    {
+                        SetTarget(ShopNightSalesSystem.Instance.ServerGetInspectPoint(
+                            NetworkObjectId + 7919UL));
+                        return;
+                    }
+                    ServerGiveUp("Product area unreachable");
+                    return;
+                case ShopCustomerState.Queue:
+                case ShopCustomerState.Checkout:
+                    ServerGiveUp("Checkout route unavailable");
+                    return;
+                case ShopCustomerState.Leave:
+                case ShopCustomerState.GiveUp:
+                    TraceSalesFlow("SafeExitFallback", ShopNightSalesSystem.Instance.ExitPosition);
+                    ShopNightSalesSystem.Instance.ServerCustomerReachedExit(this);
+                    return;
+            }
         }
 
         private Vector3 ResolveCollisionSafeTarget(Vector3 requested)

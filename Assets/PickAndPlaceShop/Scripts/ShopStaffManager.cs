@@ -110,6 +110,10 @@ namespace PickAndPlaceShop
             public float NavigationStuckSeconds;
             public int NavigationRecoveryAttempts;
             public float LastTargetDistance = float.PositiveInfinity;
+            public Vector3 RouteWaypoint;
+            public bool HasRouteWaypoint;
+            public bool UsingSafeFallback;
+            public float SafeFallbackUntil;
         }
 
         private static readonly int MovingParameter = Animator.StringToHash("Moving");
@@ -246,6 +250,7 @@ namespace PickAndPlaceShop
                 NextWorkTime = Time.unscaledTime + 1f
             };
             actor.Target = ResolveCollisionSafeTarget(actor, requestedTarget);
+            RefreshStaffRoute(actor);
             actors.Add(actor);
         }
 
@@ -256,7 +261,12 @@ namespace PickAndPlaceShop
             {
                 StaffActor actor = actors[i];
                 if (actor.Root == null) continue;
-                Vector3 requestedTarget = TargetFor(actor.Role);
+                if (actor.UsingSafeFallback && Time.unscaledTime >= actor.SafeFallbackUntil)
+                    actor.UsingSafeFallback = false;
+                ShopNightSalesSystem sales = ShopNightSalesSystem.Instance;
+                Vector3 requestedTarget = actor.UsingSafeFallback && sales != null
+                    ? sales.EntrancePosition
+                    : TargetFor(actor.Role);
                 if ((requestedTarget - actor.RequestedTarget).sqrMagnitude > 0.0025f)
                 {
                     actor.RequestedTarget = requestedTarget;
@@ -264,21 +274,33 @@ namespace PickAndPlaceShop
                     actor.NavigationStuckSeconds = 0f;
                     actor.NavigationRecoveryAttempts = 0;
                     actor.LastTargetDistance = float.PositiveInfinity;
+                    RefreshStaffRoute(actor);
                 }
                 Vector3 before = actor.Root.transform.position;
-                Vector3 delta = actor.Target - actor.Root.transform.position;
-                delta.y = 0f;
-                bool moving = delta.sqrMagnitude > config.WorkReachDistance * config.WorkReachDistance;
+                Vector3 finalDelta = actor.Target - actor.Root.transform.position;
+                finalDelta.y = 0f;
+                bool moving = finalDelta.sqrMagnitude > config.WorkReachDistance * config.WorkReachDistance;
                 if (moving)
                 {
-                    Vector3 desiredDirection = delta.normalized;
+                    if (actor.HasRouteWaypoint)
+                    {
+                        Vector3 waypointDelta = actor.RouteWaypoint - actor.Root.transform.position;
+                        waypointDelta.y = 0f;
+                        if (waypointDelta.sqrMagnitude <= 0.3f * 0.3f) RefreshStaffRoute(actor);
+                    }
+                    Vector3 movementTarget = actor.HasRouteWaypoint ? actor.RouteWaypoint : actor.Target;
+                    Vector3 movementDelta = movementTarget - actor.Root.transform.position;
+                    movementDelta.y = 0f;
+                    Vector3 desiredDirection = movementDelta.sqrMagnitude > 0.001f
+                        ? movementDelta.normalized
+                        : finalDelta.normalized;
                     if (actor.AvoidanceTimer > 0f)
                     {
                         actor.AvoidanceTimer -= Time.deltaTime;
                         desiredDirection = Quaternion.Euler(0f, 68f * actor.AvoidanceSign, 0f) *
                                            desiredDirection;
                     }
-                    float distance = Mathf.Min(config.WalkSpeed * Time.deltaTime, delta.magnitude);
+                    float distance = Mathf.Min(config.WalkSpeed * Time.deltaTime, movementDelta.magnitude);
                     CollisionFlags collision = actor.Controller != null && actor.Controller.enabled
                         ? actor.Controller.Move(desiredDirection * distance + Vector3.down *
                             (2f * Time.deltaTime))
@@ -320,9 +342,27 @@ namespace PickAndPlaceShop
                 if (moving && actor.NavigationStuckSeconds >= 1.25f)
                     RecoverBlockedActor(actor);
                 SetMoving(actor.Animator, actor.VisualMoving);
-                if (!isServer || moving || Time.unscaledTime < actor.NextWorkTime) continue;
+                if (!isServer || moving || actor.UsingSafeFallback ||
+                    Time.unscaledTime < actor.NextWorkTime) continue;
                 PerformWork(actor);
             }
+        }
+
+        private void RefreshStaffRoute(StaffActor actor)
+        {
+            if (actor == null || actor.Root == null) return;
+            float radius = actor.Controller != null ? actor.Controller.radius : 0.3f;
+            float height = actor.Controller != null ? actor.Controller.height : 1.8f;
+            actor.HasRouteWaypoint = ShopNpcRoutePlanner.TryGetNextWaypoint(
+                actor.Root.transform.position, actor.Target, radius, height,
+                actor.NavigationRecoveryAttempts, actor.Root.transform, out actor.RouteWaypoint,
+                out ShopNpcRouteStatus status);
+            if (actor.HasRouteWaypoint && status == ShopNpcRouteStatus.Direct)
+                actor.HasRouteWaypoint = false;
+            if (Debug.isDebugBuild && status != ShopNpcRouteStatus.Direct &&
+                status != ShopNpcRouteStatus.NavMeshComplete)
+                Debug.Log("[StaffNavigation] route=" + status + " role=" + actor.Role +
+                          " waypoint=" + actor.RouteWaypoint.ToString("F2"), actor.Root);
         }
 
         private Vector3 ResolveCollisionSafeTarget(StaffActor actor, Vector3 requested)
@@ -369,21 +409,21 @@ namespace PickAndPlaceShop
             {
                 actor.AvoidanceTimer = 0.9f;
                 actor.AvoidanceSign *= -1f;
+                RefreshStaffRoute(actor);
                 return;
             }
 
-            // Some machines are across the street behind large decorative walls and the
-            // lightweight CharacterController agent has no baked NavMesh route. After two
-            // visible avoidance attempts, recover beside the assigned machine instead of
-            // leaving the employee permanently wedged in scenery.
-            Vector3 safeTarget = ResolveCollisionSafeTarget(actor, actor.RequestedTarget);
-            if (actor.Controller != null) actor.Controller.enabled = false;
-            actor.Root.transform.position = safeTarget;
-            if (actor.Controller != null) actor.Controller.enabled = true;
-            actor.Target = safeTarget;
+            // Do not teleport through fixtures. Walk to the entrance safety point, pause,
+            // then retry the assigned workstation with a fresh detour.
+            ShopNightSalesSystem sales = ShopNightSalesSystem.Instance;
+            actor.UsingSafeFallback = sales != null;
+            actor.SafeFallbackUntil = Time.unscaledTime + 3f;
+            actor.RequestedTarget = sales != null ? sales.EntrancePosition : actor.RequestedTarget;
+            actor.Target = ResolveCollisionSafeTarget(actor, actor.RequestedTarget);
             actor.NavigationRecoveryAttempts = 0;
-            Debug.LogWarning("[StaffNavigation] Recovered blocked " + actor.Role +
-                             " beside assigned workstation.", actor.Root);
+            RefreshStaffRoute(actor);
+            Debug.LogWarning("[StaffNavigation] Redirected blocked " + actor.Role +
+                             " to the entrance safety point before retrying.", actor.Root);
         }
 
         private void PerformWork(StaffActor actor)
