@@ -26,6 +26,7 @@ namespace PickAndPlaceShop
             float vehicleScale = config != null ? config.VehicleColliderScale : 0.92f;
             int buildings = 0;
             int vehicles = 0;
+            int storeFixtures = 0;
 
             foreach (GameObject root in scene.GetRootGameObjects())
             foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
@@ -37,7 +38,8 @@ namespace PickAndPlaceShop
                 bool vehicle = filter.name.StartsWith("P_Car_", System.StringComparison.OrdinalIgnoreCase) ||
                                (filter.transform.parent != null && filter.transform.parent.name.StartsWith(
                                    "P_Car_", System.StringComparison.OrdinalIgnoreCase));
-                if (!building && !vehicle) continue;
+                bool storeFixture = IsStoreFixture(filter.transform);
+                if (!building && !vehicle && !storeFixture) continue;
 
                 GameObject target = vehicle && filter.transform.parent != null &&
                                     filter.transform.parent.name.StartsWith("P_Car_",
@@ -55,7 +57,7 @@ namespace PickAndPlaceShop
                 BoxCollider collider = collisionHost.AddComponent<BoxCollider>();
                 collider.center = bounds.center;
                 collider.size = Vector3.Scale(bounds.size,
-                    Vector3.one * (building ? buildingScale : vehicleScale));
+                    Vector3.one * (building ? buildingScale : storeFixture ? 0.98f : vehicleScale));
 
                 NavMeshObstacle obstacle = collisionHost.AddComponent<NavMeshObstacle>();
                 obstacle.shape = NavMeshObstacleShape.Box;
@@ -64,11 +66,32 @@ namespace PickAndPlaceShop
                 obstacle.carving = true;
                 obstacle.carveOnlyStationary = true;
                 if (building) buildings++;
+                else if (storeFixture) storeFixtures++;
                 else vehicles++;
             }
 
-            if (buildings > 0 || vehicles > 0)
-                Debug.Log("[CityCollision] buildings=" + buildings + " vehicles=" + vehicles);
+            if (buildings > 0 || vehicles > 0 || storeFixtures > 0)
+                Debug.Log("[CityCollision] buildings=" + buildings + " vehicles=" + vehicles +
+                          " storeFixtures=" + storeFixtures);
+        }
+
+        private static bool IsStoreFixture(Transform target)
+        {
+            if (target == null) return false;
+            if (target.name == "Counter") return true;
+            bool shelfPart = target.name.StartsWith("Shelf_", System.StringComparison.Ordinal) ||
+                             target.name.StartsWith("ShelfBack_", System.StringComparison.Ordinal);
+            bool warehousePart = target.name.StartsWith("Rack", System.StringComparison.Ordinal) ||
+                                 target.name.StartsWith("Box", System.StringComparison.Ordinal) ||
+                                 target.name.StartsWith("Pallet", System.StringComparison.Ordinal) ||
+                                 target.name.StartsWith("PalBox", System.StringComparison.Ordinal) ||
+                                 target.name.StartsWith("WH_Mark", System.StringComparison.Ordinal);
+            for (Transform current = target.parent; current != null; current = current.parent)
+            {
+                if (shelfPart && current.name == "Shared Display Shelves") return true;
+                if (warehousePart && current.name == "Zone_Warehouse") return true;
+            }
+            return false;
         }
 
         private static bool TryGetLocalBounds(GameObject target, out Bounds bounds)

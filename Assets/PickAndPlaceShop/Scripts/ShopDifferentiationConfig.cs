@@ -12,7 +12,7 @@ namespace PickAndPlaceShop
         [SerializeField] private ShopProductDefinition emptyCapsuleProduct;
         [SerializeField, Min(1)] private int capsuleRecyclerSlots = 10;
         [SerializeField] private int[] upcycleThresholds = { 20, 50, 100 };
-        [SerializeField] private Vector3 capsuleRecyclerPosition = new(12.7f, 0f, 3.2f);
+        [SerializeField] private Vector3 capsuleRecyclerPosition = new(5.102f, 0f, 7.088f);
 
         [Header("쿠지 라스트원상")]
         [SerializeField, Min(1)] private int kujiSetSize = 40;

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace PickAndPlaceShop
 {
@@ -227,9 +228,6 @@ namespace PickAndPlaceShop
                     game.ServerSetEvent("위탁 상품을 진열하지 못했습니다. 슬롯을 확인해 주세요.");
                     return;
                 }
-                ShopProgressionManager.Instance?.RecordAcquisition(products[i].StableItemId,
-                    products[i].DisplayName, ShopProductLocalization.CategoryId(products[i].Category),
-                    products[i].Rarity >= ShopProductRarity.Rare);
             }
             game.Coins.Value -= total;
             game.ServerSetEvent("위탁 상품 " + products.Count + "개를 " + total + "원에 들였습니다.");
@@ -578,6 +576,10 @@ namespace PickAndPlaceShop
             Renderer renderer = root.GetComponent<Renderer>();
             ShopBuildSafeMaterials.ApplyLitColor(renderer, color);
             root.AddComponent<ShopInteractable>().Configure(action, prompt);
+            NavMeshObstacle obstacle = root.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
 
             GameObject labelHost = new(objectName + "_Label");
             labelHost.transform.SetParent(root.transform, false);

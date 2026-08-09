@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.AI;
 
 namespace PickAndPlaceShop
 {
@@ -17,6 +18,9 @@ namespace PickAndPlaceShop
         private float nextPoll;
         private CanvasGroup revealGroup;
         private Text revealText;
+        private GameObject sharedShell;
+        private GameObject sharedCanopy;
+        private GameObject sharedOuterWall;
 
         public static int CustomerBrowsePointCount => instance != null
             ? instance.customerBrowsePoints.Count
@@ -57,6 +61,7 @@ namespace PickAndPlaceShop
         {
             appliedLevel = 0;
             ClearGenerated();
+            ClearSharedShell();
             sceneDefaults.Clear();
         }
 
@@ -74,25 +79,31 @@ namespace PickAndPlaceShop
             if (level == appliedLevel) return;
             int previousLevel = appliedLevel;
             appliedLevel = level;
-            Rebuild(level);
+            Rebuild(level, previousLevel);
             if (previousLevel > 0 && level > previousLevel) StartCoroutine(PlayExpansionReveal(level));
         }
 
-        private void Rebuild(int level)
+        private void Rebuild(int level, int previousLevel)
         {
             ClearGenerated();
             CaptureSceneDefaults();
             RestoreSceneDefaults();
             ApplyStageObjectRules(level);
             Vector3 origin = ShopNightSalesSystem.Instance.DisplayWorkPosition;
-            if (level >= 2) CreateShelf(origin + new Vector3(-2.1f, 0f, 2.1f), 2);
-            if (level >= 3) CreateBundledZone(config != null ? config.Level3ZoneCenter : new Vector3(11.7f, 0f, 3.2f),
-                3, "캡슐 회수 구역");
+            if (level >= 2) CreateShelf(new Vector3(2.3f, 0.05f, 6.98f), 2);
+            if (level >= 3)
+            {
+                CreateBundledZone(config != null ? config.Level3ZoneCenter : new Vector3(11.7f, 0f, 3.2f),
+                    3, "캡슐 회수 구역", previousLevel > 0 && level > previousLevel && level == 3);
+                CreateShelf(new Vector3(1.55f, 0f, -1.88f), 3);
+            }
             if (level >= 4) CreateBundledZone(config != null ? config.Level4ZoneCenter : new Vector3(11.7f, 0f, 0.2f),
-                4, "굿즈 감정 구역");
+                4, "굿즈 감정 구역", previousLevel > 0 && level > previousLevel && level == 4);
             if (level >= 5) CreateBundledZone(config != null ? config.Level5ZoneCenter : new Vector3(11.7f, 0f, 6.1f),
-                5, "위탁 판매 구역");
+                5, "위탁 판매 구역", previousLevel > 0 && level > previousLevel && level == 5);
             if (level >= 6) CreateRoomExtension(origin + Vector3.right * 5f, 2);
+            EnsureSharedShell(level);
+            ShopProductDisplayVisualController.RequestRefresh();
         }
 
         private void CaptureSceneDefaults()
@@ -147,20 +158,29 @@ namespace PickAndPlaceShop
         private void CreateShelf(Vector3 position, int tier)
         {
             GameObject root = new("ExpandedDisplayShelf_L" + tier);
+            root.SetActive(false);
             root.transform.SetParent(transform, false);
             root.transform.position = position;
-            BoxCollider trigger = root.AddComponent<BoxCollider>();
+            root.transform.rotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            GameObject interaction = new("InteractionTrigger");
+            interaction.transform.SetParent(root.transform, false);
+            interaction.transform.localPosition = new Vector3(0f, 1f, -0.58f);
+            BoxCollider trigger = interaction.AddComponent<BoxCollider>();
             trigger.isTrigger = true;
-            trigger.center = new Vector3(0f, 1f, -0.35f);
-            trigger.size = new Vector3(2f, 2f, 1.5f);
-            root.AddComponent<ShopInteractable>().Configure(ShopAction.DisplayShelf,
+            trigger.size = new Vector3(2.2f, 2f, 0.75f);
+            interaction.AddComponent<ShopInteractable>().Configure(ShopAction.DisplayShelf,
                 "[E] 공용 창고 상품 진열");
             Color wood = new(0.38f, 0.18f, 0.09f);
-            CreatePart(root.transform, "SideL", new Vector3(-0.9f, 1f, 0f), new Vector3(0.16f, 2f, 0.65f), wood, false);
-            CreatePart(root.transform, "SideR", new Vector3(0.9f, 1f, 0f), new Vector3(0.16f, 2f, 0.65f), wood, false);
+            CreatePart(root.transform, "SideL", new Vector3(-0.9f, 1f, 0f), new Vector3(0.16f, 2f, 0.65f), wood, true);
+            CreatePart(root.transform, "SideR", new Vector3(0.9f, 1f, 0f), new Vector3(0.16f, 2f, 0.65f), wood, true);
             for (int i = 0; i < 3; i++)
                 CreatePart(root.transform, "Shelf" + i, new Vector3(0f, 0.25f + i * 0.72f, 0f),
-                    new Vector3(1.95f, 0.12f, 0.72f), new Color(0.82f, 0.55f, 0.28f), false);
+                    new Vector3(1.95f, 0.12f, 0.72f), new Color(0.82f, 0.55f, 0.28f), true);
+            AddCarvingObstacle(root, new Vector3(0f, 1f, 0f), new Vector3(2.08f, 2.05f, 0.78f));
+            ShopDisplayShelfAnchors anchors = root.AddComponent<ShopDisplayShelfAnchors>();
+            anchors.Configure(10 + Mathf.Max(0, tier - 2) * 6, 2, false);
+            root.SetActive(true);
             generated.Add(root);
         }
 
@@ -179,9 +199,10 @@ namespace PickAndPlaceShop
                 new Vector3(0.18f, 3.2f, 4.5f), wall, true);
             customerBrowsePoints.Add(root.transform.position + new Vector3(0f, 0f, 0.55f));
             generated.Add(root);
+            CreateShelf(root.transform.position + new Vector3(0f, 0.08f, -1.2f), 6);
         }
 
-        private void CreateBundledZone(Vector3 center, int level, string label)
+        private void CreateBundledZone(Vector3 center, int level, string label, bool showSign)
         {
             GameObject root = new("ExpansionBundle_L" + level);
             root.transform.SetParent(transform, false);
@@ -193,29 +214,89 @@ namespace PickAndPlaceShop
                 4 => new Color(0.40f, 0.30f, 0.52f),
                 _ => new Color(0.56f, 0.38f, 0.20f)
             };
-            Color wall = config != null ? config.RoomWallColor : new Color(0.19f, 0.12f, 0.18f);
             CreatePart(root.transform, "Floor", Vector3.down * 0.08f,
                 new Vector3(size.x, 0.16f, size.y), floor, true);
-            CreatePart(root.transform, "OuterWall", new Vector3(size.x * 0.5f - 0.09f, 1.5f, 0f),
-                new Vector3(0.18f, 3f, size.y), wall, true);
-            CreatePart(root.transform, "Canopy", new Vector3(0f, 2.9f, 0f),
-                new Vector3(size.x, 0.14f, size.y), new Color(wall.r * 1.25f, wall.g * 1.25f, wall.b * 1.25f), false);
-
-            GameObject signObject = new("ZoneSign");
-            signObject.transform.SetParent(root.transform, false);
-            signObject.transform.localPosition = new Vector3(0f, 2.45f, -size.y * 0.48f);
-            TextMesh sign = signObject.AddComponent<TextMesh>();
-            sign.text = "Lv." + level + "  " + label + "\n진열대 + 특화 시설";
-            sign.anchor = TextAnchor.MiddleCenter;
-            sign.alignment = TextAlignment.Center;
-            sign.characterSize = 0.085f;
-            sign.fontSize = 48;
-            sign.color = new Color(1f, 0.88f, 0.48f);
-            ShopUiFonts.Apply(sign, ShopUiFontWeight.Bold);
-            CreateShelf(center + new Vector3(-1.65f, 0f, 0f), level);
+            if (showSign) CreateTemporaryZoneSign(root.transform, level, label, size);
+            if (level >= 4) CreateShelf(center + new Vector3(-1.65f, 0f, 0f), level);
             customerBrowsePoints.Add(center + new Vector3(-0.6f, 0f, 0.35f));
             customerBrowsePoints.Add(center + new Vector3(0.8f, 0f, -0.35f));
             generated.Add(root);
+        }
+
+        private void EnsureSharedShell(int level)
+        {
+            if (level < 3)
+            {
+                if (sharedShell != null) sharedShell.SetActive(false);
+                return;
+            }
+            if (sharedShell == null)
+            {
+                sharedShell = new GameObject("ExpansionSharedShell");
+                sharedShell.transform.SetParent(transform, false);
+                Color wall = config != null ? config.RoomWallColor : new Color(0.19f, 0.12f, 0.18f);
+                sharedOuterWall = CreatePart(sharedShell.transform, "OuterWall", Vector3.zero,
+                    Vector3.one, wall, true);
+                sharedCanopy = CreatePart(sharedShell.transform, "Canopy", Vector3.zero,
+                    Vector3.one, new Color(wall.r * 1.25f, wall.g * 1.25f, wall.b * 1.25f), true);
+            }
+            sharedShell.SetActive(true);
+            Vector2 zoneSize = config != null ? config.ZoneFloorSize : new Vector2(6f, 2.6f);
+            Vector3[] centers =
+            {
+                config != null ? config.Level3ZoneCenter : new Vector3(11.7f, 0f, 3.2f),
+                config != null ? config.Level4ZoneCenter : new Vector3(11.7f, 0f, 0.2f),
+                config != null ? config.Level5ZoneCenter : new Vector3(11.7f, 0f, 6.1f)
+            };
+            float minX = centers[0].x - zoneSize.x * 0.5f;
+            float maxX = centers[0].x + zoneSize.x * 0.5f;
+            float minZ = centers[0].z - zoneSize.y * 0.5f;
+            float maxZ = centers[0].z + zoneSize.y * 0.5f;
+            int count = Mathf.Clamp(level - 2, 1, centers.Length);
+            for (int i = 1; i < count; i++)
+            {
+                minX = Mathf.Min(minX, centers[i].x - zoneSize.x * 0.5f);
+                maxX = Mathf.Max(maxX, centers[i].x + zoneSize.x * 0.5f);
+                minZ = Mathf.Min(minZ, centers[i].z - zoneSize.y * 0.5f);
+                maxZ = Mathf.Max(maxZ, centers[i].z + zoneSize.y * 0.5f);
+            }
+            sharedShell.transform.position = Vector3.zero;
+            sharedCanopy.transform.position = new Vector3((minX + maxX) * 0.5f, 2.9f, (minZ + maxZ) * 0.5f);
+            sharedCanopy.transform.localScale = new Vector3(maxX - minX, 0.14f, maxZ - minZ);
+            sharedOuterWall.transform.position = new Vector3(maxX - 0.09f, 1.5f, (minZ + maxZ) * 0.5f);
+            sharedOuterWall.transform.localScale = new Vector3(0.18f, 3f, maxZ - minZ);
+            AddCarvingObstacle(sharedOuterWall, Vector3.zero, Vector3.one);
+        }
+
+        private void CreateTemporaryZoneSign(Transform parent, int level, string label, Vector2 size)
+        {
+            GameObject signObject = new("ZoneSign");
+            signObject.transform.SetParent(parent, false);
+            signObject.transform.localPosition = new Vector3(0f, 2.45f, -size.y * 0.48f);
+            TextMesh sign = signObject.AddComponent<TextMesh>();
+            sign.text = "Lv." + level + "  " + label + "\n진열대와 특화 시설이 열렸어요";
+            sign.anchor = TextAnchor.MiddleCenter;
+            sign.alignment = TextAlignment.Center;
+            sign.characterSize = 0.045f;
+            sign.fontSize = 40;
+            sign.color = new Color(1f, 0.88f, 0.48f);
+            ShopUiFonts.Apply(sign, ShopUiFontWeight.Bold);
+            StartCoroutine(FadeAndRemoveZoneSign(signObject, sign));
+        }
+
+        private System.Collections.IEnumerator FadeAndRemoveZoneSign(GameObject signObject, TextMesh sign)
+        {
+            yield return new WaitForSecondsRealtime(config != null ? config.ZoneSignVisibleSeconds : 5f);
+            float fade = config != null ? config.ZoneSignFadeSeconds : 1f;
+            float elapsed = 0f;
+            Color original = sign.color;
+            while (signObject != null && elapsed < fade)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                sign.color = new Color(original.r, original.g, original.b, 1f - Mathf.Clamp01(elapsed / fade));
+                yield return null;
+            }
+            if (signObject != null) Destroy(signObject);
         }
 
         private System.Collections.IEnumerator PlayExpansionReveal(int level)
@@ -277,7 +358,7 @@ namespace PickAndPlaceShop
             canvasObject.SetActive(false);
         }
 
-        private static void CreatePart(Transform parent, string name, Vector3 localPosition,
+        private static GameObject CreatePart(Transform parent, string name, Vector3 localPosition,
             Vector3 scale, Color color, bool keepCollider)
         {
             GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -292,6 +373,19 @@ namespace PickAndPlaceShop
                 if (collider != null) Destroy(collider);
             }
             part.isStatic = true;
+            return part;
+        }
+
+        private static void AddCarvingObstacle(GameObject target, Vector3 center, Vector3 size)
+        {
+            if (target == null) return;
+            NavMeshObstacle obstacle = target.GetComponent<NavMeshObstacle>();
+            if (obstacle == null) obstacle = target.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.center = center;
+            obstacle.size = size;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
         }
 
         private void ClearGenerated()
@@ -299,6 +393,14 @@ namespace PickAndPlaceShop
             for (int i = 0; i < generated.Count; i++) if (generated[i] != null) Destroy(generated[i]);
             generated.Clear();
             customerBrowsePoints.Clear();
+        }
+
+        private void ClearSharedShell()
+        {
+            if (sharedShell != null) Destroy(sharedShell);
+            sharedShell = null;
+            sharedCanopy = null;
+            sharedOuterWall = null;
         }
     }
 }

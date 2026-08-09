@@ -15,7 +15,7 @@ MonoBehaviour:
   emptyCapsuleProduct: {fileID: 11400000, guid: 635bdee2ea91a35458086d8a9e057965, type: 2}
   capsuleRecyclerSlots: 10
   upcycleThresholds: 140000003200000064000000
-  capsuleRecyclerPosition: {x: 4.2, y: 0, z: 0.2}
+  capsuleRecyclerPosition: {x: 5.102, y: 0, z: 7.088}
   kujiSetSize: 40
   kujiRefillSeconds: {x: 5, y: 8}
   lastOneTitleThresholds: 010000000a0000001e00000064000000
