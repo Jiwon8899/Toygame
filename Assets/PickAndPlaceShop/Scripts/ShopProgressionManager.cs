@@ -245,6 +245,11 @@ namespace PickAndPlaceShop
         public void ChangeTeamFunds(int amount)
         {
             if (amount == 0) return;
+            if (boundGame != null && boundGame.IsServer)
+            {
+                teamFunds = Mathf.Max(0, boundGame.Coins.Value);
+                observedGameFunds = teamFunds;
+            }
             teamFunds = Mathf.Max(0, teamFunds + amount);
             if (boundGame != null && boundGame.IsServer)
             {
@@ -644,6 +649,7 @@ namespace PickAndPlaceShop
                         ? "아직 등록된 리뷰가 없습니다." : loadedSaveData.reviewHistory);
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, loadedSaveData.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, loadedSaveData.appraisalSequence);
+                RestoreSideContent(boundGame, loadedSaveData);
                 RestoreConsignment(boundGame, loadedSaveData);
             }
             observedGameFunds = teamFunds;
@@ -904,7 +910,9 @@ namespace PickAndPlaceShop
                 hotbarProduct2 = hotbarProductIds[2],
                 hotbarProduct3 = hotbarProductIds[3],
                 hotbarProduct4 = hotbarProductIds[4],
-                selectedHotbarSlot = selectedHotbarSlot
+                selectedHotbarSlot = selectedHotbarSlot,
+                sideContentDay = liveServer ? boundGame.SideContentDay.Value : previous?.sideContentDay ?? 0,
+                trashIncomeToday = liveServer ? boundGame.TrashIncomeToday.Value : previous?.trashIncomeToday ?? 0
             };
         }
 
@@ -1049,6 +1057,7 @@ namespace PickAndPlaceShop
                         ? "아직 등록된 리뷰가 없습니다." : save.reviewHistory);
                 boundGame.LatestReviewDay.Value = Mathf.Max(0, save.latestReviewDay);
                 boundGame.AppraisalSequence.Value = Mathf.Max(0, save.appraisalSequence);
+                RestoreSideContent(boundGame, save);
                 RestoreConsignment(boundGame, save);
             }
         }
@@ -1079,6 +1088,18 @@ namespace PickAndPlaceShop
             game.ConsignmentOfferPrice2.Value = Mathf.Max(0, save.consignmentOfferPrice2);
             game.ConsignmentSecondsRemaining.Value = Mathf.Max(0f, save.consignmentSecondsRemaining);
             game.ConsignmentOfferSerial.Value = Mathf.Max(0, save.consignmentOfferSerial);
+        }
+
+        private static void RestoreSideContent(ShopNetworkGame game, ShopProgressionSaveData save)
+        {
+            if (game == null || save == null || !game.IsServer) return;
+            int savedDay = Mathf.Max(0, save.sideContentDay);
+            game.SideContentDay.Value = savedDay;
+            game.TrashIncomeToday.Value = savedDay == game.Day.Value
+                ? Mathf.Clamp(save.trashIncomeToday, 0,
+                    game.SideContentConfig != null ? game.SideContentConfig.TrashDailyCap : 500)
+                : 0;
+            game.ServerEnsureSideContentDay();
         }
 
         public bool TryConsumeClawMachineSave(int machineId, out ShopClawMachineSave saved)

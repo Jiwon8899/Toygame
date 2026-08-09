@@ -9,8 +9,10 @@ namespace PickAndPlaceShop
 
         [Header("Trash search")]
         [Range(0f, 1f)] [SerializeField] private float trashSuccessChance = 0.2f;
-        [Min(1)] [SerializeField] private int trashReward = 100;
+        [Min(1)] [SerializeField] private int trashRewardMinimum = 25;
+        [Min(1)] [SerializeField] private int trashRewardMaximum = 100;
         [Min(1)] [SerializeField] private int trashDailyCap = 500;
+        [Min(0.1f)] [SerializeField] private float trashSearchCooldown = 2.5f;
 
         [Header("Claw dud")]
         [Range(0f, 0.25f)] [SerializeField] private float commonCapsuleDudChance = 0.05f;
@@ -43,8 +45,11 @@ namespace PickAndPlaceShop
         [Range(0f, 0.5f)] [SerializeField] private float categoryCompletionSaleBonus = 0.08f;
 
         public float TrashSuccessChance => Mathf.Clamp01(trashSuccessChance);
-        public int TrashReward => Mathf.Max(1, trashReward);
-        public int TrashDailyCap => Mathf.Max(TrashReward, trashDailyCap);
+        public int TrashRewardMinimum => Mathf.Max(1, trashRewardMinimum);
+        public int TrashRewardMaximum => Mathf.Max(TrashRewardMinimum, trashRewardMaximum);
+        public int TrashReward => TrashRewardMaximum;
+        public int TrashDailyCap => Mathf.Max(TrashRewardMaximum, trashDailyCap);
+        public float TrashSearchCooldown => Mathf.Max(0.1f, trashSearchCooldown);
         public float CommonCapsuleDudChance => Mathf.Clamp(commonCapsuleDudChance, 0f, 0.25f);
         public float RobberChance => Mathf.Clamp01(robberChance);
         public int RobberDailyMaximum => Mathf.Max(0, robberDailyMaximum);

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace PickAndPlaceShop
 {
@@ -19,6 +20,12 @@ namespace PickAndPlaceShop
     public sealed class ShopTrashSearchPoint : MonoBehaviour
     {
         public void Interact() => ShopNetworkGame.Instance?.RequestTrashSearch();
+
+        public bool ServerApplyAttack(ulong playerClientId)
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            return game != null && game.ServerTryTrashSearch(playerClientId);
+        }
     }
 
     public sealed class ShopRivalShelfInteractable : MonoBehaviour
@@ -44,6 +51,7 @@ namespace PickAndPlaceShop
 
         private ShopNetworkGame game;
         private TextMesh trashLabel;
+        private Transform trashRoot;
         private readonly List<ShopRivalShelfInteractable> rivalShelves = new();
         private readonly Dictionary<int, GameObject> rivalVisuals = new();
         private int observedRivalRevision = -1;
@@ -175,27 +183,80 @@ namespace PickAndPlaceShop
         {
             GameObject target = FindNamedObject("S2_p.001");
             if (target == null) return;
-            ShopTrashSearchPoint point = target.GetComponent<ShopTrashSearchPoint>() ??
-                                         target.AddComponent<ShopTrashSearchPoint>();
-            ShopInteractable interactable = target.GetComponent<ShopInteractable>() ??
-                                            target.AddComponent<ShopInteractable>();
-            interactable.Configure(ShopAction.TrashSearch, "쓰레기통 뒤지기");
-            if (target.GetComponentInChildren<Collider>(true) == null)
+
+            Renderer modelRenderer = target.GetComponentsInChildren<Renderer>(true)
+                .FirstOrDefault(candidate => candidate != null &&
+                                             candidate.gameObject.name != "TrashDailyIncomeLabel");
+            if (modelRenderer == null) return;
+            Bounds modelBounds = modelRenderer.bounds;
+
+            trashRoot = transform.Find("TrashInteractionRoot");
+            if (trashRoot == null)
             {
-                BoxCollider collider = target.AddComponent<BoxCollider>();
-                collider.size = new Vector3(0.8f, 1.1f, 0.8f);
-                collider.center = Vector3.up * 0.55f;
+                GameObject rootObject = new("TrashInteractionRoot");
+                trashRoot = rootObject.transform;
+                trashRoot.SetParent(transform, false);
             }
-            GameObject label = new("TrashDailyIncomeLabel");
-            label.transform.SetParent(point.transform, false);
-            label.transform.localPosition = Vector3.up * 1.45f;
-            trashLabel = label.AddComponent<TextMesh>();
+            trashRoot.position = modelBounds.center;
+            trashRoot.rotation = Quaternion.identity;
+            trashRoot.localScale = Vector3.one;
+
+            ShopTrashSearchPoint point = trashRoot.GetComponent<ShopTrashSearchPoint>();
+            if (point == null) point = trashRoot.gameObject.AddComponent<ShopTrashSearchPoint>();
+            BoxCollider solidCollider = trashRoot.GetComponent<BoxCollider>();
+            if (solidCollider == null) solidCollider = trashRoot.gameObject.AddComponent<BoxCollider>();
+            solidCollider.isTrigger = false;
+            solidCollider.center = Vector3.zero;
+            solidCollider.size = new Vector3(Mathf.Max(0.5f, modelBounds.size.x * 0.92f),
+                Mathf.Max(0.65f, modelBounds.size.y), Mathf.Max(0.5f, modelBounds.size.z * 0.92f));
+
+            NavMeshObstacle obstacle = trashRoot.GetComponent<NavMeshObstacle>();
+            if (obstacle == null) obstacle = trashRoot.gameObject.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.center = solidCollider.center;
+            obstacle.size = solidCollider.size;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
+
+            Transform triggerTransform = trashRoot.Find("InteractionTrigger");
+            if (triggerTransform == null)
+            {
+                GameObject triggerObject = new("InteractionTrigger");
+                triggerTransform = triggerObject.transform;
+                triggerTransform.SetParent(trashRoot, false);
+            }
+            triggerTransform.localPosition = Vector3.zero;
+            triggerTransform.localRotation = Quaternion.identity;
+            triggerTransform.localScale = Vector3.one;
+            BoxCollider interactionTrigger = triggerTransform.GetComponent<BoxCollider>();
+            if (interactionTrigger == null)
+                interactionTrigger = triggerTransform.gameObject.AddComponent<BoxCollider>();
+            interactionTrigger.isTrigger = true;
+            interactionTrigger.center = Vector3.zero;
+            interactionTrigger.size = solidCollider.size + new Vector3(1.2f, 0.7f, 1.2f);
+            ShopInteractable interactable = triggerTransform.GetComponent<ShopInteractable>();
+            if (interactable == null)
+                interactable = triggerTransform.gameObject.AddComponent<ShopInteractable>();
+            interactable.Configure(ShopAction.TrashSearch, "쓰레기통 뒤지기");
+
+            Transform labelTransform = trashRoot.Find("TrashDailyIncomeLabel");
+            if (labelTransform == null)
+            {
+                GameObject labelObject = new("TrashDailyIncomeLabel");
+                labelTransform = labelObject.transform;
+                labelTransform.SetParent(trashRoot, false);
+            }
+            labelTransform.localPosition = Vector3.up * (solidCollider.size.y * 0.5f + 0.42f);
+            labelTransform.localScale = Vector3.one;
+            trashLabel = labelTransform.GetComponent<TextMesh>();
+            if (trashLabel == null) trashLabel = labelTransform.gameObject.AddComponent<TextMesh>();
             trashLabel.anchor = TextAnchor.MiddleCenter;
             trashLabel.alignment = TextAlignment.Center;
             trashLabel.characterSize = 0.075f;
             trashLabel.fontSize = 48;
             trashLabel.color = new Color(1f, 0.82f, 0.28f);
-            label.AddComponent<ShopWorldTextBillboard>();
+            if (labelTransform.GetComponent<ShopWorldTextBillboard>() == null)
+                labelTransform.gameObject.AddComponent<ShopWorldTextBillboard>();
         }
 
         private void ConfigureRivalShelves()

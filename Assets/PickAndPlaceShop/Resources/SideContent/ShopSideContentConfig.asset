@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: ShopSideContentConfig
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopSideContentConfig
   trashSuccessChance: 0.2
-  trashReward: 100
+  trashRewardMinimum: 25
+  trashRewardMaximum: 100
   trashDailyCap: 500
+  trashSearchCooldown: 2.5
   commonCapsuleDudChance: 0.05
   robberChance: 0.06
   robberDailyMaximum: 2

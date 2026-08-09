@@ -162,6 +162,7 @@ namespace PickAndPlaceShop
                 candidate ??= hit.GetComponentInParent<ShopGachaMachineNetwork>();
                 candidate ??= hit.GetComponentInParent<ShopKujiStationNetwork>();
                 candidate ??= hit.GetComponentInParent<ShopCustomerNetwork>();
+                candidate ??= hit.GetComponentInParent<ShopTrashSearchPoint>();
                 if (candidate == null) continue;
                 Vector3 closest = hit.ClosestPoint(transform.position + Vector3.up);
                 Vector3 delta = closest - transform.position;
@@ -181,6 +182,7 @@ namespace PickAndPlaceShop
                 ShopKujiStationNetwork kuji => kuji.ServerApplyTheftHit(OwnerClientId,
                     config.AttackDamage, config),
                 ShopCustomerNetwork customer => customer.ServerApplyPlayerAttack(OwnerClientId, forward),
+                ShopTrashSearchPoint trash => trash.ServerApplyAttack(OwnerClientId),
                 _ => false
             };
             PersonalStatus.Value = new FixedString128Bytes(reacted

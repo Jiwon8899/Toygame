@@ -283,6 +283,7 @@ namespace PickAndPlaceShop
         private float nextRivalVisitRefreshTime;
         private int rivalVisitSequence;
         private readonly Dictionary<ulong, List<int>> rivalVisitStolenProducts = new();
+        private readonly Dictionary<ulong, float> nextTrashSearchTimeByClient = new();
 
         private void ServerRefreshRivalStockForVisit(ulong visitorClientId)
         {
@@ -298,25 +299,48 @@ namespace PickAndPlaceShop
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
         private void TrashSearchRpc(RpcParams rpcParams = default)
         {
+            ServerTryTrashSearch(rpcParams.Receive.SenderClientId);
+        }
+
+        public bool ServerTryTrashSearch(ulong requesterClientId)
+        {
+            if (!IsServer) return false;
             ServerEnsureSideContentDay();
             ShopSideContentConfig settings = SideContentConfig;
-            if (settings == null) return;
+            if (settings == null) return false;
+            float now = Time.unscaledTime;
+            if (nextTrashSearchTimeByClient.TryGetValue(requesterClientId, out float nextAllowed) &&
+                now < nextAllowed)
+            {
+                SetEvent("쓰레기통을 다시 살펴보려면 잠시 기다려 주세요.");
+                return false;
+            }
+            nextTrashSearchTimeByClient[requesterClientId] = now + settings.TrashSearchCooldown;
             if (TrashIncomeToday.Value >= settings.TrashDailyCap)
             {
-                SetEvent("오늘은 쓰레기통을 다 뒤졌어요.");
-                return;
+                SetEvent("오늘은 더 이상 주울 것이 없어요.");
+                return false;
             }
             if (Random.value > settings.TrashSuccessChance)
             {
                 SetEvent("쓰레기통을 뒤졌지만… 아무것도 없었습니다.");
                 Debug.Log("[SideContent:Trash] miss day=" + Day.Value + " total=" + TrashIncomeToday.Value, this);
-                return;
+                return true;
             }
-            int reward = Mathf.Min(settings.TrashReward, settings.TrashDailyCap - TrashIncomeToday.Value);
+            int rolledReward = Random.Range(settings.TrashRewardMinimum, settings.TrashRewardMaximum + 1);
+            int reward = Mathf.Min(rolledReward, settings.TrashDailyCap - TrashIncomeToday.Value);
+            ShopProgressionManager progression = ShopProgressionManager.Instance;
+            if (progression == null)
+            {
+                Debug.LogError("[SideContent:Trash] Progression manager is unavailable; reward was not paid.", this);
+                SetEvent("보상 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+                return false;
+            }
             TrashIncomeToday.Value += reward;
-            Coins.Value += reward;
+            progression.ChangeTeamFunds(reward);
             SetEvent("쓰레기통에서 동전을 찾았습니다! +" + reward + "원");
             Debug.Log("[SideContent:Trash] success reward=" + reward + " total=" + TrashIncomeToday.Value, this);
+            return true;
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -403,6 +427,7 @@ namespace PickAndPlaceShop
             SideContentDay.Value = Day.Value;
             TrashIncomeToday.Value = 0;
             RobbersSpawnedToday.Value = 0;
+            nextTrashSearchTimeByClient.Clear();
             PopulateRivalStock();
             Debug.Log("[SideContent:DayReset] day=" + Day.Value + " trash=0 rivalSlots=" + RivalProductIds.Count, this);
         }

@@ -144,11 +144,13 @@ namespace PickAndPlaceShop
         public int hotbarProduct3 = -1;
         public int hotbarProduct4 = -1;
         public int selectedHotbarSlot = -1;
+        public int sideContentDay;
+        public int trashIncomeToday;
     }
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 17;
+        public const int CurrentVersion = 18;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 

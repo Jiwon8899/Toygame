@@ -133,8 +133,8 @@ namespace PickAndPlaceShop
             if (kujiStation == null) kujiStation = GetComponent<ShopKujiStationNetwork>();
             if (districtPortal == null) districtPortal = GetComponent<ShopDistrictPortalNetwork>();
             if (upgradeTerminal == null) upgradeTerminal = GetComponent<ShopUpgradeTerminal>();
-            if (trashSearchPoint == null) trashSearchPoint = GetComponent<ShopTrashSearchPoint>();
-            if (rivalShelf == null) rivalShelf = GetComponent<ShopRivalShelfInteractable>();
+            if (trashSearchPoint == null) trashSearchPoint = GetComponentInParent<ShopTrashSearchPoint>();
+            if (rivalShelf == null) rivalShelf = GetComponentInParent<ShopRivalShelfInteractable>();
         }
 
         private void CacheInteractionColliders()
