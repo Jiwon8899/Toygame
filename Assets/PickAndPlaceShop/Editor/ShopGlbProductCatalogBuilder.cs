@@ -15,9 +15,10 @@ namespace PickAndPlaceShop.Editor
         private const string SourceFolder = "Assets/reduced";
         private const string ProductFolder =
             "Assets/PickAndPlaceShop/Resources/Products/CatCatalog";
-        private const string VisualFolder = "Assets/PickAndPlaceShop/Generated/ProductVisuals";
-        private const string MeshFolder =
-            "Assets/PickAndPlaceShop/Generated/ProductVisuals/Meshes";
+        private const string VisualFolder =
+            "Assets/PickAndPlaceShop/Generated/ProductVisuals/Generated";
+        private const string LegacyMeshFolder =
+            "Assets/PickAndPlaceShop/Generated/ProductVisuals/Generated/Meshes";
         private const string MaterialFolder =
             "Assets/PickAndPlaceShop/Generated/ProductMaterials";
         private const string RuntimeMaterialTemplatePath =
@@ -32,7 +33,6 @@ namespace PickAndPlaceShop.Editor
         public static void Rebuild()
         {
             EnsureFolder(VisualFolder);
-            EnsureFolder(MeshFolder);
             EnsureFolder(MaterialFolder);
             EnsureRuntimeMaterialTemplate();
             EnsureFolder(IconFolder);
@@ -89,11 +89,49 @@ namespace PickAndPlaceShop.Editor
             AssetDatabase.ImportAsset(CsvPath, ImportAssetOptions.ForceUpdate);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            RemoveLegacyGeneratedMeshes();
             EditorUtility.ClearProgressBar();
             Debug.Log("[ProductVisuals] COMPLETE glb=" + glbPaths.Length +
                       " wrappers=" + wrappers.Count + " products=" + products.Length +
                       " placeholder=" + products.Count(p => p.PlaceholderArtwork) +
                       " unreadableMeshes=" + unreadableMeshes + " csv=" + CsvPath);
+        }
+
+        [MenuItem("Tools/Pick And Place Shop/Rebuild Build-Efficient Product Wrappers")]
+        public static void RebuildBuildEfficientWrappers()
+        {
+            EnsureFolder(VisualFolder);
+            EnsureFolder(MaterialFolder);
+            EnsureRuntimeMaterialTemplate();
+            ShopProductVisualConfig config = EnsureConfig();
+            string[] glbPaths = AssetDatabase.FindAssets("", new[] { SourceFolder })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => path.EndsWith(".glb", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            int unreadableMeshes = 0;
+            try
+            {
+                for (int index = 0; index < glbPaths.Length; index++)
+                {
+                    EditorUtility.DisplayProgressBar("빌드 효율 상품 래퍼", glbPaths[index],
+                        index / (float)Mathf.Max(1, glbPaths.Length));
+                    GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(glbPaths[index]);
+                    if (source == null) throw new InvalidOperationException("GLB 임포트 실패: " + glbPaths[index]);
+                    BuildWrapper(source, index, config.TargetLongestSide, out int unreadable);
+                    unreadableMeshes += unreadable;
+                }
+                RemoveLegacyGeneratedMeshes();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+            Debug.Log("[ProductVisuals] BUILD-EFFICIENT wrappers=" + glbPaths.Length +
+                      " legacyMeshFolderRemoved=" + !AssetDatabase.IsValidFolder(LegacyMeshFolder) +
+                      " unreadableMeshes=" + unreadableMeshes);
         }
 
         [MenuItem("Tools/Pick And Place Shop/Bake Build-Safe Product Materials")]
@@ -240,7 +278,6 @@ namespace PickAndPlaceShop.Editor
                 UnityEngine.Object.DestroyImmediate(item);
             foreach (MonoBehaviour item in root.GetComponentsInChildren<MonoBehaviour>(true))
                 UnityEngine.Object.DestroyImmediate(item);
-            MakeMeshesRuntimeOnly(root, index);
             BakeMaterials(root, index);
             Bounds bounds = CalculateBounds(root);
             float longest = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
@@ -371,32 +408,10 @@ namespace PickAndPlaceShop.Editor
             EditorUtility.SetDirty(template);
         }
 
-        private static void MakeMeshesRuntimeOnly(GameObject root, int modelIndex)
+        private static void RemoveLegacyGeneratedMeshes()
         {
-            int meshIndex = 0;
-            foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
-            {
-                if (filter.sharedMesh == null) continue;
-                filter.sharedMesh = CreateRuntimeMesh(filter.sharedMesh, modelIndex, meshIndex++);
-            }
-            foreach (SkinnedMeshRenderer renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-            {
-                if (renderer.sharedMesh == null) continue;
-                renderer.sharedMesh = CreateRuntimeMesh(renderer.sharedMesh, modelIndex, meshIndex++);
-            }
-        }
-
-        private static Mesh CreateRuntimeMesh(Mesh source, int modelIndex, int meshIndex)
-        {
-            string path = MeshFolder + "/ProductMesh_" + modelIndex.ToString("D3") + "_" +
-                          meshIndex.ToString("D2") + ".asset";
-            if (AssetDatabase.LoadAssetAtPath<Mesh>(path) != null) AssetDatabase.DeleteAsset(path);
-            Mesh copy = UnityEngine.Object.Instantiate(source);
-            copy.name = Path.GetFileNameWithoutExtension(path);
-            AssetDatabase.CreateAsset(copy, path);
-            copy.UploadMeshData(true);
-            EditorUtility.SetDirty(copy);
-            return copy;
+            if (AssetDatabase.IsValidFolder(LegacyMeshFolder))
+                AssetDatabase.DeleteAsset(LegacyMeshFolder);
         }
 
         private static Sprite RenderIcon(int productId, GameObject prefab, Color tint, int resolution)

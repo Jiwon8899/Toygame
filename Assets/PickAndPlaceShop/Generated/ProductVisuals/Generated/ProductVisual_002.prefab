@@ -100,10 +100,6 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 95292a494cc6d014e8d722f7bbc25b0a, type: 2}
-    - target: {fileID: 7301793881611645019, guid: 025c05affe85b1f41a581aa651f4eea7, type: 3}
-      propertyPath: m_Mesh
-      value: 
-      objectReference: {fileID: 4300000, guid: 400c2a8fb914bbc45ad797394a05aaaf, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
