@@ -162,3 +162,75 @@ PART B~G 결과는 각 단계 검증 후 이 문서에 이어서 기록한다.
 - WebGL compression: Gzip, Decompression Fallback: enabled.
 - Development Build: false. Exception Support: ExplicitlyThrownExceptionsOnly.
 - 스트리핑 레벨은 현재 값만 기록했고 올리지 않았다.
+
+## PART G. 최종 WebGL 빌드 및 실제 실행 검증
+
+### G-1. 1차 재빌드와 추가 병목 제거
+
+- 1차 최적화 빌드는 성공했지만 실제 `docs`가 249.27 MiB여서 200 MiB 목표를 넘었다.
+- 해당 Build Report에서 Textures 356.0 MiB(70.3%), Meshes 123.6 MiB(24.4%)로 확인되어, 실제 빌드에 포함되는 고비용 텍스처만 추가 조정했다.
+- 캐릭터/아마추어 텍스처 64개는 WebGL 전용 override를 적용했다. diffuse/normal은 최대 1024, gloss/specular/metallic/opacity는 최대 512, 압축 품질 70, Crunch 사용, Read/Write off다.
+- 타이틀 로고와 배경 이미지는 최대 1024, 압축 품질 75, Crunch 사용으로 조정했다.
+- 재감사 결과 대상 64개 중 설정 누락 0건이다.
+
+### G-2. 최종 빌드 결과
+
+| 항목 | 작업 전 | 최종 | 변화 |
+|---|---:|---:|---:|
+| 실제 배포 폴더 `docs` | 792.25 MiB | **179.34 MiB** | **-612.91 MiB (-77.4%)** |
+| Complete build size | 862.5 MiB | **249.6 MiB** | -71.1% |
+| GLB 원본 합계 | 628.02 MiB | **78.91 MiB** | -87.4% |
+| PickAndPlaceShop Resources | 1,613.75 MiB | **0.37 MiB** | 직접 참조 에셋 분리 |
+
+최종 Build Report의 압축 전 사용자 에셋 구성:
+
+| 종류 | 용량 | 비중 |
+|---|---:|---:|
+| Textures | 168.4 MiB | 52.8% |
+| Meshes | 123.6 MiB | 38.8% |
+| Animations | 1.9 MiB | 0.6% |
+| Sounds | 1.3 MiB | 0.4% |
+| Shaders | 4.0 MiB | 1.3% |
+| Other Assets | 18.9 MiB | 5.9% |
+| File headers | 354.3 KiB | 0.1% |
+| 합계 | 318.8 MiB | 100% |
+
+- 실제 배포 폴더가 100~200 MiB 구간이므로 기존 자동 분할 로더를 유지했다.
+- `docs.data.unityweb` 170,164,100 bytes를 2개로 분할했다: part000 90.00 MiB, part001 72.28 MiB.
+- 매니페스트의 SHA-256과 두 조각을 재결합한 SHA-256이 일치한다.
+- 기본 주소 `http://127.0.0.1:18080/`에서 별도 쿼리 없이 매니페스트를 자동 탐지하고 두 조각을 받아 실행했다.
+
+### G-3. Unity Editor Play 검증
+
+- 렌더러 1,113개, 누락 머티리얼 0, Error Shader 0.
+- BGM AudioSource 재생/Loop 정상, 볼륨 0.385, 동시 재생 오디오 1개.
+- Console error 0.
+- 확인 이미지: `PART_G_editor_play_after.png`.
+
+### G-4. 로컬 WebGL 브라우저 검증
+
+- 기본 URL 로딩 성공: `PART_G_webgl_default_url.png`.
+- 타이틀에서 `게임 시작` → `혼자 시작` → 저장 데이터 `이어하기` → 메인 게임플레이 진입 성공.
+- 게임 시작 선택 화면: `PART_G_webgl_game_start.png`.
+- 이어하기 선택 화면: `PART_G_webgl_singleplayer.png`.
+- 실제 게임플레이: `PART_G_webgl_continue_gameplay.png`.
+- 치명적 JavaScript/Unity 오류 0, 분홍 재질 0, 주요 한글 UI와 캐릭터/상점 렌더링 정상.
+- 경고 1건: WebGL에서 `Hidden/Universal Render Pipeline/Edge Adaptive Spatial Upsampling` 미지원. URP FSR 후처리 패스가 생략된다는 비치명 경고이며 게임 진행과 기본 렌더링은 정상이다.
+
+## 저장소 후보 용량 결과
+
+- 현재 추적 파일 기준 워킹 트리 후보: **1,512.2 MiB**. 목표 1 GiB 이하는 달성하지 못했다.
+- 가장 큰 필수 원본은 `Assets/외형들모음` 614.1 MiB이며, 그중 NPC 530.02 MiB와 플레이어 82.5 MiB다.
+- NPC/플레이어 FBX는 현재 캐릭터 메시와 Idle/Walking/Run 애니메이션의 원본 참조이므로 콘텐츠를 제거하지 않는 조건에서 삭제하거나 임의 변환하지 않았다.
+- 다음 큰 항목은 `Assets/PickAndPlaceShop` 446.4 MiB, 최종 `docs/Build` 179.33 MiB, `Assets/reduced` 78.92 MiB, `Assets/Core` 72.08 MiB, `Assets/animation` 54.47 MiB다.
+- Git object pack은 과거 대형 바이너리 이력 때문에 약 2.48 GiB다. 이를 줄이려면 별도 승인 하에 Git LFS 도입 또는 이력 재작성/재클론이 필요하다. 이번 작업에서는 push 및 파괴적인 이력 변경을 하지 않았다.
+- 워크스페이스의 비추적 빌드 캐시(`Build`, `Builds`, `Backups`)는 추적 후보 계산에서 제외했고 사용자 데이터 보호를 위해 삭제하지 않았다.
+
+## 최종 판정
+
+- WebGL 실제 배포 폴더 200 MiB 이하: **달성 (179.34 MiB)**.
+- WebGL 실제 배포 폴더 100 MiB 이하: 미달성. 현재 품질/콘텐츠 보존 조건에서는 추가 메시·캐릭터 텍스처 축소가 필요하다.
+- 기본 URL 자동 분할 로딩 및 게임 진입: **통과**.
+- Unity Editor Play 검증: **통과**.
+- 저장소 후보 1 GiB 이하: 미달성(1,512.2 MiB). 필수 캐릭터 원본과 기존 Git 바이너리 이력이 주원인이다.
+- 원격 push: 실행하지 않음.
