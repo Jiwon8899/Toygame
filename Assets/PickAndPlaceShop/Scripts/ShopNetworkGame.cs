@@ -63,6 +63,8 @@ namespace PickAndPlaceShop
         private static readonly int[] KujiUpgradeCosts = { 250, 500 };
 
         public static ShopNetworkGame Instance { get; private set; }
+        public event System.Action<ShopContainerKind, ShopContainerKind, int, int, string>
+            ContainerBatchMoveCompleted;
 
         public NetworkVariable<int> Day = new(1);
         public NetworkVariable<int> Coins = new(0);
@@ -518,6 +520,13 @@ namespace PickAndPlaceShop
             MoveContainerSlotRpc(sourceContainer, sourceSlot, destinationContainer, destinationSlot);
         }
 
+        public void RequestContainerBatchMove(ShopContainerKind sourceContainer,
+            ShopContainerKind destinationContainer)
+        {
+            if (!IsSpawned) return;
+            MoveContainerBatchRpc(sourceContainer, destinationContainer);
+        }
+
         public void RequestDisplayProduct(int productId)
         {
             if (!IsSpawned) return;
@@ -548,6 +557,68 @@ namespace PickAndPlaceShop
                 ShopNightSalesSystem.Instance?.ServerRefreshDisplayLedger();
             }
         }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void MoveContainerBatchRpc(ShopContainerKind sourceContainer,
+            ShopContainerKind destinationContainer, RpcParams rpcParams = default)
+        {
+            ulong requester = rpcParams.Receive.SenderClientId;
+            int requested = 0;
+            int moved = 0;
+            string message;
+            if (!IsSupportedBatchRoute(sourceContainer, destinationContainer))
+            {
+                message = "지원하지 않는 일괄 이동 경로입니다.";
+            }
+            else
+            {
+                ulong sourceOwner = sourceContainer == ShopContainerKind.PersonalInventory
+                    ? requester : ShopContainerRules.SharedOwner;
+                ulong destinationOwner = destinationContainer == ShopContainerKind.PersonalInventory
+                    ? requester : ShopContainerRules.SharedOwner;
+                requested = ShopContainerRules.TotalQuantity(ItemContainers, sourceOwner, sourceContainer);
+                while (ServerTryMoveItem(sourceOwner, sourceContainer, destinationOwner,
+                           destinationContainer, out _))
+                    moved++;
+
+                if (sourceContainer == ShopContainerKind.SharedDisplay ||
+                    destinationContainer == ShopContainerKind.SharedDisplay)
+                    ShopNightSalesSystem.Instance?.ServerRefreshDisplayLedger();
+
+                if (requested <= 0)
+                    message = "이동할 상품이 없습니다.";
+                else if (moved >= requested)
+                    message = requested + "개를 모두 옮겼습니다.";
+                else if (moved > 0)
+                    message = requested + "개 중 " + moved + "개 이동 · 공간 부족으로 " +
+                              (requested - moved) + "개는 원래 위치에 남았습니다.";
+                else
+                    message = "받는 곳에 여유 공간이 없어 상품을 옮기지 못했습니다.";
+            }
+
+            ContainerBatchMoveResultRpc(sourceContainer, destinationContainer, requested, moved,
+                new FixedString512Bytes(message), RpcTarget.Single(requester, RpcTargetUse.Temp));
+        }
+
+        [Rpc(SendTo.SpecifiedInParams)]
+        private void ContainerBatchMoveResultRpc(ShopContainerKind sourceContainer,
+            ShopContainerKind destinationContainer, int requested, int moved,
+            FixedString512Bytes message, RpcParams rpcParams = default)
+        {
+            ContainerBatchMoveCompleted?.Invoke(sourceContainer, destinationContainer,
+                requested, moved, message.ToString());
+        }
+
+        private static bool IsSupportedBatchRoute(ShopContainerKind source,
+            ShopContainerKind destination) =>
+            (source == ShopContainerKind.PersonalInventory &&
+             destination == ShopContainerKind.SharedDisplay) ||
+            (source == ShopContainerKind.SharedDisplay &&
+             destination == ShopContainerKind.PersonalInventory) ||
+            (source == ShopContainerKind.SharedStorage &&
+             destination == ShopContainerKind.SharedDisplay) ||
+            (source == ShopContainerKind.SharedDisplay &&
+             destination == ShopContainerKind.SharedStorage);
 
         public int GetUpgradeLevel(ShopUpgradeCategory category) => category switch
         {

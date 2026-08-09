@@ -102,6 +102,7 @@ namespace PickAndPlaceShop
         private Image personalPanelImage;
         private Image storagePanelImage;
         private Image displayPanelImage;
+        private readonly Button[] batchButtons = new Button[4];
         private readonly Dictionary<ShopContainerKind, Color> panelColors = new();
         private Font uiFont;
         private ShopNetworkGame observedGame;
@@ -109,6 +110,7 @@ namespace PickAndPlaceShop
         private RawImage dragIcon;
         private bool isOpen;
         private bool dirty = true;
+        private bool batchMovePending;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -164,18 +166,35 @@ namespace PickAndPlaceShop
             if (observedGame == game) return;
             DetachGame();
             observedGame = game;
-            if (observedGame != null) observedGame.ItemContainers.OnListChanged += OnContainerChanged;
+            if (observedGame != null)
+            {
+                observedGame.ItemContainers.OnListChanged += OnContainerChanged;
+                observedGame.ContainerBatchMoveCompleted += OnContainerBatchMoveCompleted;
+            }
             dirty = true;
             if (observedGame == null && isOpen) SetOpen(false);
         }
 
         private void DetachGame()
         {
-            if (observedGame != null) observedGame.ItemContainers.OnListChanged -= OnContainerChanged;
+            if (observedGame != null)
+            {
+                observedGame.ItemContainers.OnListChanged -= OnContainerChanged;
+                observedGame.ContainerBatchMoveCompleted -= OnContainerBatchMoveCompleted;
+            }
             observedGame = null;
+            batchMovePending = false;
         }
 
         private void OnContainerChanged(NetworkListEvent<ShopContainerItem> _) => dirty = true;
+
+        private void OnContainerBatchMoveCompleted(ShopContainerKind source,
+            ShopContainerKind destination, int requested, int moved, string message)
+        {
+            batchMovePending = false;
+            if (feedback != null) feedback.text = message;
+            dirty = true;
+        }
 
         public void SetOpen(bool open)
         {
@@ -270,14 +289,31 @@ namespace PickAndPlaceShop
             BuildGrid(content.transform, displaySlots, ShopContainerKind.SharedDisplay,
                 MaximumDisplaySlots, new Vector2(6f, -4f), 4);
 
+            batchButtons[0] = CreateBatchButton("PersonalToDisplay", panel.transform,
+                "개인 → 공용 진열", new Vector2(32f, -774f), ShopUiSkin.Teal,
+                () => RequestBatchMove(ShopContainerKind.PersonalInventory,
+                    ShopContainerKind.SharedDisplay));
+            batchButtons[1] = CreateBatchButton("DisplayToPersonal", panel.transform,
+                "공용 진열 → 개인", new Vector2(467f, -774f), ShopUiSkin.Teal,
+                () => RequestBatchMove(ShopContainerKind.SharedDisplay,
+                    ShopContainerKind.PersonalInventory));
+            batchButtons[2] = CreateBatchButton("StorageToDisplay", panel.transform,
+                "창고 → 공용 진열", new Vector2(902f, -774f), ShopUiSkin.Orange,
+                () => RequestBatchMove(ShopContainerKind.SharedStorage,
+                    ShopContainerKind.SharedDisplay));
+            batchButtons[3] = CreateBatchButton("DisplayToStorage", panel.transform,
+                "공용 진열 → 창고", new Vector2(1337f, -774f), ShopUiSkin.Orange,
+                () => RequestBatchMove(ShopContainerKind.SharedDisplay,
+                    ShopContainerKind.SharedStorage));
+
             feedback = CreateText("Feedback", panel.transform, string.Empty, 22, FontStyle.Bold,
                 TextAnchor.MiddleCenter, new Color(0.7f, 1f, 0.82f));
-            SetRect(feedback.rectTransform, new Vector2(32f, -782f), new Vector2(1746f, 42f));
+            SetRect(feedback.rectTransform, new Vector2(32f, -826f), new Vector2(1746f, 34f));
             feedback.text = "개인 상품 위에 마우스를 올리고 Shift+1~5로 단축 슬롯 등록 · 클릭하면 바로 들기";
             Text help = CreateText("Help", panel.transform,
                 "I 닫기 · 드래그로 패널 간 이동 · 같은 상품은 최대 10개 합치기 · 실패한 이동은 원래 위치 유지",
                 21, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.68f, 0.78f, 0.9f));
-            SetRect(help.rectTransform, new Vector2(32f, -832f), new Vector2(1746f, 38f));
+            SetRect(help.rectTransform, new Vector2(32f, -862f), new Vector2(1746f, 30f));
 
             dragIcon = new GameObject("DraggedIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage))
                 .GetComponent<RawImage>();
@@ -341,6 +377,27 @@ namespace PickAndPlaceShop
                 ShopContainerKind.SharedDisplay) + "/" + displayCapacity + ") · 상품 " +
                                 TotalQuantity(ShopContainerRules.SharedOwner,
                                     ShopContainerKind.SharedDisplay) + "개";
+            RefreshBatchButtons(owner);
+        }
+
+        private void RefreshBatchButtons(ulong owner)
+        {
+            int personal = TotalQuantity(owner, ShopContainerKind.PersonalInventory);
+            int storage = TotalQuantity(ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage);
+            int display = TotalQuantity(ShopContainerRules.SharedOwner, ShopContainerKind.SharedDisplay);
+            if (batchButtons[0] != null) batchButtons[0].interactable = !batchMovePending && personal > 0;
+            if (batchButtons[1] != null) batchButtons[1].interactable = !batchMovePending && display > 0;
+            if (batchButtons[2] != null) batchButtons[2].interactable = !batchMovePending && storage > 0;
+            if (batchButtons[3] != null) batchButtons[3].interactable = !batchMovePending && display > 0;
+        }
+
+        private void RequestBatchMove(ShopContainerKind source, ShopContainerKind destination)
+        {
+            if (batchMovePending || observedGame == null) return;
+            batchMovePending = true;
+            RefreshBatchButtons(NetworkManager.Singleton != null ? NetworkManager.Singleton.LocalClientId : 0);
+            feedback.text = "호스트가 일괄 이동을 확인하고 있습니다…";
+            observedGame.RequestContainerBatchMove(source, destination);
         }
 
         private void RefreshContainer(List<ShopContainerSlotView> views, ulong owner,
@@ -472,6 +529,24 @@ namespace PickAndPlaceShop
             target.GetComponent<RectTransform>().sizeDelta = size;
             target.GetComponent<Image>().color = color;
             return target;
+        }
+
+        private Button CreateBatchButton(string name, Transform parent, string label,
+            Vector2 position, Color color, UnityEngine.Events.UnityAction onClick)
+        {
+            GameObject root = CreatePanel(name, parent, new Vector2(425f, 44f), color);
+            SetRect(root.GetComponent<RectTransform>(), position, new Vector2(425f, 44f));
+            ShopUiSkin.Pill(root.GetComponent<Image>());
+            Button button = root.AddComponent<Button>();
+            button.targetGraphic = root.GetComponent<Image>();
+            button.onClick.AddListener(onClick);
+            Text text = CreateText("Label", root.transform, label, 18, FontStyle.Bold,
+                TextAnchor.MiddleCenter, Color.white);
+            text.rectTransform.anchorMin = Vector2.zero;
+            text.rectTransform.anchorMax = Vector2.one;
+            text.rectTransform.offsetMin = new Vector2(8f, 2f);
+            text.rectTransform.offsetMax = new Vector2(-8f, -2f);
+            return button;
         }
 
         private Text CreateText(string name, Transform parent, string content, int size,
