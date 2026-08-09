@@ -50,6 +50,7 @@ MonoBehaviour:
   shopSafeRadius: 18
   alertAfterArrestNormalized: 0
   alertHudFadeSeconds: 0.45
+  customerTheftNoticeBatchSeconds: 1.25
   policeAppearancePrefab: {fileID: 4304917915462873115, guid: 4e0a55fb8b16e8543b1b56979360648d, type: 3}
   policeSpeed: 4.8
   policeTargetRefreshSeconds: 0.15

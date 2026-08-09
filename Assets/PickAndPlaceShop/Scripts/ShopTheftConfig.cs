@@ -59,6 +59,7 @@ namespace PickAndPlaceShop
         [Min(1f)] [SerializeField] private float shopSafeRadius = 18f;
         [Range(0f, 1f)] [SerializeField] private float alertAfterArrestNormalized;
         [Min(0.05f)] [SerializeField] private float alertHudFadeSeconds = 0.45f;
+        [Min(0.1f)] [SerializeField] private float customerTheftNoticeBatchSeconds = 1.25f;
 
         [Header("Police")]
         [SerializeField] private GameObject policeAppearancePrefab;
@@ -128,6 +129,7 @@ namespace PickAndPlaceShop
         public float ShopSafeRadius => Mathf.Max(1f, shopSafeRadius);
         public float AlertAfterArrest => MaximumAlert * Mathf.Clamp01(alertAfterArrestNormalized);
         public float AlertHudFadeSeconds => Mathf.Max(0.05f, alertHudFadeSeconds);
+        public float CustomerTheftNoticeBatchSeconds => Mathf.Max(0.1f, customerTheftNoticeBatchSeconds);
         public GameObject PoliceAppearancePrefab => policeAppearancePrefab;
         public float PoliceSpeed => Mathf.Max(0.1f, policeSpeed);
         public float PoliceTargetRefreshSeconds => Mathf.Max(0.02f, policeTargetRefreshSeconds);
@@ -192,6 +194,18 @@ namespace PickAndPlaceShop
             return value < config.TheftKujiAChance + config.TheftKujiBChance + config.TheftKujiCChance
                 ? ShopKujiRank.C
                 : ShopKujiRank.D;
+        }
+
+        public static string CustomerTheftNotice(string productName, int count)
+        {
+            if (count > 1) return "인형 " + count + "개를 누군가 훔쳤습니다.";
+            string safeName = string.IsNullOrWhiteSpace(productName) ? string.Empty : productName.Trim();
+            const int maximumNameCharacters = 18;
+            if (safeName.Length > maximumNameCharacters)
+                safeName = safeName.Substring(0, maximumNameCharacters - 1) + "…";
+            return string.IsNullOrEmpty(safeName)
+                ? "인형을 누군가 훔쳤습니다."
+                : safeName + " 상품을 누군가 훔쳤습니다.";
         }
 
         public static Vector3 ClampVelocity(Vector3 velocity, float maximum) =>

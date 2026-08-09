@@ -22,6 +22,7 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> ArrestSequence = new(0);
         public NetworkVariable<FixedString128Bytes> PersonalStatus =
             new(new FixedString128Bytes(string.Empty));
+        public NetworkVariable<int> PersonalStatusRevision = new(0);
 
         private ShopTheftConfig config;
         private ShopPlayerAppearance appearance;
@@ -34,6 +35,8 @@ namespace PickAndPlaceShop
         private float baseSprintSpeed;
         private int nextCombo;
         private float lastTheftTime = float.NegativeInfinity;
+        private float customerTheftNoticeBatchUntil = float.NegativeInfinity;
+        private int customerTheftNoticeBatchCount;
         private float chaseElapsed;
         private float arrestElapsed;
         private float nextPoliceTargetRefresh;
@@ -189,7 +192,7 @@ namespace PickAndPlaceShop
                 ShopTrashSearchPoint trash => trash.ServerApplyAttack(OwnerClientId),
                 _ => false
             };
-            PersonalStatus.Value = new FixedString128Bytes(reacted
+            ServerSetPersonalStatus(reacted
                 ? "기계에 공격이 적중했습니다. 주변을 조심하세요."
                 : "공격이 허공을 갈랐습니다.");
         }
@@ -216,13 +219,41 @@ namespace PickAndPlaceShop
             }
         }
 
+        public static void ServerBroadcastCustomerTheft(string productName)
+        {
+            foreach (ShopPlayerTheftNetwork player in
+                     FindObjectsByType<ShopPlayerTheftNetwork>(FindObjectsSortMode.None))
+            {
+                if (player == null || !player.IsServer) continue;
+                player.ServerShowCustomerTheft(productName);
+            }
+        }
+
+        private void ServerShowCustomerTheft(string productName)
+        {
+            float now = Time.time;
+            customerTheftNoticeBatchCount = now <= customerTheftNoticeBatchUntil
+                ? customerTheftNoticeBatchCount + 1
+                : 1;
+            customerTheftNoticeBatchUntil = now + config.CustomerTheftNoticeBatchSeconds;
+            ServerSetPersonalStatus(ShopTheftRules.CustomerTheftNotice(
+                productName, customerTheftNoticeBatchCount));
+        }
+
+        private void ServerSetPersonalStatus(string message)
+        {
+            if (!IsServer || string.IsNullOrWhiteSpace(message)) return;
+            PersonalStatus.Value = new FixedString128Bytes(message);
+            PersonalStatusRevision.Value++;
+        }
+
         private void ServerAddAlertAmount(float amount, string status)
         {
             if (!IsServer || config == null || amount <= 0f) return;
             lastTheftTime = Time.time;
             Alert.Value = Mathf.Clamp(Alert.Value + amount, 0f, config.MaximumAlert);
             if (!string.IsNullOrWhiteSpace(status))
-                PersonalStatus.Value = new FixedString128Bytes(status);
+                ServerSetPersonalStatus(status);
             if (Alert.Value >= config.MaximumAlert && !PoliceActive.Value) ServerStartPolice();
         }
 
@@ -230,7 +261,7 @@ namespace PickAndPlaceShop
         {
             lastTheftTime = Time.time;
             Alert.Value = Mathf.Clamp(Alert.Value + config.AlertFor(action), 0f, config.MaximumAlert);
-            PersonalStatus.Value = new FixedString128Bytes(action switch
+            ServerSetPersonalStatus(action switch
             {
                 ShopTheftAction.ClawChute => "강탈 상품을 획득했습니다. 경고가 올라갑니다.",
                 ShopTheftAction.GachaBreak => "가챠 기계 파손 보상을 강탈했습니다.",
@@ -272,7 +303,7 @@ namespace PickAndPlaceShop
             policeNoProgressSeconds = 0f;
             policeRouteAttempt = 0;
             RefreshPoliceRoute();
-            PersonalStatus.Value = new FixedString128Bytes("경찰이 출동했습니다! " +
+            ServerSetPersonalStatus("경찰이 출동했습니다! " +
                 Mathf.CeilToInt(config.ChaseTimeoutSeconds) + "초 동안 도망치세요.");
         }
 
@@ -288,7 +319,7 @@ namespace PickAndPlaceShop
             if (chaseElapsed >= config.ChaseTimeoutSeconds)
             {
                 PoliceActive.Value = false;
-                PersonalStatus.Value = new FixedString128Bytes("경찰이 추격을 포기했습니다. 경고는 매장 안에서 감소합니다.");
+                ServerSetPersonalStatus("경찰이 추격을 포기했습니다. 경고는 매장 안에서 감소합니다.");
                 return;
             }
 
@@ -319,8 +350,8 @@ namespace PickAndPlaceShop
             {
                 int paid = Mathf.Min(game.Coins.Value, config.ArrestFine);
                 game.Coins.Value = Mathf.Max(0, game.Coins.Value - paid);
-                PersonalStatus.Value = new FixedString128Bytes("체포되었습니다. 벌금 " + paid +
-                                                               "원을 내고 매장으로 돌아갑니다.");
+                ServerSetPersonalStatus("체포되었습니다. 벌금 " + paid +
+                                        "원을 내고 매장으로 돌아갑니다.");
             }
             Vector3 safe = FindArrestReturnPoint();
             Teleport(safe);
@@ -551,6 +582,7 @@ namespace PickAndPlaceShop
         private Text status;
         private CanvasGroup group;
         private int observedArrestSequence;
+        private int observedStatusRevision = -1;
         private float statusVisibleUntil;
 
         public static ShopTheftHud Create(ShopPlayerTheftNetwork target)
@@ -627,9 +659,12 @@ namespace PickAndPlaceShop
                 ? "경찰 추격 중  ·  경고 " + Mathf.RoundToInt(value * 100f) + "%"
                 : "경고 " + Mathf.RoundToInt(value * 100f) + "%";
             string message = owner.PersonalStatus.Value.ToString();
-            if (!string.IsNullOrWhiteSpace(message) && status.text != message)
+            int revision = owner.PersonalStatusRevision.Value;
+            if (!string.IsNullOrWhiteSpace(message) &&
+                (status.text != message || observedStatusRevision != revision))
             {
                 status.text = message;
+                observedStatusRevision = revision;
                 statusVisibleUntil = Time.unscaledTime + 4f;
             }
             if (owner.ArrestSequence.Value != observedArrestSequence)

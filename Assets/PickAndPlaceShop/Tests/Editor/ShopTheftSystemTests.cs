@@ -53,6 +53,17 @@ namespace PickAndPlaceShop.Tests.Editor
         }
 
         [Test]
+        public void CustomerTheftNotice_IncludesProductAndBatchesRapidLosses()
+        {
+            Assert.AreEqual("턱시도냥 상품을 누군가 훔쳤습니다.",
+                ShopTheftRules.CustomerTheftNotice("턱시도냥", 1));
+            Assert.AreEqual("인형 3개를 누군가 훔쳤습니다.",
+                ShopTheftRules.CustomerTheftNotice("턱시도냥", 3));
+            Assert.AreEqual("인형을 누군가 훔쳤습니다.",
+                ShopTheftRules.CustomerTheftNotice(string.Empty, 1));
+        }
+
+        [Test]
         public void PlayerPrefab_HasTheftNetworkBehaviourAndAttackStates()
         {
             GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -76,6 +87,7 @@ namespace PickAndPlaceShop.Tests.Editor
             Assert.NotNull(typeof(ShopClawMachineNetwork).GetMethod("ServerApplyTheftImpulse"));
             Assert.NotNull(typeof(ShopGachaMachineNetwork).GetMethod("ServerApplyTheftHit"));
             Assert.NotNull(typeof(ShopKujiStationNetwork).GetMethod("ServerApplyTheftHit"));
+            Assert.NotNull(typeof(ShopCustomerNetwork).GetMethod("ServerTryCompleteRobbery"));
             Assert.That((int)ShopAcquisitionSource.Theft,
                 Is.GreaterThan((int)ShopAcquisitionSource.Consignment));
         }

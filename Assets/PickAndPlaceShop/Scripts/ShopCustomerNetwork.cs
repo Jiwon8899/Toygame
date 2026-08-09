@@ -220,21 +220,7 @@ namespace PickAndPlaceShop
                             DesiredProductId.Value = productId;
                             DesiredProductName.Value = new FixedString64Bytes(productName);
                             matchScore = score;
-                            if (IsRobber.Value && ShopNightSalesSystem.Instance.ServerRobberSteal(
-                                    this, productId, out ShopContainerItem stolen))
-                            {
-                                RobbedProductId.Value = productId;
-                                RobbedVisualIndex.Value = stolen.VisualPrefabIndex;
-                                ServerSetHeldProduct(productId, stolen.VisualPrefabIndex);
-                                DesiredProductName.Value = new FixedString64Bytes(productName);
-                                SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
-                                SetState(ShopCustomerState.Leave);
-                                ShopNetworkGame.Instance?.ServerSetEvent("도둑이 " + productName +
-                                    "을 훔쳐 달아납니다!");
-                                Debug.Log("[SideContent:Robber] stole product=" + productId +
-                                          " customer=" + NetworkObjectId, this);
-                                break;
-                            }
+                            if (IsRobber.Value && ServerTryCompleteRobbery(productId, productName)) break;
                             queueEnteredAt = Time.time;
                             ShopNightSalesSystem.Instance.ServerJoinQueue(this);
                             TraceSalesFlow("Pickup", transform.position);
@@ -269,6 +255,25 @@ namespace PickAndPlaceShop
                     break;
             }
             UpdateVisualAnimation();
+        }
+
+        public bool ServerTryCompleteRobbery(int productId, string productName)
+        {
+            ShopNightSalesSystem sales = ShopNightSalesSystem.Instance;
+            if (!IsServer || !IsRobber.Value || sales == null ||
+                !sales.ServerRobberSteal(this, productId, out ShopContainerItem stolen)) return false;
+
+            RobbedProductId.Value = productId;
+            RobbedVisualIndex.Value = stolen.VisualPrefabIndex;
+            ServerSetHeldProduct(productId, stolen.VisualPrefabIndex);
+            DesiredProductName.Value = new FixedString64Bytes(productName);
+            SetTarget(sales.ExitPosition);
+            SetState(ShopCustomerState.Leave);
+            ShopPlayerTheftNetwork.ServerBroadcastCustomerTheft(productName);
+            ShopNetworkGame.Instance?.ServerSetEvent("도둑이 " + productName + "을 훔쳐 달아납니다!");
+            Debug.Log("[SideContent:Robber] stole product=" + productId +
+                      " customer=" + NetworkObjectId, this);
+            return true;
         }
 
         public void ServerBeginCheckout(Vector3 checkoutPosition)
