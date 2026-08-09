@@ -38,8 +38,7 @@ namespace PickAndPlaceShop
             get
             {
                 CacheHandlers();
-                if (networkClaw != null) return networkClaw.InteractionPrompt +
-                    "\n[R 누르고 있기] 쇠꼬챙이로 캡슐 꺼내기";
+                if (networkClaw != null) return networkClaw.InteractionPrompt;
                 if (gachaMachine != null) return gachaMachine.InteractionPrompt;
                 if (kujiStation != null) return kujiStation.InteractionPrompt;
                 if (districtPortal != null) return districtPortal.InteractionPrompt;

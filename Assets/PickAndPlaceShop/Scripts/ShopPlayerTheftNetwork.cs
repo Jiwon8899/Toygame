@@ -45,9 +45,6 @@ namespace PickAndPlaceShop
         private float policeAvoidanceTimer;
         private float policeAvoidanceSign = 1f;
         private ShopTheftHud hud;
-        private bool serverSkewerActive;
-        private GameObject skewerVisual;
-        private static Material skewerUrpMaterial;
 
         public float AlertNormalized => config == null ? 0f : Mathf.Clamp01(Alert.Value / config.MaximumAlert);
         public float AlertHudFadeSeconds => config != null ? config.AlertHudFadeSeconds : 0.45f;
@@ -101,27 +98,12 @@ namespace PickAndPlaceShop
         private void FixedUpdate()
         {
             if (!IsServer || !IsSpawned || config == null) return;
-            ServerUpdateSkewer();
             ServerUpdateAlert();
             ServerUpdatePolice();
         }
 
         private void UpdateOwnerInput()
         {
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && ShopInputModeManager.AllowsGameplay && !ShopLocalPauseState.IsPaused)
-            {
-                if (keyboard.rKey.wasPressedThisFrame)
-                {
-                    RequestSkewerStateRpc(true);
-                    SetSkewerVisual(true);
-                }
-                if (keyboard.rKey.wasReleasedThisFrame)
-                {
-                    RequestSkewerStateRpc(false);
-                    SetSkewerVisual(false);
-                }
-            }
             if (ShopLocalPauseState.IsPaused || !ShopInputModeManager.AllowsGameplay ||
                 Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
 
@@ -137,113 +119,6 @@ namespace PickAndPlaceShop
             localNextAttack = now + config.AttackMinimumClickInterval;
             ApplyMovementSlow();
             RequestAttackRpc(combo, transform.forward, clickInterval);
-        }
-
-        [Rpc(SendTo.Server)]
-        private void RequestSkewerStateRpc(bool active, RpcParams rpcParams = default)
-        {
-            if (rpcParams.Receive.SenderClientId != OwnerClientId) return;
-            if (!active)
-            {
-                serverSkewerActive = false;
-                return;
-            }
-            ShopSideContentConfig side = ShopSideContentConfig.Load();
-            if (side == null) return;
-            ShopClawMachineNetwork nearest = null;
-            float best = side.SkewerMachineRange * side.SkewerMachineRange;
-            foreach (ShopClawMachineNetwork machine in
-                     FindObjectsByType<ShopClawMachineNetwork>(FindObjectsSortMode.None))
-            {
-                if (machine == null || !machine.IsSpawned) continue;
-                float distance = (machine.ChuteWorldPosition - transform.position).sqrMagnitude;
-                if (distance > best) continue;
-                best = distance;
-                nearest = machine;
-            }
-            if (nearest == null)
-            {
-                PersonalStatus.Value = new FixedString128Bytes("배출구 가까이에서 R을 눌러야 합니다.");
-                return;
-            }
-            if (!nearest.ServerTryPeekAutomationCapsule(out ShopProductRarity rarity) ||
-                !nearest.ServerTryConsumeAutomationCapsule(rarity))
-            {
-                PersonalStatus.Value = new FixedString128Bytes("꺼낼 캡슐 재고가 없습니다.");
-                return;
-            }
-            ShopProductDefinition product = FindProductByRarity(rarity);
-            int visual = product != null ? ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab) : -1;
-            ShopNetworkGame game = ShopNetworkGame.Instance;
-            if (game == null || !game.ServerTryAcquireItem(OwnerClientId, product, visual,
-                    ShopAcquisitionSource.Theft, 0, out _))
-            {
-                PersonalStatus.Value = new FixedString128Bytes("보관 공간이 없어 캡슐을 가져오지 못했습니다.");
-                return;
-            }
-            game.ServerRecordAcquired(1);
-            serverSkewerActive = true;
-            PersonalStatus.Value = new FixedString128Bytes("쇠꼬챙이로 캡슐을 끌어냈습니다. R을 놓으면 멈춥니다.");
-            Debug.Log("[SideContent:Skewer] owner=" + OwnerClientId + " rarity=" + rarity +
-                      " stock=" + nearest.RemainingCapsules.Value, this);
-        }
-
-        private void ServerUpdateSkewer()
-        {
-            if (!serverSkewerActive) return;
-            ShopSideContentConfig side = ShopSideContentConfig.Load();
-            if (side == null)
-            {
-                serverSkewerActive = false;
-                return;
-            }
-            ServerAddAlertAmount(side.SkewerAlertPerSecond * Time.fixedDeltaTime,
-                "쇠꼬챙이 조작 중 · 경고도가 계속 상승합니다.");
-        }
-
-        private static ShopProductDefinition FindProductByRarity(ShopProductRarity rarity)
-        {
-            ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products");
-            for (int i = 0; i < products.Length; i++)
-                if (products[i] != null && products[i].Rarity == rarity) return products[i];
-            return products.Length > 0 ? products[0] : null;
-        }
-
-        private void SetSkewerVisual(bool visible)
-        {
-            if (!visible)
-            {
-                if (skewerVisual != null) Destroy(skewerVisual);
-                return;
-            }
-            if (skewerVisual != null) return;
-            skewerVisual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            skewerVisual.name = "SkewerToolVisual";
-            skewerVisual.transform.SetParent(transform, false);
-            skewerVisual.transform.localPosition = new Vector3(0.35f, 1.1f, 0.8f);
-            skewerVisual.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            skewerVisual.transform.localScale = new Vector3(0.025f, 0.75f, 0.025f);
-            Renderer renderer = skewerVisual.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                if (skewerUrpMaterial == null)
-                {
-                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                    if (shader != null)
-                    {
-                        skewerUrpMaterial = new Material(shader)
-                        {
-                            name = "Runtime Skewer URP Lit",
-                            color = new Color(0.18f, 0.2f, 0.24f)
-                        };
-                        skewerUrpMaterial.SetFloat("_Smoothness", 0.42f);
-                        skewerUrpMaterial.SetFloat("_Metallic", 0.7f);
-                    }
-                }
-                if (skewerUrpMaterial != null) renderer.sharedMaterial = skewerUrpMaterial;
-            }
-            Collider collider = skewerVisual.GetComponent<Collider>();
-            if (collider != null) collider.enabled = false;
         }
 
         [Rpc(SendTo.Server)]
