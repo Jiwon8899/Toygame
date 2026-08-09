@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ShopWarehouseVisualConfig
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopWarehouseVisualConfig
   itemsRepresentedPerVisual: 1
-  maximumVisibleProducts: 18
+  maximumVisibleProducts: 30
   refreshInterval: 0.25
   normalizedFloorAnchor: {x: 0.14, y: 0.84}
   columns: 6
@@ -23,4 +23,15 @@ MonoBehaviour:
   rowsPerLayer: 2
   targetLongestSide: 0.42
   yawRange: {x: -18, y: 18}
+  colliderSizeMultiplier: 0.9
+  productMass: 0.35
+  linearDamping: 2.8
+  angularDamping: 3.5
+  maximumLinearSpeed: 2.2
+  maximumAngularSpeed: 6
+  controllerPushImpulse: 0.42
+  recoveryRadius: 4.25
+  recoveryDropDistance: 1
+  sleepThreshold: 0.08
+  interactionPadding: 0.25
   labelOffset: {x: 1.45, y: 1.35, z: -0.35}

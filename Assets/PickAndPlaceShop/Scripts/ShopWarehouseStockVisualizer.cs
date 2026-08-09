@@ -12,6 +12,7 @@ namespace PickAndPlaceShop
         private static ShopWarehouseStockVisualizer instance;
         private ShopWarehouseVisualConfig config;
         private Transform stackRoot;
+        private BoxCollider interactionTrigger;
         private TextMesh label;
         private int observedSignature;
         private bool hasObservedSignature;
@@ -85,6 +86,9 @@ namespace PickAndPlaceShop
             GameObject root = new("Warehouse Product Stock");
             root.transform.SetParent(floor.transform, true);
             root.transform.position = worldAnchor;
+            interactionTrigger = root.AddComponent<BoxCollider>();
+            interactionTrigger.isTrigger = true;
+            interactionTrigger.enabled = false;
             root.AddComponent<ShopInteractable>().Configure(ShopAction.WarehousePickup,
                 "창고 상품 1개 가져가기");
             stackRoot = root.transform;
@@ -96,6 +100,7 @@ namespace PickAndPlaceShop
             for (int i = stackRoot.childCount - 1; i >= 0; i--)
                 Destroy(stackRoot.GetChild(i).gameObject);
             label = null;
+            if (interactionTrigger != null) interactionTrigger.enabled = false;
             if (totalQuantity <= 0 || stock.Count == 0) return;
 
             int representedPerVisual = config.ItemsRepresentedPerVisual;
@@ -108,6 +113,8 @@ namespace PickAndPlaceShop
                 CreateProductVisual(product, i);
             }
 
+            UpdateInteractionTrigger();
+            EnsurePushSources();
             CreateLabel(totalQuantity, visibleCount, representedPerVisual);
         }
 
@@ -142,6 +149,80 @@ namespace PickAndPlaceShop
             if (visual == null) return;
             visual.name = product.DisplayName + " GLB Visual";
             NormalizeAndGround(visual, config.TargetLongestSide);
+            AddLightweightPhysics(slot, visual);
+        }
+
+        private void AddLightweightPhysics(GameObject slot, GameObject visual)
+        {
+            if (!TryCalculateRendererBounds(visual, out Bounds worldBounds)) return;
+            Collider[] importedColliders = visual.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < importedColliders.Length; i++)
+            {
+                importedColliders[i].enabled = false;
+                Destroy(importedColliders[i]);
+            }
+            Bounds localBounds = TransformBoundsToLocal(slot.transform, worldBounds);
+            BoxCollider collision = slot.AddComponent<BoxCollider>();
+            collision.isTrigger = false;
+            collision.center = localBounds.center;
+            collision.size = Vector3.Max(localBounds.size * config.ColliderSizeMultiplier,
+                Vector3.one * 0.05f);
+
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            bool authoritative = game != null && game.IsServer;
+            slot.AddComponent<ShopWarehousePhysicsItem>().Configure(stackRoot, authoritative, config);
+        }
+
+        private void UpdateInteractionTrigger()
+        {
+            if (interactionTrigger == null || stackRoot == null) return;
+            Collider[] colliders = stackRoot.GetComponentsInChildren<Collider>(true);
+            bool found = false;
+            Bounds worldBounds = default;
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider candidate = colliders[i];
+                if (candidate == null || candidate == interactionTrigger || candidate.isTrigger) continue;
+                if (!found) { worldBounds = candidate.bounds; found = true; }
+                else worldBounds.Encapsulate(candidate.bounds);
+            }
+            if (!found) { interactionTrigger.enabled = false; return; }
+
+            Bounds localBounds = TransformBoundsToLocal(stackRoot, worldBounds);
+            Vector3 padding = Vector3.one * config.InteractionPadding;
+            interactionTrigger.center = localBounds.center;
+            interactionTrigger.size = localBounds.size + padding * 2f;
+            interactionTrigger.enabled = true;
+        }
+
+        private static Bounds TransformBoundsToLocal(Transform target, Bounds worldBounds)
+        {
+            Vector3 min = worldBounds.min;
+            Vector3 max = worldBounds.max;
+            Vector3[] corners =
+            {
+                new(min.x, min.y, min.z), new(min.x, min.y, max.z),
+                new(min.x, max.y, min.z), new(min.x, max.y, max.z),
+                new(max.x, min.y, min.z), new(max.x, min.y, max.z),
+                new(max.x, max.y, min.z), new(max.x, max.y, max.z)
+            };
+            Bounds local = new(target.InverseTransformPoint(corners[0]), Vector3.zero);
+            for (int i = 1; i < corners.Length; i++)
+                local.Encapsulate(target.InverseTransformPoint(corners[i]));
+            return local;
+        }
+
+        private static void EnsurePushSources()
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || !game.IsServer) return;
+            ShopPlayerInteractor[] players = FindObjectsByType<ShopPlayerInteractor>(
+                FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (players[i] != null && players[i].GetComponent<ShopWarehousePushSource>() == null)
+                    players[i].gameObject.AddComponent<ShopWarehousePushSource>();
+            }
         }
 
         private static void NormalizeAndGround(GameObject visual, float targetLongestSide)
