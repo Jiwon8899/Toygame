@@ -32,7 +32,7 @@ namespace PickAndPlaceShop.Tests
         public void GeneratedVisuals_AreNormalizedAndPhysicsFree()
         {
             GameObject[] wrappers = AssetDatabase.FindAssets("t:Prefab",
-                    new[] { "Assets/PickAndPlaceShop/Resources/ProductVisuals/Generated" })
+                    new[] { "Assets/PickAndPlaceShop/Generated/ProductVisuals" })
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
                 .Where(item => item != null)

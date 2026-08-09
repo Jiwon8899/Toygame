@@ -111,3 +111,18 @@
 ## 후속 파트 기록
 
 PART B~G 결과는 각 단계 검증 후 이 문서에 이어서 기록한다.
+
+## PART B. Resources 감사
+
+| Resources 경로 | 작업 전 | 작업 후 | 처리 |
+|---|---:|---:|---|
+| `Assets/PickAndPlaceShop/Resources` | 1,613.75 MiB / 1,579파일 | 0.37 MiB / 569파일 | 생성 외형·아이콘·머티리얼을 GUID 보존 이동 |
+| `Assets/Core/TextMesh Pro/Resources` | 2.17 MiB | 2.17 MiB | TMP 필수 리소스 유지 |
+| `Assets/Core/Resources` | 0.54 MiB | 0.54 MiB | GFCRedSpirit 및 전역 폰트 설정 유지 |
+| `Assets/Resources` | 0 | 0 | 빈 폴더 |
+
+- 직접 `Resources.Load`/`LoadAll`로 읽는 상품 정의, 진행·오디오·월드 설정, TMP/전역 폰트와 `RuntimeLitBase`는 유지했다.
+- 상품 외형과 아이콘은 `ShopProductDefinition`의 직렬화 참조로 접근하므로 `Assets/PickAndPlaceShop/Generated`로 이동했다.
+- `FindIcon`은 먼저 상품 정의의 아이콘 참조를 사용하고, 구형 데이터만 기존 Resources 폴백을 사용하도록 변경했다.
+- 이동은 Unity `AssetDatabase.MoveAsset`만 사용해 GUID를 보존했다.
+- 이 단계는 Resources 강제 포함을 제거하지만 모든 200개 상품 정의가 80개 외형을 참조하므로, 실제 빌드 감축의 본체는 다음 단계의 중복 메시 제거와 원본 GLB 최적화다.

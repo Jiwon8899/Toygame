@@ -27,9 +27,8 @@ namespace PickAndPlaceShop
         public static Sprite FindIcon(int productId)
         {
             ShopProductDefinition product = Find(productId);
-            Sprite resourceIcon = Resources.Load<Sprite>(
-                $"ProductIcons/Generated/ProductIcon_{productId:D4}");
-            return resourceIcon != null ? resourceIcon : product != null ? product.Icon : null;
+            if (product != null && product.Icon != null) return product.Icon;
+            return Resources.Load<Sprite>($"ProductIcons/Generated/ProductIcon_{productId:D4}");
         }
 
         public static GameObject Instantiate(ShopProductDefinition product, Transform parent)

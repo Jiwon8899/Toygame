@@ -15,14 +15,16 @@ namespace PickAndPlaceShop.Editor
         private const string SourceFolder = "Assets/reduced";
         private const string ProductFolder =
             "Assets/PickAndPlaceShop/Resources/Products/CatCatalog";
-        private const string VisualFolder = "Assets/PickAndPlaceShop/Resources/ProductVisuals/Generated";
+        private const string VisualFolder = "Assets/PickAndPlaceShop/Generated/ProductVisuals";
         private const string MeshFolder =
-            "Assets/PickAndPlaceShop/Resources/ProductVisuals/Generated/Meshes";
+            "Assets/PickAndPlaceShop/Generated/ProductVisuals/Meshes";
         private const string MaterialFolder =
-            "Assets/PickAndPlaceShop/Resources/ProductMaterials/Generated";
-        private const string IconFolder = "Assets/PickAndPlaceShop/Resources/ProductIcons/Generated";
+            "Assets/PickAndPlaceShop/Generated/ProductMaterials";
+        private const string RuntimeMaterialTemplatePath =
+            "Assets/PickAndPlaceShop/Resources/ProductMaterials/Generated/RuntimeLitBase.mat";
+        private const string IconFolder = "Assets/PickAndPlaceShop/Generated/ProductIcons";
         private const string ConfigPath =
-            "Assets/PickAndPlaceShop/Resources/Products/ShopProductVisualConfig.asset";
+            "Assets/PickAndPlaceShop/Generated/ShopProductVisualConfig.asset";
         private const string CsvPath = "Assets/PickAndPlaceShop/Docs/model_assignment.csv";
         private const int PreviewLayer = 31;
 
@@ -350,7 +352,8 @@ namespace PickAndPlaceShop.Editor
 
         private static void EnsureRuntimeMaterialTemplate()
         {
-            const string path = MaterialFolder + "/RuntimeLitBase.mat";
+            const string path = RuntimeMaterialTemplatePath;
+            EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
             Material template = AssetDatabase.LoadAssetAtPath<Material>(path);
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) throw new InvalidOperationException("URP Lit 셰이더를 찾지 못했습니다.");

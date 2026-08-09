@@ -27,10 +27,6 @@ namespace PickAndPlaceShop.Tests
                                                                product.Icon.texture == null)
                 .Select(product => product.ProductId + "|" + product.DisplayName).ToArray(),
                 "Every UI icon reference must resolve to an actual texture.");
-            CollectionAssert.IsEmpty(products.Where(product => UnityEngine.Resources.Load<UnityEngine.Sprite>(
-                    $"ProductIcons/Generated/ProductIcon_{product.ProductId:D4}") == null)
-                .Select(product => product.ProductId + "|" + product.DisplayName).ToArray(),
-                "Build-safe UI icons must be directly loadable from Resources.");
             CollectionAssert.IsEmpty(products
                 .Where(product => product.ProductId != 9001 && product.VisualPrefab == null &&
                                   product.PrizePrefab == null)
