@@ -79,5 +79,18 @@ namespace PickAndPlaceShop.Tests.Editor
             Assert.That((int)ShopAcquisitionSource.Theft,
                 Is.GreaterThan((int)ShopAcquisitionSource.Consignment));
         }
+
+        [Test]
+        public void AttackSpeed_ScalesWithClickIntervalAndRespectsMaximum()
+        {
+            ShopTheftConfig config = AssetDatabase.LoadAssetAtPath<ShopTheftConfig>(ConfigPath);
+            Assert.NotNull(config);
+            float slow = config.AttackSpeedForClickInterval(config.AttackReferenceClickInterval);
+            float fast = config.AttackSpeedForClickInterval(config.AttackMinimumClickInterval);
+            float fasterThanMinimum = config.AttackSpeedForClickInterval(0.001f);
+            Assert.That(fast, Is.GreaterThan(slow));
+            Assert.AreEqual(config.AttackMaximumAnimationSpeed, fast, 0.001f);
+            Assert.AreEqual(fast, fasterThanMinimum, 0.001f);
+        }
     }
 }

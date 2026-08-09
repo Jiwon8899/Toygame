@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Netcode;
+using System.Collections;
 using UnityEngine;
 
 namespace PickAndPlaceShop
@@ -29,6 +30,11 @@ namespace PickAndPlaceShop
         public NetworkVariable<FixedString512Bytes> DialogueText =
             new(new FixedString512Bytes(string.Empty));
         public NetworkVariable<int> DialogueRevision = new(0);
+        public NetworkVariable<bool> IsRobber = new(false);
+        public NetworkVariable<int> RobbedProductId = new(-1);
+        public NetworkVariable<int> RobbedVisualIndex = new(-1);
+        public NetworkVariable<int> HeldProductId = new(-1);
+        public NetworkVariable<int> HeldVisualIndex = new(-1);
 
         [Header("Appearance")]
         [SerializeField] private Transform appearanceRoot;
@@ -54,6 +60,8 @@ namespace PickAndPlaceShop
         private float queueEnteredAt;
         private float matchScore;
         private Vector3 target;
+        private Vector3 requestedTarget = new(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+        private float nextTargetRefresh;
         private ShopCustomerPreference preference;
         private bool giveUpReported;
         private GameObject activeAppearance;
@@ -65,6 +73,12 @@ namespace PickAndPlaceShop
         private float visualStateChangedAt;
         private float avoidanceTimer;
         private float avoidanceSign = 1f;
+        private float collisionStuckSeconds;
+        private bool movementCommanded;
+        private readonly Collider[] targetOverlapBuffer = new Collider[32];
+        private TextMesh robberMarker;
+        private bool attackReactionActive;
+        private GameObject heldProductVisual;
 
         public float PatienceSeconds => patienceSeconds;
         public float MatchScore => matchScore;
@@ -94,7 +108,12 @@ namespace PickAndPlaceShop
         {
             AppearanceIndex.OnValueChanged += HandleAppearanceChanged;
             DialogueRevision.OnValueChanged += HandleDialogueChanged;
+            IsRobber.OnValueChanged += HandleRobberChanged;
+            HeldProductId.OnValueChanged += HandleHeldProductChanged;
+            HeldVisualIndex.OnValueChanged += HandleHeldVisualChanged;
             ApplyAppearance(AppearanceIndex.Value);
+            HandleRobberChanged(false, IsRobber.Value);
+            RefreshHeldProductVisual();
             lastVisualPosition = transform.position;
 
             if (IsServer && NetworkManager.NetworkConfig.NetworkTopology == NetworkTopologyTypes.DistributedAuthority)
@@ -105,6 +124,10 @@ namespace PickAndPlaceShop
         {
             AppearanceIndex.OnValueChanged -= HandleAppearanceChanged;
             DialogueRevision.OnValueChanged -= HandleDialogueChanged;
+            IsRobber.OnValueChanged -= HandleRobberChanged;
+            HeldProductId.OnValueChanged -= HandleHeldProductChanged;
+            HeldVisualIndex.OnValueChanged -= HandleHeldVisualChanged;
+            if (heldProductVisual != null) Destroy(heldProductVisual);
             base.OnNetworkDespawn();
         }
 
@@ -133,23 +156,40 @@ namespace PickAndPlaceShop
             if (characterController != null) characterController.enabled = false;
             transform.position = entrance;
             if (characterController != null) characterController.enabled = true;
-            target = firstBrowsePoint;
+            SetTarget(firstBrowsePoint);
             lastVisualPosition = transform.position;
             SetState(ShopCustomerState.Enter);
         }
 
+        public void ServerConfigureRobber(bool robber)
+        {
+            if (!IsServer) return;
+            IsRobber.Value = robber;
+            if (!robber) return;
+            ShopSideContentConfig config = ShopSideContentConfig.Load();
+            movementSpeed *= config != null ? config.RobberSpeedMultiplier : 1.65f;
+            DialogueText.Value = new FixedString512Bytes("…");
+            DialogueRevision.Value++;
+            ShopNetworkGame.Instance?.ServerSetEvent("도둑이야! 빨간 느낌표가 붙은 손님을 막으세요!");
+            Debug.Log("[SideContent:Robber] spawned customer=" + NetworkObjectId, this);
+        }
+
         private void Update()
         {
-            UpdateVisualAnimation();
-            if (!IsServer || !IsSpawned || ShopNightSalesSystem.Instance == null) return;
+            if (!IsServer || !IsSpawned || ShopNightSalesSystem.Instance == null)
+            {
+                UpdateVisualAnimation();
+                return;
+            }
 
+            movementCommanded = false;
             stateElapsed += Time.deltaTime;
             switch (State.Value)
             {
                 case ShopCustomerState.Enter:
                     if (MoveTo(target) || stateElapsed >= movementStateTimeoutSeconds)
                     {
-                        target = ShopNightSalesSystem.Instance.ServerGetBrowsePoint(NetworkObjectId);
+                        SetTarget(ShopNightSalesSystem.Instance.ServerGetBrowsePoint(NetworkObjectId));
                         TraceSalesFlow("Browse", target);
                         SetState(ShopCustomerState.Browse);
                     }
@@ -159,7 +199,7 @@ namespace PickAndPlaceShop
                     if ((browseReached && stateElapsed >= 1.25f) ||
                         stateElapsed >= movementStateTimeoutSeconds)
                     {
-                        target = ShopNightSalesSystem.Instance.ServerGetInspectPoint(NetworkObjectId);
+                        SetTarget(ShopNightSalesSystem.Instance.ServerGetInspectPoint(NetworkObjectId));
                         TraceSalesFlow("Inspect", target);
                         SetState(ShopCustomerState.InspectProduct);
                     }
@@ -175,6 +215,21 @@ namespace PickAndPlaceShop
                             DesiredProductId.Value = productId;
                             DesiredProductName.Value = new FixedString64Bytes(productName);
                             matchScore = score;
+                            if (IsRobber.Value && ShopNightSalesSystem.Instance.ServerRobberSteal(
+                                    this, productId, out ShopContainerItem stolen))
+                            {
+                                RobbedProductId.Value = productId;
+                                RobbedVisualIndex.Value = stolen.VisualPrefabIndex;
+                                ServerSetHeldProduct(productId, stolen.VisualPrefabIndex);
+                                DesiredProductName.Value = new FixedString64Bytes(productName);
+                                SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
+                                SetState(ShopCustomerState.Leave);
+                                ShopNetworkGame.Instance?.ServerSetEvent("도둑이 " + productName +
+                                    "을 훔쳐 달아납니다!");
+                                Debug.Log("[SideContent:Robber] stole product=" + productId +
+                                          " customer=" + NetworkObjectId, this);
+                                break;
+                            }
                             queueEnteredAt = Time.time;
                             ShopNightSalesSystem.Instance.ServerJoinQueue(this);
                             TraceSalesFlow("Pickup", transform.position);
@@ -187,7 +242,7 @@ namespace PickAndPlaceShop
                     }
                     break;
                 case ShopCustomerState.Queue:
-                    target = ShopNightSalesSystem.Instance.ServerGetQueuePosition(this);
+                    SetTarget(ShopNightSalesSystem.Instance.ServerGetQueuePosition(this));
                     MoveTo(target);
                     if (QueueWaitSeconds > patienceSeconds)
                     {
@@ -199,7 +254,7 @@ namespace PickAndPlaceShop
                     break;
                 case ShopCustomerState.Leave:
                 case ShopCustomerState.GiveUp:
-                    target = ShopNightSalesSystem.Instance.ExitPosition;
+                    SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
                     if (MoveTo(target) || stateElapsed >= leaveRecoveryTimeoutSeconds)
                     {
                         if (stateElapsed >= leaveRecoveryTimeoutSeconds)
@@ -208,12 +263,13 @@ namespace PickAndPlaceShop
                     }
                     break;
             }
+            UpdateVisualAnimation();
         }
 
         public void ServerBeginCheckout(Vector3 checkoutPosition)
         {
             if (!IsServer || State.Value != ShopCustomerState.Queue) return;
-            target = checkoutPosition;
+            SetTarget(checkoutPosition);
             SetState(ShopCustomerState.Checkout);
         }
 
@@ -225,7 +281,7 @@ namespace PickAndPlaceShop
                 DesiredProductName.Value.ToString(), true,
                 ShopNightSalesSystem.Instance != null &&
                 ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
-            target = ShopNightSalesSystem.Instance.ExitPosition;
+            SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
             SetState(ShopCustomerState.Leave);
         }
 
@@ -240,7 +296,7 @@ namespace PickAndPlaceShop
                 ShopNightSalesSystem.Instance.ServerIsCategoryDisplayed(Preference.PreferredCategory));
             ShopNightSalesSystem.Instance.ServerRegisterGiveUp(this, reason);
             DesiredProductName.Value = new FixedString64Bytes("Gave up");
-            target = ShopNightSalesSystem.Instance.ExitPosition;
+            SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
             SetState(ShopCustomerState.GiveUp);
         }
 
@@ -258,6 +314,88 @@ namespace PickAndPlaceShop
                 body.linearVelocity = Vector3.zero;
                 body.angularVelocity = Vector3.zero;
             }
+        }
+
+        public bool ServerApplyPlayerAttack(ulong attackerClientId, Vector3 direction)
+        {
+            if (!IsServer || attackReactionActive || State.Value == ShopCustomerState.Checkout) return false;
+            StartCoroutine(ServerAttackReaction(attackerClientId,
+                Vector3.ProjectOnPlane(direction, Vector3.up).normalized));
+            return true;
+        }
+
+        private IEnumerator ServerAttackReaction(ulong attackerClientId, Vector3 direction)
+        {
+            attackReactionActive = true;
+            ShopSideContentConfig settings = ShopSideContentConfig.Load();
+            float duration = settings != null ? settings.CustomerKnockbackSeconds : 0.35f;
+            float distance = settings != null ? settings.CustomerKnockbackDistance : 2.2f;
+            if (direction.sqrMagnitude < 0.01f) direction = -transform.forward;
+            Vector3 start = transform.position;
+            Vector3 end = start + direction * distance;
+            bool useController = characterController != null && characterController.enabled;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                Vector3 desired = Vector3.Lerp(start, end, 1f - (1f - t) * (1f - t)) +
+                                  Vector3.up * Mathf.Sin(t * Mathf.PI) * 0.45f;
+                if (useController) characterController.Move(desired - transform.position);
+                else transform.position = desired;
+                yield return null;
+            }
+            if (useController) characterController.Move(end - transform.position);
+            else transform.position = end;
+
+            if (IsRobber.Value)
+            {
+                ShopProductDefinition product = ShopProductVisuals.Find(RobbedProductId.Value);
+                ShopNetworkGame game = ShopNetworkGame.Instance;
+                bool recovered = game != null && product != null && game.ServerTryAcquireSharedContainer(
+                    product, RobbedVisualIndex.Value, ShopContainerKind.SharedStorage,
+                    game.SharedStorageCapacity);
+                if (recovered)
+                {
+                    int reward = settings != null ? settings.RobberArrestReward : 300;
+                    game.Coins.Value += reward;
+                    game.ServerSetEvent("강도 검거! 상품을 창고로 회수하고 +" + reward + "원을 받았습니다.");
+                }
+                Debug.Log("[SideContent:RobberArrest] customer=" + NetworkObjectId +
+                          " recovered=" + recovered, this);
+            }
+            else
+            {
+                ShopNightSalesSystem.Instance?.ServerRegisterAttackExit(this);
+                DesiredProductName.Value = new FixedString64Bytes("구매 포기");
+                SetTarget(ShopNightSalesSystem.Instance.ExitPosition);
+                SetState(ShopCustomerState.GiveUp);
+                Debug.Log("[SideContent:CustomerHit] normal customer left without extra penalty", this);
+            }
+            yield return new WaitForSeconds(0.35f);
+            if (this != null && IsSpawned)
+                ShopNightSalesSystem.Instance?.ServerCustomerReachedExit(this);
+        }
+
+        private void HandleRobberChanged(bool previous, bool current)
+        {
+            if (!current)
+            {
+                if (robberMarker != null) Destroy(robberMarker.gameObject);
+                return;
+            }
+            if (robberMarker != null) return;
+            GameObject marker = new("RobberWarningMarker");
+            marker.transform.SetParent(transform, false);
+            marker.transform.localPosition = Vector3.up * 2.25f;
+            robberMarker = marker.AddComponent<TextMesh>();
+            robberMarker.text = "!";
+            robberMarker.anchor = TextAnchor.MiddleCenter;
+            robberMarker.alignment = TextAlignment.Center;
+            robberMarker.fontSize = 96;
+            robberMarker.characterSize = 0.12f;
+            robberMarker.color = Color.red;
+            marker.AddComponent<ShopWorldTextBillboard>();
         }
 
         private void SetState(ShopCustomerState next)
@@ -279,6 +417,7 @@ namespace PickAndPlaceShop
             remaining.y = 0f;
             float arrivalSqr = arrivalDistance * arrivalDistance;
             if (remaining.sqrMagnitude <= arrivalSqr) return true;
+            movementCommanded = true;
 
             if (characterController == null || !characterController.enabled)
             {
@@ -298,14 +437,20 @@ namespace PickAndPlaceShop
                 desiredDirection * step + Vector3.down * (2f * Time.deltaTime));
             if ((collision & CollisionFlags.Sides) != 0)
             {
-                avoidanceTimer = obstacleAvoidanceSeconds;
-                avoidanceSign *= -1f;
+                collisionStuckSeconds += Time.deltaTime;
+                if (avoidanceTimer <= 0f || collisionStuckSeconds >= 0.3f)
+                {
+                    avoidanceSign *= -1f;
+                    avoidanceTimer = obstacleAvoidanceSeconds;
+                    collisionStuckSeconds = 0f;
+                }
             }
 
             Vector3 actualDirection = transform.position - before;
             actualDirection.y = 0f;
             if (actualDirection.sqrMagnitude > 0.0001f)
             {
+                collisionStuckSeconds = 0f;
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,
                     Quaternion.LookRotation(actualDirection),
@@ -317,10 +462,85 @@ namespace PickAndPlaceShop
             return flatRemaining.sqrMagnitude <= arrivalSqr;
         }
 
+        private void SetTarget(Vector3 requested)
+        {
+            if ((requested - requestedTarget).sqrMagnitude <= 0.0025f &&
+                Time.time < nextTargetRefresh) return;
+            requestedTarget = requested;
+            nextTargetRefresh = Time.time + 0.5f;
+            target = ResolveCollisionSafeTarget(requested);
+        }
+
+        private Vector3 ResolveCollisionSafeTarget(Vector3 requested)
+        {
+            if (characterController == null) return requested;
+            float radius = Mathf.Max(0.1f, characterController.radius);
+            float height = Mathf.Max(radius * 2f, characterController.height);
+            const float radialStep = 0.3f;
+            const float maximumCorrection = 3f;
+            Vector3 best = requested;
+            float bestScore = float.MaxValue;
+            for (float correction = 0f; correction <= maximumCorrection; correction += radialStep)
+            {
+                int directions = correction <= 0.001f ? 1 : 12;
+                for (int directionIndex = 0; directionIndex < directions; directionIndex++)
+                {
+                    float angle = directions == 1 ? 0f : directionIndex * (360f / directions);
+                    Vector3 offset = directions == 1
+                        ? Vector3.zero
+                        : Quaternion.Euler(0f, angle, 0f) * Vector3.forward * correction;
+                    Vector3 candidate = requested + offset;
+                    Vector3 bottom = candidate + Vector3.up * radius;
+                    Vector3 top = candidate + Vector3.up * Mathf.Max(radius, height - radius);
+                    int count = Physics.OverlapCapsuleNonAlloc(bottom, top, radius + 0.06f,
+                        targetOverlapBuffer, ~0, QueryTriggerInteraction.Ignore);
+                    bool blocked = false;
+                    for (int i = 0; i < count; i++)
+                    {
+                        Collider hit = targetOverlapBuffer[i];
+                        if (hit == null || hit.transform == transform || hit.transform.IsChildOf(transform) ||
+                            hit.GetComponentInParent<ShopCustomerNetwork>() != null ||
+                            hit.bounds.max.y <= candidate.y + 0.12f) continue;
+                        blocked = true;
+                        break;
+                    }
+                    if (blocked) continue;
+                    float score = correction * 2f + Vector3.Distance(transform.position, candidate);
+                    if (score >= bestScore) continue;
+                    best = candidate;
+                    bestScore = score;
+                }
+                if (bestScore < float.MaxValue) break;
+            }
+            if (bestScore < float.MaxValue)
+            {
+                if ((best - requested).sqrMagnitude > 0.01f && Debug.isDebugBuild)
+                    Debug.Log("[CustomerNavigation] target corrected radially by " +
+                              Vector3.Distance(best, requested).ToString("F2") + "m", this);
+                return best;
+            }
+
+            Debug.LogWarning("[CustomerNavigation] no free target around requested point; " +
+                             "preserving destination so movement cannot report false arrival", this);
+            return requested;
+        }
+
         private void HandleAppearanceChanged(int previous, int current)
         {
             ApplyAppearance(current);
         }
+
+        public void ServerSetHeldProduct(int productId, int visualIndex)
+        {
+            if (!IsServer) return;
+            HeldVisualIndex.Value = visualIndex;
+            HeldProductId.Value = productId;
+            RefreshHeldProductVisual();
+        }
+
+        private void HandleHeldProductChanged(int previous, int current) => RefreshHeldProductVisual();
+
+        private void HandleHeldVisualChanged(int previous, int current) => RefreshHeldProductVisual();
 
         public void ServerSetDialogue(string message)
         {
@@ -367,6 +587,49 @@ namespace PickAndPlaceShop
             visualMoving = false;
             visualStationarySeconds = 0f;
             visualStateChangedAt = Time.unscaledTime;
+            RefreshHeldProductVisual();
+        }
+
+        private void RefreshHeldProductVisual()
+        {
+            if (heldProductVisual != null) Destroy(heldProductVisual);
+            heldProductVisual = null;
+            if (HeldProductId.Value < 0 || activeAppearance == null) return;
+
+            ShopProductDefinition product = ShopProductVisuals.Find(HeldProductId.Value);
+            Transform hand = FindRightHand(activeAppearance.transform);
+            if (product == null || hand == null) return;
+            heldProductVisual = ShopProductVisuals.Instantiate(product, hand);
+            if (heldProductVisual == null) return;
+            heldProductVisual.name = "Customer Held Product";
+
+            Renderer[] renderers = heldProductVisual.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length > 0)
+            {
+                Bounds bounds = renderers[0].bounds;
+                for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+                float longest = Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z);
+                if (longest > 0.001f)
+                    heldProductVisual.transform.localScale *= 0.26f / longest;
+            }
+            heldProductVisual.transform.SetLocalPositionAndRotation(
+                new Vector3(0.04f, 0.02f, 0.08f), Quaternion.Euler(20f, 90f, 0f));
+        }
+
+        private static Transform FindRightHand(Transform root)
+        {
+            Animator animator = root != null ? root.GetComponentInChildren<Animator>(true) : null;
+            if (animator != null && animator.isHuman)
+            {
+                Transform hand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+                if (hand != null) return hand;
+            }
+            if (root == null) return null;
+            foreach (Transform candidate in root.GetComponentsInChildren<Transform>(true))
+                if (candidate.name.IndexOf("RightHand", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    candidate.name.IndexOf("Hand_R", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    return candidate;
+            return null;
         }
 
         private void UpdateVisualAnimation()
@@ -384,14 +647,15 @@ namespace PickAndPlaceShop
             visualSpeed = Mathf.MoveTowards(visualSpeed, measuredSpeed, deltaTime * 8f);
             lastVisualPosition = transform.position;
             float heldSeconds = Time.unscaledTime - visualStateChangedAt;
-            if (!visualMoving && measuredSpeed >= walkEnterSpeed &&
+            bool explicitWalk = !IsServer || movementCommanded;
+            if (!visualMoving && explicitWalk && measuredSpeed >= walkEnterSpeed &&
                 heldSeconds >= minimumAnimationStateSeconds)
             {
                 visualMoving = true;
                 visualStationarySeconds = 0f;
                 visualStateChangedAt = Time.unscaledTime;
             }
-            else if (visualMoving && measuredSpeed <= idleReturnSpeed)
+            else if (visualMoving && (!explicitWalk || measuredSpeed <= idleReturnSpeed))
             {
                 visualStationarySeconds += deltaTime;
                 if (visualStationarySeconds >= minimumAnimationStateSeconds &&

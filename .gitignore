@@ -31,6 +31,8 @@
 .DS_Store
 Thumbs.db
 Desktop.ini
+sysinfo.txt
+crashlytics-build.properties
 
 # Unity package/export artifacts
 *.unitypackage
@@ -47,3 +49,7 @@ ignore.conf
 QA_M1_Fixed/
 QA_MainStreetSlice/
 ValidationReports/
+
+# GitHub Pages WebGL deployment output must be versioned.
+!docs/
+!docs/**

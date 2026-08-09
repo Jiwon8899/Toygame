@@ -109,11 +109,20 @@ namespace PickAndPlaceShop
             }
 
             bool pointerFree = IsPointerFreeMode(next);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            bool returningToLockedPointer = false;
+#else
             bool returningToLockedPointer = !pointerFree;
+#endif
             appliedMode = next;
             appliedOnce = true;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = pointerFree;
+#else
             Cursor.lockState = pointerFree ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = pointerFree;
+#endif
             if (returningToLockedPointer) suppressLookFrames = Mathf.Max(suppressLookFrames, 1);
             ApplyLocalPlayerInput(next);
         }

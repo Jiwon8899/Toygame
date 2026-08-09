@@ -94,6 +94,8 @@ namespace PickAndPlaceShop
         public List<string> unlockedDistrictIds = new();
         public List<string> ownedCollectionItemIds = new();
         public List<int> grantedCollectionMilestones = new();
+        public List<string> grantedCollectionSets = new();
+        public List<string> completedCollectionCategories = new();
         public List<ShopProgressGoalSave> dailyGoals = new();
         public List<ShopProgressGoalSave> weeklyGoals = new();
         public List<ShopContainerItemSave> containerItems = new();
@@ -117,6 +119,8 @@ namespace PickAndPlaceShop
         public int kujiUpgradeLevel;
         public int staffHiredMask;
         public int staffAttendanceMask;
+        public int staffAssignmentSlot2;
+        public int staffAssignmentSlot3;
         public int tutorialStep;
         public bool tutorialCompleted;
         public int upcycleDecorMask;
@@ -296,6 +300,8 @@ namespace PickAndPlaceShop
             data.unlockedDistrictIds ??= new List<string>();
             data.ownedCollectionItemIds ??= new List<string>();
             data.grantedCollectionMilestones ??= new List<int>();
+            data.grantedCollectionSets ??= new List<string>();
+            data.completedCollectionCategories ??= new List<string>();
             data.dailyGoals ??= new List<ShopProgressGoalSave>();
             data.weeklyGoals ??= new List<ShopProgressGoalSave>();
             data.containerItems ??= new List<ShopContainerItemSave>();

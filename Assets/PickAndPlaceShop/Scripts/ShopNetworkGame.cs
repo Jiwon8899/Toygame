@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -28,7 +29,10 @@ namespace PickAndPlaceShop
         AppraisalDesk,
         ConsignmentCorner,
         ReviewBoard,
-        ConsignmentReject
+        ConsignmentReject,
+        WarehousePickup,
+        TrashSearch,
+        RivalShelf
     }
 
     public enum ShopUpgradeCategory
@@ -78,8 +82,15 @@ namespace PickAndPlaceShop
         public NetworkVariable<int> KujiUpgradeLevel = new(0);
         public NetworkVariable<int> StaffHiredMask = new(0);
         public NetworkVariable<int> StaffAttendanceMask = new(0);
+        public NetworkVariable<int> StaffAssignmentSlot2 = new(0);
+        public NetworkVariable<int> StaffAssignmentSlot3 = new(0);
         public NetworkVariable<int> TrendPercent = new(15);
         public NetworkVariable<int> FailStreak = new(0);
+        public NetworkVariable<int> SideContentDay = new(0);
+        public NetworkVariable<int> TrashIncomeToday = new(0);
+        public NetworkVariable<int> RobbersSpawnedToday = new(0);
+        public NetworkVariable<int> RivalStockRevision = new(0);
+        public NetworkList<int> RivalProductIds = new();
         public NetworkVariable<ShopPhase> Phase = new(ShopPhase.PrizeHunt);
         public NetworkVariable<FixedString128Bytes> LastEvent =
             new(new FixedString128Bytes("Open a claw machine and collect stock together."));
@@ -152,6 +163,16 @@ namespace PickAndPlaceShop
         public string ShopUpgradePrompt =>
             "업그레이드 내역 열기 (" + TotalUpgradeLevel + "/" + TotalSupportedUpgradeLevels + ")";
 
+        private ShopSideContentConfig sideContentConfig;
+        public ShopSideContentConfig SideContentConfig
+        {
+            get
+            {
+                if (sideContentConfig == null) sideContentConfig = ShopSideContentConfig.Load();
+                return sideContentConfig;
+            }
+        }
+
         public string PhaseLabel => KoreanMode
             ? Phase.Value switch
             {
@@ -195,6 +216,7 @@ namespace PickAndPlaceShop
         public override void OnNetworkSpawn()
         {
             Instance = this;
+            ShopSideContentRuntime.Ensure(this);
             if (IsServer && NetworkManager.NetworkConfig.NetworkTopology == NetworkTopologyTypes.DistributedAuthority)
                 NetworkObject.SetOwnershipStatus(NetworkObject.OwnershipStatus.SessionOwner, true);
             if (IsServer && Day.Value < 1)
@@ -206,7 +228,10 @@ namespace PickAndPlaceShop
                 SetEvent("인형뽑기 기계를 사용해 함께 판매 상품을 모으세요.");
             }
             if (IsServer)
+            {
                 ShopProgressionManager.Instance?.RestoreContainersTo(this);
+                ServerEnsureSideContentDay();
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -227,6 +252,187 @@ namespace PickAndPlaceShop
             InteractRpc(action);
         }
 
+        public void RequestTrashSearch()
+        {
+            if (IsSpawned) TrashSearchRpc();
+        }
+
+        public void RequestRivalTheft(int shelfIndex)
+        {
+            if (IsSpawned) RivalTheftRpc(Mathf.Clamp(shelfIndex, 0, 7));
+        }
+
+        public void RequestRivalVisitRefresh()
+        {
+            if (!IsSpawned) return;
+            if (IsServer) ServerRefreshRivalStockForVisit(NetworkManager.Singleton.LocalClientId);
+            else RivalVisitRefreshRpc();
+        }
+
+        public void RequestRivalOwnerCatch()
+        {
+            if (IsSpawned) RivalOwnerCatchRpc();
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void RivalVisitRefreshRpc(RpcParams rpcParams = default)
+        {
+            ServerRefreshRivalStockForVisit(rpcParams.Receive.SenderClientId);
+        }
+
+        private float nextRivalVisitRefreshTime;
+        private int rivalVisitSequence;
+        private readonly Dictionary<ulong, List<int>> rivalVisitStolenProducts = new();
+
+        private void ServerRefreshRivalStockForVisit(ulong visitorClientId)
+        {
+            if (!IsServer || SideContentConfig == null || Time.unscaledTime < nextRivalVisitRefreshTime) return;
+            nextRivalVisitRefreshTime = Time.unscaledTime + 1f;
+            rivalVisitSequence++;
+            rivalVisitStolenProducts[visitorClientId] = new List<int>();
+            PopulateRivalStock();
+            Debug.Log("[SideContent:RivalVisit] visit=" + rivalVisitSequence +
+                      " slots=" + RivalProductIds.Count, this);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void TrashSearchRpc(RpcParams rpcParams = default)
+        {
+            ServerEnsureSideContentDay();
+            ShopSideContentConfig settings = SideContentConfig;
+            if (settings == null) return;
+            if (TrashIncomeToday.Value >= settings.TrashDailyCap)
+            {
+                SetEvent("오늘은 쓰레기통을 다 뒤졌어요.");
+                return;
+            }
+            if (Random.value > settings.TrashSuccessChance)
+            {
+                SetEvent("쓰레기통을 뒤졌지만… 아무것도 없었습니다.");
+                Debug.Log("[SideContent:Trash] miss day=" + Day.Value + " total=" + TrashIncomeToday.Value, this);
+                return;
+            }
+            int reward = Mathf.Min(settings.TrashReward, settings.TrashDailyCap - TrashIncomeToday.Value);
+            TrashIncomeToday.Value += reward;
+            Coins.Value += reward;
+            SetEvent("쓰레기통에서 동전을 찾았습니다! +" + reward + "원");
+            Debug.Log("[SideContent:Trash] success reward=" + reward + " total=" + TrashIncomeToday.Value, this);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void RivalTheftRpc(int shelfIndex, RpcParams rpcParams = default)
+        {
+            ServerEnsureSideContentDay();
+            if (shelfIndex < 0 || shelfIndex >= RivalProductIds.Count) return;
+            int productId = RivalProductIds[shelfIndex];
+            if (productId < 0)
+            {
+                SetEvent("이 선반은 이미 비어 있습니다.");
+                return;
+            }
+            ShopProductDefinition product = ShopProductVisuals.Find(productId);
+            int visual = product != null ? ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab) : -1;
+            if (!ServerTryAcquireItem(rpcParams.Receive.SenderClientId, product, visual,
+                    ShopAcquisitionSource.Theft, 0, out _))
+            {
+                SetEvent("가방과 창고가 가득 차 훔칠 수 없습니다.");
+                return;
+            }
+            RivalProductIds[shelfIndex] = -1;
+            RivalStockRevision.Value++;
+            if (!rivalVisitStolenProducts.TryGetValue(rpcParams.Receive.SenderClientId, out List<int> stolen))
+            {
+                stolen = new List<int>();
+                rivalVisitStolenProducts[rpcParams.Receive.SenderClientId] = stolen;
+            }
+            stolen.Add(productId);
+            ShopPlayerTheftNetwork.ServerAddExternalAlert(rpcParams.Receive.SenderClientId,
+                SideContentConfig != null ? SideContentConfig.RivalAlert(product.Rarity) : 8f,
+                "경쟁 가게에서 " + product.DisplayName + "을 훔쳤습니다.");
+            ServerRecordAcquired(1);
+            SetEvent(product.DisplayName + " 획득 · 경쟁 가게 절도가 발각될 수 있습니다.");
+            Debug.Log("[SideContent:RivalTheft] shelf=" + shelfIndex + " product=" + productId +
+                      " rarity=" + product.Rarity, this);
+        }
+
+        public bool ServerHasRivalVisitStolenItems(ulong clientId) => IsServer &&
+            rivalVisitStolenProducts.TryGetValue(clientId, out List<int> products) && products.Count > 0;
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void RivalOwnerCatchRpc(RpcParams rpcParams = default)
+        {
+            ulong clientId = rpcParams.Receive.SenderClientId;
+            if (!rivalVisitStolenProducts.TryGetValue(clientId, out List<int> stolen) || stolen.Count == 0)
+                return;
+
+            int confiscated = 0;
+            for (int s = 0; s < stolen.Count; s++)
+            {
+                int productId = stolen[s];
+                for (int i = 0; i < ItemContainers.Count; i++)
+                {
+                    ShopContainerItem item = ItemContainers[i];
+                    if (item.OwnerClientId != clientId || item.Container != ShopContainerKind.PersonalInventory ||
+                        item.ProductId != productId || item.Quantity <= 0) continue;
+                    item.Quantity--;
+                    if (item.Quantity <= 0) ItemContainers.RemoveAt(i);
+                    else ItemContainers[i] = item;
+                    int emptyShelf = -1;
+                    for (int r = 0; r < RivalProductIds.Count; r++)
+                        if (RivalProductIds[r] < 0) { emptyShelf = r; break; }
+                    if (emptyShelf >= 0) RivalProductIds[emptyShelf] = productId;
+                    confiscated++;
+                    break;
+                }
+            }
+            stolen.Clear();
+            if (confiscated <= 0) return;
+            RivalStockRevision.Value++;
+            SyncLegacyContainerCounts();
+            float alert = SideContentConfig != null ? SideContentConfig.RivalOwnerCatchAlert : 0f;
+            if (alert > 0f)
+                ShopPlayerTheftNetwork.ServerAddExternalAlert(clientId, alert, "경쟁 가게 사장에게 붙잡혔습니다.");
+            ServerSetEvent("경쟁 가게 사장에게 붙잡혀 이번 방문에 훔친 상품 " + confiscated +
+                           "개를 돌려주었습니다.");
+            Debug.Log("[SideContent:RivalOwner] confiscated=" + confiscated + " client=" + clientId, this);
+        }
+
+        public void ServerEnsureSideContentDay()
+        {
+            if (!IsServer || SideContentConfig == null || SideContentDay.Value == Day.Value) return;
+            SideContentDay.Value = Day.Value;
+            TrashIncomeToday.Value = 0;
+            RobbersSpawnedToday.Value = 0;
+            PopulateRivalStock();
+            Debug.Log("[SideContent:DayReset] day=" + Day.Value + " trash=0 rivalSlots=" + RivalProductIds.Count, this);
+        }
+
+        public bool ServerTryClaimRobberSpawn()
+        {
+            if (!IsServer || SideContentConfig == null) return false;
+            ServerEnsureSideContentDay();
+            if (RobbersSpawnedToday.Value >= SideContentConfig.RobberDailyMaximum ||
+                Random.value >= SideContentConfig.RobberChance) return false;
+            RobbersSpawnedToday.Value++;
+            return true;
+        }
+
+        private void PopulateRivalStock()
+        {
+            RivalProductIds.Clear();
+            ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products")
+                .Where(product => product != null).ToArray();
+            System.Random random = new(Day.Value * 48611 + 9137 + rivalVisitSequence * 7919);
+            for (int slot = 0; slot < 8; slot++)
+            {
+                ShopProductRarity rarity = SideContentConfig.PickRivalRarity((float)random.NextDouble());
+                ShopProductDefinition[] matching = products.Where(product => product.Rarity == rarity).ToArray();
+                if (matching.Length == 0) matching = products;
+                RivalProductIds.Add(matching.Length == 0 ? -1 : matching[random.Next(matching.Length)].ProductId);
+            }
+            RivalStockRevision.Value++;
+        }
+
         public void RequestNegotiationStart()
         {
             if (IsSpawned) NegotiationStartRpc();
@@ -235,6 +441,30 @@ namespace PickAndPlaceShop
         public void RequestNegotiationOffer(int offerIndex)
         {
             if (IsSpawned) NegotiationOfferRpc(Mathf.Clamp(offerIndex, 0, 2));
+        }
+
+        public void RequestDiscountChoice(int choiceIndex)
+        {
+            if (IsSpawned) DiscountChoiceRpc(Mathf.Clamp(choiceIndex, 0, 2));
+        }
+
+        public void RequestCheckoutPromptChoice(int choiceIndex)
+        {
+            if (IsSpawned) CheckoutPromptChoiceRpc(Mathf.Clamp(choiceIndex, 0, 1));
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void CheckoutPromptChoiceRpc(int choiceIndex, RpcParams rpcParams = default)
+        {
+            ShopNightSalesSystem.Instance?.ServerResolveCheckoutPrompt(
+                rpcParams.Receive.SenderClientId, Mathf.Clamp(choiceIndex, 0, 1));
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void DiscountChoiceRpc(int choiceIndex, RpcParams rpcParams = default)
+        {
+            ShopNightSalesSystem.Instance?.ServerResolveDiscountChoice(
+                rpcParams.Receive.SenderClientId, Mathf.Clamp(choiceIndex, 0, 2));
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -357,7 +587,7 @@ namespace PickAndPlaceShop
                     UseDisplayShelf(sender);
                     break;
                 case ShopAction.Register:
-                    UseRegister();
+                    UseRegister(sender);
                     break;
                 case ShopAction.EndDay:
                     UseClosingBell();
@@ -375,7 +605,46 @@ namespace PickAndPlaceShop
                 case ShopAction.ReviewBoard:
                     ShopDifferentiationController.Instance?.ServerHandleInteraction(action, sender);
                     break;
+                case ShopAction.WarehousePickup:
+                    ServerCollectWarehouseItem(sender);
+                    break;
+                case ShopAction.TrashSearch:
+                    ServerEnsureSideContentDay();
+                    break;
+                case ShopAction.RivalShelf:
+                    break;
             }
+        }
+
+        private void ServerCollectWarehouseItem(ulong requester)
+        {
+            int sourceSlot = -1;
+            for (int i = 0; i < ItemContainers.Count; i++)
+            {
+                ShopContainerItem item = ItemContainers[i];
+                if (!ShopContainerRules.BelongsTo(item, ShopContainerRules.SharedOwner,
+                        ShopContainerKind.SharedStorage) || item.Quantity <= 0) continue;
+                if (sourceSlot < 0 || item.SlotIndex < sourceSlot) sourceSlot = item.SlotIndex;
+            }
+            if (sourceSlot < 0)
+            {
+                SetEvent("창고에 가져갈 상품이 없습니다.");
+                return;
+            }
+
+            int destinationSlot = ShopContainerRules.FindNearestFreeSlot(ItemContainers, requester,
+                ShopContainerKind.PersonalInventory, 0, ShopContainerRules.PersonalCapacity);
+            if (destinationSlot < 0)
+            {
+                SetEvent("개인 인벤토리가 가득 차 창고 상품을 가져오지 못했습니다.");
+                return;
+            }
+
+            if (ServerTryMoveItem(ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
+                    requester, ShopContainerKind.PersonalInventory, out _, -1))
+                SetEvent("창고 상품 1개를 개인 인벤토리로 가져왔습니다.");
+            else
+                SetEvent("창고 상품을 가져오지 못했습니다.");
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -684,11 +953,11 @@ namespace PickAndPlaceShop
             ShopTutorialRuntime.Report(ShopTutorialAction.ProductDisplayed);
         }
 
-        private void UseRegister()
+        private void UseRegister(ulong requester = 0)
         {
             if (ShopNightSalesSystem.Instance != null)
             {
-                ShopNightSalesSystem.Instance.ServerHandleRegister();
+                ShopNightSalesSystem.Instance.ServerHandleRegister(requester);
                 return;
             }
 
@@ -792,11 +1061,15 @@ namespace PickAndPlaceShop
                     : "Seven-day prototype complete! Final score: " +
                       ShopEconomy.CalculateDayScore(Coins.Value, SoldToday.Value, Reputation.Value) + ".");
                 ShopTutorialRuntime.Report(ShopTutorialAction.DayClosed);
-                ShopProgressionManager.Instance?.SaveNowWithFeedback();
+                ShopProgressionManager progression = ShopProgressionManager.Instance;
+                progression?.CaptureAuthoritativeSessionState();
+                progression?.SaveNowWithFeedback();
                 return;
             }
 
             Day.Value++;
+            SideContentDay.Value = 0;
+            ServerEnsureSideContentDay();
             SoldToday.Value = 0;
             RareSoldToday.Value = 0;
             TrendPercent.Value = Random.Range(-10, 36);
@@ -807,12 +1080,17 @@ namespace PickAndPlaceShop
                 : "Day " + completedDay + " closed. Rent " + rent + " and wages " + wages +
                   " paid. New trend revealed.");
             ShopTutorialRuntime.Report(ShopTutorialAction.DayClosed);
-            ShopProgressionManager.Instance?.SaveNowWithFeedback();
+            ShopProgressionManager nextDayProgression = ShopProgressionManager.Instance;
+            nextDayProgression?.CaptureAuthoritativeSessionState();
+            nextDayProgression?.SaveNowWithFeedback();
         }
 
         private void ResetCampaign()
         {
             Day.Value = 1;
+            SideContentDay.Value = 0;
+            TrashIncomeToday.Value = 0;
+            RobbersSpawnedToday.Value = 0;
             ShopOperationsConfig operations = ShopOperationsConfig.Load();
             Coins.Value = operations != null ? operations.NewGameStartingFunds : 0;
             Inventory.Value = 0;
@@ -935,6 +1213,7 @@ namespace PickAndPlaceShop
                 if (TryAddToContainer(automationOwner, ShopContainerKind.AutomationBuffer, product,
                         visualPrefabIndex, bufferCapacity))
                 {
+                    RecordCollectionAcquisition(product);
                     SyncLegacyContainerCounts();
                     return true;
                 }
@@ -943,6 +1222,7 @@ namespace PickAndPlaceShop
                 if (!TryAddToContainer(ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
                         product, visualPrefabIndex))
                     return false;
+                RecordCollectionAcquisition(product);
                 SyncLegacyContainerCounts();
                 return true;
             }
@@ -954,6 +1234,7 @@ namespace PickAndPlaceShop
                         ShopContainerKind.ConsignmentDisplay, product, visualPrefabIndex,
                         ShopDifferentiationConfig.Load()?.ConsignmentSlots ?? 3))
                     return false;
+                RecordCollectionAcquisition(product);
                 SyncLegacyContainerCounts();
                 return true;
             }
@@ -963,6 +1244,7 @@ namespace PickAndPlaceShop
             {
                 ServerRecordClawPrize(visualPrefabIndex);
                 ShopProgressionManager.Instance?.AutoAssignHotbarProduct(product.ProductId);
+                RecordCollectionAcquisition(product);
                 SyncLegacyContainerCounts();
                 return true;
             }
@@ -971,8 +1253,17 @@ namespace PickAndPlaceShop
             if (!TryAddToContainer(ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
                     product, visualPrefabIndex))
                 return false;
+            RecordCollectionAcquisition(product);
             SyncLegacyContainerCounts();
             return true;
+        }
+
+        private static void RecordCollectionAcquisition(ShopProductDefinition product)
+        {
+            if (product == null || ShopProgressionManager.Instance == null) return;
+            ShopProgressionManager.Instance.RecordAcquisition("product:" + product.ProductId,
+                product.DisplayName, ShopProductLocalization.CategoryId(product.Category),
+                product.Rarity >= ShopProductRarity.Rare);
         }
 
         public bool ServerTryAcquireSharedContainer(ShopProductDefinition product, int visualPrefabIndex,
@@ -981,7 +1272,11 @@ namespace PickAndPlaceShop
             if (!IsServer || product == null || destination == ShopContainerKind.PersonalInventory) return false;
             bool added = TryAddToContainer(ShopContainerRules.SharedOwner, destination, product,
                 visualPrefabIndex, Mathf.Max(1, capacity));
-            if (added) SyncLegacyContainerCounts();
+            if (added)
+            {
+                RecordCollectionAcquisition(product);
+                SyncLegacyContainerCounts();
+            }
             return added;
         }
 
@@ -1005,6 +1300,17 @@ namespace PickAndPlaceShop
         public bool ServerTryMoveItem(ulong sourceOwner, ShopContainerKind source,
             ShopContainerKind destination, out ShopContainerItem moved, int requiredProductId = -1)
         {
+            ulong destinationOwner = destination == ShopContainerKind.PersonalInventory
+                ? sourceOwner
+                : ShopContainerRules.SharedOwner;
+            return ServerTryMoveItem(sourceOwner, source, destinationOwner, destination,
+                out moved, requiredProductId);
+        }
+
+        public bool ServerTryMoveItem(ulong sourceOwner, ShopContainerKind source,
+            ulong destinationOwner, ShopContainerKind destination, out ShopContainerItem moved,
+            int requiredProductId = -1)
+        {
             moved = default;
             if (!IsServer || source == destination) return false;
             int sourceIndex = -1;
@@ -1018,9 +1324,6 @@ namespace PickAndPlaceShop
             }
             if (sourceIndex < 0) return false;
             ShopContainerItem sourceItem = ItemContainers[sourceIndex];
-            ulong destinationOwner = destination == ShopContainerKind.PersonalInventory
-                ? sourceOwner
-                : ShopContainerRules.SharedOwner;
             int capacity = destination switch
             {
                 ShopContainerKind.PersonalInventory => ShopContainerRules.PersonalCapacity,
@@ -1099,6 +1402,30 @@ namespace PickAndPlaceShop
             }
             int destinationIndex = FindContainerSlot(destinationOwner, destinationContainer, destinationSlot);
             ShopContainerItem source = ItemContainers[sourceIndex];
+
+            // Placing a held/storage product on an occupied display slot should not
+            // swap it back into the player's inventory. Prefer the nearest empty
+            // slot on the same UI row, then the closest row. If none exists the
+            // original item remains untouched and the caller receives a clear error.
+            if (sourceContainer != ShopContainerKind.SharedDisplay &&
+                destinationContainer == ShopContainerKind.SharedDisplay && destinationIndex >= 0)
+            {
+                ShopContainerItem occupied = ItemContainers[destinationIndex];
+                bool canStackHere = ShopContainerRules.CanStack(source, occupied) &&
+                                    occupied.Quantity < occupied.MaxStack;
+                if (!canStackHere)
+                {
+                    int fallback = ShopContainerRules.FindNearestFreeSlot(ItemContainers,
+                        destinationOwner, destinationContainer, destinationSlot, destinationCapacity);
+                    if (fallback < 0)
+                    {
+                        message = "진열대가 가득 차 상품을 배치하지 못했습니다.";
+                        return false;
+                    }
+                    destinationSlot = fallback;
+                    destinationIndex = -1;
+                }
+            }
 
             if (destinationIndex < 0)
             {
@@ -1342,6 +1669,38 @@ namespace PickAndPlaceShop
             else ItemContainers[index] = remaining;
             SyncLegacyContainerCounts();
             return true;
+        }
+
+        public bool ServerTryRestoreDisplayedProduct(ShopContainerItem item)
+        {
+            return ServerTryRestoreDisplayedProduct(item, out _);
+        }
+
+        public bool ServerTryRestoreDisplayedProduct(ShopContainerItem item, out bool restoredToDisplay)
+        {
+            restoredToDisplay = false;
+            if (!IsServer || item.Quantity <= 0) return false;
+            item.Quantity = 1;
+            if (TryAddExistingToContainer(ShopContainerRules.SharedOwner,
+                ShopContainerKind.SharedDisplay, item, SharedDisplayCapacity, out _))
+            {
+                restoredToDisplay = true;
+                SyncLegacyContainerCounts();
+                return true;
+            }
+
+            // A simultaneous player move can consume the freed display slot before a
+            // customer cancels. Preserve the exact item in shared storage instead of
+            // silently deleting it; the ledger only restores display stock when the
+            // first branch succeeds.
+            if (TryAddExistingToContainer(ShopContainerRules.SharedOwner,
+                ShopContainerKind.SharedStorage, item, SharedStorageCapacity, out _))
+            {
+                SyncLegacyContainerCounts();
+                return true;
+            }
+
+            return false;
         }
 
         public bool ServerTryPeekDisplayedProduct(int productId, out ShopContainerItem item)
@@ -1627,6 +1986,27 @@ namespace PickAndPlaceShop
             StaffAttendanceMask.Value = attending ? StaffAttendanceMask.Value | bit : StaffAttendanceMask.Value & ~bit;
         }
 
+        public int GetStaffMachineAssignment(int staffSlot) => staffSlot == 2
+            ? StaffAssignmentSlot2.Value
+            : staffSlot == 3 ? StaffAssignmentSlot3.Value : 0;
+
+        public void RequestStaffMachineAssignment(int staffSlot, int assignment)
+        {
+            if (IsSpawned) SetStaffMachineAssignmentRpc(staffSlot, assignment);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void SetStaffMachineAssignmentRpc(int staffSlot, int assignment)
+        {
+            if (staffSlot < 2 || staffSlot > 3 || !IsStaffHired((ShopStaffRole)(staffSlot - 1))) return;
+            int validated = ShopStaffMachineAssignment.IsAvailable(assignment) ? assignment : 0;
+            if (staffSlot == 2) StaffAssignmentSlot2.Value = validated;
+            else StaffAssignmentSlot3.Value = validated;
+            ShopStaffManager.NotifyAssignmentChanged();
+            ServerSetEvent(staffSlot + "번 알바 배치: " + ShopStaffMachineAssignment.Label(validated));
+            ShopProgressionManager.Instance?.SaveNow();
+        }
+
         public int ServerPayStaffWages()
         {
             if (!IsServer) return 0;
@@ -1674,6 +2054,17 @@ namespace PickAndPlaceShop
             KujiUpgradeLevel.Value = Mathf.Clamp(kuji, 0, 2);
             StaffHiredMask.Value = hiredMask & 7;
             StaffAttendanceMask.Value = attendanceMask & StaffHiredMask.Value;
+            if ((StaffHiredMask.Value & (1 << (int)ShopStaffRole.Stocker)) == 0) StaffAssignmentSlot2.Value = 0;
+            if ((StaffHiredMask.Value & (1 << (int)ShopStaffRole.Collector)) == 0) StaffAssignmentSlot3.Value = 0;
+        }
+
+        public void ServerRestoreStaffAssignments(int slot2, int slot3)
+        {
+            if (!IsServer) return;
+            // Machines spawn after the save is restored, so keep the stable encoded IDs
+            // here and validate them when the staff manager resolves the scene objects.
+            StaffAssignmentSlot2.Value = Mathf.Max(0, slot2);
+            StaffAssignmentSlot3.Value = Mathf.Max(0, slot3);
         }
 
         private static int CountBits(int value)

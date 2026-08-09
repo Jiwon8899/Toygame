@@ -176,8 +176,15 @@ namespace Blocks.Gameplay.Core
 
             // Hide session UI and lock cursor for gameplay
             StartCoroutine(FadeOutAndDisable());
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Embedded browsers may reject delayed pointer-lock requests after scene loading.
+            // Keep pointer lock disabled, but hide the pointer during gameplay.
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = false;
+#else
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+#endif
 
             // Generate and assign player name based on client ID
             string playerPrefix = "Player";
@@ -266,8 +273,13 @@ namespace Blocks.Gameplay.Core
 
             // Hide session UI and lock cursor for gameplay
             StartCoroutine(FadeOutAndDisable());
+#if UNITY_WEBGL && !UNITY_EDITOR
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = false;
+#else
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+#endif
 
             // Set player name from session properties
             SetupLocalPlayerName(session);

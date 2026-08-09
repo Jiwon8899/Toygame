@@ -222,6 +222,32 @@ namespace PickAndPlaceShop
             // would write the same day transition twice.
         }
 
+        public void RequestSkipPreparation()
+        {
+            if (!IsSpawned) return;
+            if (IsServer) ServerSkipPreparation();
+            else SkipPreparationRpc();
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void SkipPreparationRpc(RpcParams rpcParams = default)
+        {
+            ServerSkipPreparation();
+        }
+
+        public bool ServerSkipPreparation()
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (!IsServer || game == null || game.Phase.Value != ShopPhase.Setup) return false;
+            observedPhase = ShopPhase.Open;
+            phaseRemaining = DurationFor(observedPhase);
+            openCloseRequested = false;
+            game.ServerSetPhase(ShopPhase.Open);
+            SyncRemaining();
+            game.ServerSetEvent("준비 구간을 건너뛰고 영업을 시작했습니다.");
+            return true;
+        }
+
         private void PickTrend(int day)
         {
             ShopProductCategory[] categories =

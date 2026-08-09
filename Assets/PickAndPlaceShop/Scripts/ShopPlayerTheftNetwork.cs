@@ -28,6 +28,7 @@ namespace PickAndPlaceShop
         private CoreMovement movement;
         private float localNextAttack;
         private float serverNextAttack;
+        private float lastLocalAttackClick = float.NegativeInfinity;
         private float slowUntil;
         private float baseMoveSpeed;
         private float baseSprintSpeed;
@@ -38,10 +39,20 @@ namespace PickAndPlaceShop
         private float nextPoliceTargetRefresh;
         private GameObject policeVisual;
         private NavMeshAgent policeAgent;
+        private CharacterController policeController;
         private Animator policeAnimator;
+        private Vector3 policeActualVelocity;
+        private float policeAvoidanceTimer;
+        private float policeAvoidanceSign = 1f;
         private ShopTheftHud hud;
+        private bool serverSkewerActive;
+        private GameObject skewerVisual;
+        private static Material skewerUrpMaterial;
 
         public float AlertNormalized => config == null ? 0f : Mathf.Clamp01(Alert.Value / config.MaximumAlert);
+        public float AlertHudFadeSeconds => config != null ? config.AlertHudFadeSeconds : 0.45f;
+        public int ServerAcceptedAttackCount { get; private set; }
+        public float LastAcceptedAttackSpeed { get; private set; }
 
         private void Awake()
         {
@@ -90,40 +101,173 @@ namespace PickAndPlaceShop
         private void FixedUpdate()
         {
             if (!IsServer || !IsSpawned || config == null) return;
+            ServerUpdateSkewer();
             ServerUpdateAlert();
             ServerUpdatePolice();
         }
 
         private void UpdateOwnerInput()
         {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && ShopInputModeManager.AllowsGameplay && !ShopLocalPauseState.IsPaused)
+            {
+                if (keyboard.rKey.wasPressedThisFrame)
+                {
+                    RequestSkewerStateRpc(true);
+                    SetSkewerVisual(true);
+                }
+                if (keyboard.rKey.wasReleasedThisFrame)
+                {
+                    RequestSkewerStateRpc(false);
+                    SetSkewerVisual(false);
+                }
+            }
             if (ShopLocalPauseState.IsPaused || !ShopInputModeManager.AllowsGameplay ||
-                Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame ||
-                Time.unscaledTime < localNextAttack) return;
+                Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
+
+            float now = Time.unscaledTime;
+            float clickInterval = float.IsNegativeInfinity(lastLocalAttackClick)
+                ? config.AttackReferenceClickInterval
+                : Mathf.Max(0f, now - lastLocalAttackClick);
+            lastLocalAttackClick = now;
+            if (now < localNextAttack) return;
 
             int combo = nextCombo;
             nextCombo = 1 - nextCombo;
-            localNextAttack = Time.unscaledTime + config.AttackCooldown;
+            localNextAttack = now + config.AttackMinimumClickInterval;
             ApplyMovementSlow();
-            RequestAttackRpc(combo, transform.forward);
+            RequestAttackRpc(combo, transform.forward, clickInterval);
         }
 
         [Rpc(SendTo.Server)]
-        private void RequestAttackRpc(int combo, Vector3 requestedForward, RpcParams rpcParams = default)
+        private void RequestSkewerStateRpc(bool active, RpcParams rpcParams = default)
+        {
+            if (rpcParams.Receive.SenderClientId != OwnerClientId) return;
+            if (!active)
+            {
+                serverSkewerActive = false;
+                return;
+            }
+            ShopSideContentConfig side = ShopSideContentConfig.Load();
+            if (side == null) return;
+            ShopClawMachineNetwork nearest = null;
+            float best = side.SkewerMachineRange * side.SkewerMachineRange;
+            foreach (ShopClawMachineNetwork machine in
+                     FindObjectsByType<ShopClawMachineNetwork>(FindObjectsSortMode.None))
+            {
+                if (machine == null || !machine.IsSpawned) continue;
+                float distance = (machine.ChuteWorldPosition - transform.position).sqrMagnitude;
+                if (distance > best) continue;
+                best = distance;
+                nearest = machine;
+            }
+            if (nearest == null)
+            {
+                PersonalStatus.Value = new FixedString128Bytes("배출구 가까이에서 R을 눌러야 합니다.");
+                return;
+            }
+            if (!nearest.ServerTryPeekAutomationCapsule(out ShopProductRarity rarity) ||
+                !nearest.ServerTryConsumeAutomationCapsule(rarity))
+            {
+                PersonalStatus.Value = new FixedString128Bytes("꺼낼 캡슐 재고가 없습니다.");
+                return;
+            }
+            ShopProductDefinition product = FindProductByRarity(rarity);
+            int visual = product != null ? ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab) : -1;
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (game == null || !game.ServerTryAcquireItem(OwnerClientId, product, visual,
+                    ShopAcquisitionSource.Theft, 0, out _))
+            {
+                PersonalStatus.Value = new FixedString128Bytes("보관 공간이 없어 캡슐을 가져오지 못했습니다.");
+                return;
+            }
+            game.ServerRecordAcquired(1);
+            serverSkewerActive = true;
+            PersonalStatus.Value = new FixedString128Bytes("쇠꼬챙이로 캡슐을 끌어냈습니다. R을 놓으면 멈춥니다.");
+            Debug.Log("[SideContent:Skewer] owner=" + OwnerClientId + " rarity=" + rarity +
+                      " stock=" + nearest.RemainingCapsules.Value, this);
+        }
+
+        private void ServerUpdateSkewer()
+        {
+            if (!serverSkewerActive) return;
+            ShopSideContentConfig side = ShopSideContentConfig.Load();
+            if (side == null)
+            {
+                serverSkewerActive = false;
+                return;
+            }
+            ServerAddAlertAmount(side.SkewerAlertPerSecond * Time.fixedDeltaTime,
+                "쇠꼬챙이 조작 중 · 경고도가 계속 상승합니다.");
+        }
+
+        private static ShopProductDefinition FindProductByRarity(ShopProductRarity rarity)
+        {
+            ShopProductDefinition[] products = Resources.LoadAll<ShopProductDefinition>("Products");
+            for (int i = 0; i < products.Length; i++)
+                if (products[i] != null && products[i].Rarity == rarity) return products[i];
+            return products.Length > 0 ? products[0] : null;
+        }
+
+        private void SetSkewerVisual(bool visible)
+        {
+            if (!visible)
+            {
+                if (skewerVisual != null) Destroy(skewerVisual);
+                return;
+            }
+            if (skewerVisual != null) return;
+            skewerVisual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            skewerVisual.name = "SkewerToolVisual";
+            skewerVisual.transform.SetParent(transform, false);
+            skewerVisual.transform.localPosition = new Vector3(0.35f, 1.1f, 0.8f);
+            skewerVisual.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            skewerVisual.transform.localScale = new Vector3(0.025f, 0.75f, 0.025f);
+            Renderer renderer = skewerVisual.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                if (skewerUrpMaterial == null)
+                {
+                    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                    if (shader != null)
+                    {
+                        skewerUrpMaterial = new Material(shader)
+                        {
+                            name = "Runtime Skewer URP Lit",
+                            color = new Color(0.18f, 0.2f, 0.24f)
+                        };
+                        skewerUrpMaterial.SetFloat("_Smoothness", 0.42f);
+                        skewerUrpMaterial.SetFloat("_Metallic", 0.7f);
+                    }
+                }
+                if (skewerUrpMaterial != null) renderer.sharedMaterial = skewerUrpMaterial;
+            }
+            Collider collider = skewerVisual.GetComponent<Collider>();
+            if (collider != null) collider.enabled = false;
+        }
+
+        [Rpc(SendTo.Server)]
+        private void RequestAttackRpc(int combo, Vector3 requestedForward, float clickInterval,
+            RpcParams rpcParams = default)
         {
             if (rpcParams.Receive.SenderClientId != OwnerClientId || Time.time < serverNextAttack) return;
-            serverNextAttack = Time.time + config.AttackCooldown;
+            serverNextAttack = Time.time + config.AttackMinimumClickInterval;
             Vector3 forward = Vector3.ProjectOnPlane(requestedForward, Vector3.up).normalized;
             if (forward.sqrMagnitude < 0.1f) forward = transform.forward;
-            PlayAttackRpc(Mathf.Abs(combo) % 2);
+            float playbackSpeed = config.AttackSpeedForClickInterval(clickInterval);
+            ServerAcceptedAttackCount++;
+            LastAcceptedAttackSpeed = playbackSpeed;
+            PlayAttackRpc(Mathf.Abs(combo) % 2, playbackSpeed);
             ServerResolveHit(forward);
         }
 
         [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Server)]
-        private void PlayAttackRpc(int combo)
+        private void PlayAttackRpc(int combo, float playbackSpeed)
         {
             if (appearance == null) appearance = GetComponent<ShopPlayerAppearance>();
             if (appearance == null || config == null) return;
-            appearance.PlayAttack(combo, config.AttackTransitionSeconds);
+            appearance.PlayAttack(combo, config.AttackTransitionSeconds,
+                Mathf.Min(playbackSpeed, config.AttackMaximumAnimationSpeed));
             if (IsOwner) ApplyMovementSlow();
         }
 
@@ -142,6 +286,7 @@ namespace PickAndPlaceShop
                 Component candidate = hit.GetComponentInParent<ShopClawMachineNetwork>();
                 candidate ??= hit.GetComponentInParent<ShopGachaMachineNetwork>();
                 candidate ??= hit.GetComponentInParent<ShopKujiStationNetwork>();
+                candidate ??= hit.GetComponentInParent<ShopCustomerNetwork>();
                 if (candidate == null) continue;
                 Vector3 closest = hit.ClosestPoint(transform.position + Vector3.up);
                 Vector3 delta = closest - transform.position;
@@ -160,6 +305,7 @@ namespace PickAndPlaceShop
                     config.AttackDamage, config),
                 ShopKujiStationNetwork kuji => kuji.ServerApplyTheftHit(OwnerClientId,
                     config.AttackDamage, config),
+                ShopCustomerNetwork customer => customer.ServerApplyPlayerAttack(OwnerClientId, forward),
                 _ => false
             };
             PersonalStatus.Value = new FixedString128Bytes(reacted
@@ -176,6 +322,27 @@ namespace PickAndPlaceShop
                 player.ServerAddAlert(action);
                 return;
             }
+        }
+
+        public static void ServerAddExternalAlert(ulong playerClientId, float amount, string status)
+        {
+            foreach (ShopPlayerTheftNetwork player in
+                     FindObjectsByType<ShopPlayerTheftNetwork>(FindObjectsSortMode.None))
+            {
+                if (player == null || !player.IsServer || player.OwnerClientId != playerClientId) continue;
+                player.ServerAddAlertAmount(amount, status);
+                return;
+            }
+        }
+
+        private void ServerAddAlertAmount(float amount, string status)
+        {
+            if (!IsServer || config == null || amount <= 0f) return;
+            lastTheftTime = Time.time;
+            Alert.Value = Mathf.Clamp(Alert.Value + amount, 0f, config.MaximumAlert);
+            if (!string.IsNullOrWhiteSpace(status))
+                PersonalStatus.Value = new FixedString128Bytes(status);
+            if (Alert.Value >= config.MaximumAlert && !PoliceActive.Value) ServerStartPolice();
         }
 
         private void ServerAddAlert(ShopTheftAction action)
@@ -248,16 +415,7 @@ namespace PickAndPlaceShop
                     SampleNavMesh(transform.position, out Vector3 destination))
                     policeAgent.SetDestination(destination);
             }
-            if (policeAgent != null && policeAgent.isOnNavMesh)
-                PolicePosition.Value = policeAgent.transform.position;
-            else if (policeVisual != null)
-            {
-                Vector3 next = Vector3.MoveTowards(policeVisual.transform.position, transform.position,
-                    config.PoliceSpeed * Time.fixedDeltaTime);
-                next.y = policeVisual.transform.position.y;
-                policeVisual.transform.position = next;
-                PolicePosition.Value = next;
-            }
+            MovePoliceAuthority();
 
             float distance = Vector3.Distance(PolicePosition.Value, transform.position);
             arrestElapsed = distance <= config.ArrestDistance
@@ -330,9 +488,8 @@ namespace PickAndPlaceShop
             }
             else if (policeVisual != null)
             {
-                facingDirection = policeAgent != null && policeAgent.enabled && policeAgent.isOnNavMesh &&
-                                  policeAgent.velocity.sqrMagnitude > 0.01f
-                    ? policeAgent.velocity
+                facingDirection = policeActualVelocity.sqrMagnitude > 0.01f
+                    ? policeActualVelocity
                     : transform.position - policeVisual.transform.position;
             }
             RotatePoliceTowards(facingDirection);
@@ -348,9 +505,48 @@ namespace PickAndPlaceShop
             if (policeVisual == null) return;
             direction = Vector3.ProjectOnPlane(direction, Vector3.up);
             if (direction.sqrMagnitude <= 0.01f) return;
-            Quaternion target = Quaternion.LookRotation(direction.normalized, Vector3.up);
+            Quaternion target = Quaternion.LookRotation(direction.normalized, Vector3.up) *
+                                Quaternion.Euler(0f, config.PoliceVisualYawOffset, 0f);
             policeVisual.transform.rotation = Quaternion.RotateTowards(policeVisual.transform.rotation,
                 target, config.PoliceAngularSpeed * Time.deltaTime);
+        }
+
+        private void MovePoliceAuthority()
+        {
+            if (policeVisual == null || policeController == null || !policeController.enabled) return;
+            Vector3 desired = policeAgent != null && policeAgent.enabled && policeAgent.isOnNavMesh &&
+                              policeAgent.desiredVelocity.sqrMagnitude > 0.01f
+                ? policeAgent.desiredVelocity
+                : transform.position - policeVisual.transform.position;
+            desired = Vector3.ProjectOnPlane(desired, Vector3.up);
+            if (desired.sqrMagnitude <= 0.001f)
+            {
+                policeActualVelocity = Vector3.zero;
+                return;
+            }
+
+            if (policeAvoidanceTimer > 0f)
+            {
+                policeAvoidanceTimer -= Time.fixedDeltaTime;
+                desired = Quaternion.Euler(0f,
+                    config.PoliceObstacleAvoidanceAngle * policeAvoidanceSign, 0f) * desired;
+            }
+
+            Vector3 before = policeVisual.transform.position;
+            CollisionFlags collision = policeController.Move(desired.normalized *
+                (config.PoliceSpeed * Time.fixedDeltaTime) + Vector3.down * (2f * Time.fixedDeltaTime));
+            if ((collision & CollisionFlags.Sides) != 0 && policeAvoidanceTimer <= 0f)
+            {
+                policeAvoidanceSign *= -1f;
+                policeAvoidanceTimer = config.PoliceObstacleAvoidanceSeconds;
+            }
+
+            Vector3 actual = policeVisual.transform.position - before;
+            actual.y = 0f;
+            policeActualVelocity = Time.fixedDeltaTime > 0f ? actual / Time.fixedDeltaTime : Vector3.zero;
+            if (policeAgent != null && policeAgent.enabled && policeAgent.isOnNavMesh)
+                policeAgent.nextPosition = policeVisual.transform.position;
+            PolicePosition.Value = policeVisual.transform.position;
         }
 
         private void EnsurePoliceVisual(bool authoritative)
@@ -363,11 +559,24 @@ namespace PickAndPlaceShop
             foreach (Collider item in policeVisual.GetComponentsInChildren<Collider>(true)) item.enabled = false;
             policeAnimator = policeVisual.GetComponentInChildren<Animator>(true);
             if (!authoritative) return;
+            policeController = policeVisual.GetComponent<CharacterController>();
+            if (policeController == null) policeController = policeVisual.AddComponent<CharacterController>();
+            policeController.radius = config.PoliceCollisionRadius;
+            policeController.height = config.PoliceCollisionHeight;
+            policeController.center = Vector3.up * (config.PoliceCollisionHeight * 0.5f);
+            policeController.stepOffset = Mathf.Min(0.3f, config.PoliceCollisionHeight * 0.2f);
+            policeController.slopeLimit = 50f;
+            policeController.enabled = true;
             policeAgent = policeVisual.GetComponent<NavMeshAgent>();
             if (policeAgent == null) policeAgent = policeVisual.AddComponent<NavMeshAgent>();
             policeAgent.speed = config.PoliceSpeed;
             policeAgent.acceleration = config.PoliceSpeed * config.PoliceAccelerationMultiplier;
             policeAgent.angularSpeed = config.PoliceAngularSpeed;
+            policeAgent.radius = config.PoliceCollisionRadius;
+            policeAgent.height = config.PoliceCollisionHeight;
+            policeAgent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            policeAgent.avoidancePriority = 20;
+            policeAgent.updatePosition = false;
             policeAgent.updateRotation = false;
             policeAgent.stoppingDistance = config.ArrestDistance * config.PoliceStoppingDistanceMultiplier;
             if (SampleNavMesh(PolicePosition.Value, out Vector3 sampled)) policeAgent.Warp(sampled);
@@ -413,6 +622,7 @@ namespace PickAndPlaceShop
         private Image fill;
         private Text label;
         private Text status;
+        private CanvasGroup group;
         private int observedArrestSequence;
         private float statusVisibleUntil;
 
@@ -436,6 +646,10 @@ namespace PickAndPlaceShop
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
+            group = gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
 
             Image panel = CreateImage("AlertPanel", transform, new Color(0.06f, 0.035f, 0.03f, 0.9f));
             RectTransform panelRect = panel.rectTransform;
@@ -497,6 +711,10 @@ namespace PickAndPlaceShop
                 statusVisibleUntil = Time.unscaledTime + 6f;
             }
             status.enabled = Time.unscaledTime < statusVisibleUntil;
+            bool shouldShow = value > 0.001f || owner.PoliceActive.Value || status.enabled;
+            float fadeSeconds = owner.AlertHudFadeSeconds;
+            group.alpha = Mathf.MoveTowards(group.alpha, shouldShow ? 1f : 0f,
+                Time.unscaledDeltaTime / fadeSeconds);
         }
 
         private static Image CreateImage(string objectName, Transform parent, Color color)

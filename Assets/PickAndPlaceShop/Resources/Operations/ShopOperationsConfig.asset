@@ -61,6 +61,22 @@ MonoBehaviour:
   closingFadeSeconds: 0.45
   closingItemInterval: 0.4
   closingRevenueCountSeconds: 0.8
+  lightingTransitionSeconds: 3
+  morningDirectionalEuler: {x: 24, y: 150, z: 0}
+  morningDirectionalColor: {r: 1, g: 0.72, b: 0.5, a: 1}
+  morningDirectionalIntensity: 0.82
+  morningAmbientColor: {r: 0.52, g: 0.4, b: 0.34, a: 1}
+  dayDirectionalEuler: {x: 48, y: 200, z: 0}
+  dayDirectionalColor: {r: 1, g: 0.95, b: 0.82, a: 1}
+  dayDirectionalIntensity: 1.05
+  dayAmbientColor: {r: 0.56, g: 0.62, b: 0.72, a: 1}
+  nightDirectionalEuler: {x: 18, y: 25, z: 0}
+  nightDirectionalColor: {r: 0.43, g: 0.56, b: 0.86, a: 1}
+  nightDirectionalIntensity: 0.42
+  nightAmbientColor: {r: 0.14, g: 0.18, b: 0.3, a: 1}
+  warehouseItemsPerCrate: 10
+  warehouseMaximumVisualCrates: 12
+  warehouseCrateSize: {x: 0.72, y: 0.46, z: 0.62}
   narrativeAIEnabled: 1
   narrativeEndpoint: https://api.anthropic.com/v1/messages
   narrativeModel: claude-haiku-4-5-20251001

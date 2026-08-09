@@ -13,7 +13,9 @@ namespace PickAndPlaceShop
         private Canvas canvas;
         private Text priceText;
         private Text attemptsText;
+        private Text titleText;
         private readonly Button[] offerButtons = new Button[3];
+        private readonly Text[] offerLabels = new Text[3];
         private int openedFrame;
         private int lastAttempts = -1;
 
@@ -38,9 +40,15 @@ namespace PickAndPlaceShop
         {
             ShopNightSalesSystem sales = ShopNightSalesSystem.Instance;
             NetworkManager network = NetworkManager.Singleton;
-            bool localActive = sales != null && network != null && network.IsClient &&
+            bool checkoutActive = sales != null && network != null && network.IsClient &&
+                                  sales.CheckoutPromptActive.Value &&
+                                  sales.CheckoutPromptOwner.Value == network.LocalClientId;
+            bool discountActive = sales != null && network != null && network.IsClient &&
+                                  sales.DiscountRequestActive.Value &&
+                                  sales.DiscountRequestOwner.Value == network.LocalClientId;
+            bool localActive = checkoutActive || discountActive || (sales != null && network != null && network.IsClient &&
                                sales.NegotiationActive.Value &&
-                               sales.NegotiationOwner.Value == network.LocalClientId;
+                               sales.NegotiationOwner.Value == network.LocalClientId);
             if (!localActive)
             {
                 if (canvas.gameObject.activeSelf)
@@ -60,16 +68,46 @@ namespace PickAndPlaceShop
                 lastAttempts = sales.NegotiationAttemptsRemaining.Value;
             }
 
-            priceText.text = "기준 판매가  " + sales.NegotiationBasePrice.Value.ToString("N0") + "원";
-            attemptsText.text = "남은 기회 " + sales.NegotiationAttemptsRemaining.Value +
-                                "회  ·  마우스 클릭 또는 숫자 1 / 2 / 3";
+            titleText.text = checkoutActive ? "계산 확인" : discountActive ? "손님의 할인 요청" : "계산대 흥정";
+            int basePrice = checkoutActive ? sales.CheckoutPromptBasePrice.Value :
+                discountActive ? sales.DiscountRequestBasePrice.Value : sales.NegotiationBasePrice.Value;
+            priceText.text = "기준 판매가  " + basePrice.ToString("N0") + "원";
+            attemptsText.text = checkoutActive
+                ? "E 한 번으로 열린 계산 창입니다 · Shift+E 또는 2번으로 흥정"
+                : discountActive
+                ? "거절해도 큰 불이익이 없습니다  ·  마우스 클릭 또는 숫자 1 / 2 / 3"
+                : "남은 기회 " + sales.NegotiationAttemptsRemaining.Value +
+                  "회  ·  마우스 클릭 또는 숫자 1 / 2 / 3";
+            for (int i = 0; i < offerLabels.Length; i++)
+            {
+                offerButtons[i].gameObject.SetActive(!checkoutActive || i < 2);
+                if (checkoutActive)
+                {
+                    string[] choices = { "바로 계산\n정가로 판매", "흥정 시작\nShift+E" };
+                    if (i < choices.Length) offerLabels[i].text = (i + 1) + "  " + choices[i];
+                }
+                else if (discountActive)
+                {
+                    string[] choices = { "요청 수락\n요청 할인 적용", "일부만 할인\n부담 없는 절충", "정중히 거절\n정가 구매" };
+                    offerLabels[i].text = (i + 1) + "  " + choices[i];
+                }
+                else
+                {
+                    ShopNegotiationOffer offer = config != null ? config.NegotiationOfferAt(i) :
+                        new ShopNegotiationOffer("흥정", 0.1f, 0.8f, "성공 높음");
+                    offerLabels[i].text = (i + 1) + "  " + offer.Label + "\n+" +
+                                          Mathf.RoundToInt(offer.PriceBonus * 100f) + "%  ·  " + offer.Difficulty;
+                }
+            }
             if (lastAttempts != sales.NegotiationAttemptsRemaining.Value)
                 lastAttempts = sales.NegotiationAttemptsRemaining.Value;
 
             if (Time.frameCount <= openedFrame || Keyboard.current == null) return;
-            if (Keyboard.current.digit1Key.wasPressedThisFrame) ChooseOffer(0);
+            bool shiftHeld = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+            if (checkoutActive && shiftHeld && Keyboard.current.eKey.wasPressedThisFrame) ChooseOffer(1);
+            else if (Keyboard.current.digit1Key.wasPressedThisFrame) ChooseOffer(0);
             else if (Keyboard.current.digit2Key.wasPressedThisFrame) ChooseOffer(1);
-            else if (Keyboard.current.digit3Key.wasPressedThisFrame) ChooseOffer(2);
+            else if (!checkoutActive && Keyboard.current.digit3Key.wasPressedThisFrame) ChooseOffer(2);
         }
 
         private void OnDestroy()
@@ -96,8 +134,8 @@ namespace PickAndPlaceShop
             panelRect.anchorMin = panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.sizeDelta = new Vector2(1040f, 500f);
 
-            Text title = Label("Title", panel.transform, "계산대 흥정", 48, FontStyle.Bold);
-            SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(920f, 70f), new Vector2(0f, -55f));
+            titleText = Label("Title", panel.transform, "계산대 흥정", 48, FontStyle.Bold);
+            SetRect(titleText.rectTransform, new Vector2(0.5f, 1f), new Vector2(920f, 70f), new Vector2(0f, -55f));
             priceText = Label("Price", panel.transform, string.Empty, 32, FontStyle.Normal);
             SetRect(priceText.rectTransform, new Vector2(0.5f, 1f), new Vector2(920f, 52f), new Vector2(0f, -120f));
 
@@ -130,6 +168,7 @@ namespace PickAndPlaceShop
                 label.rectTransform.offsetMin = new Vector2(14f, 12f);
                 label.rectTransform.offsetMax = new Vector2(-14f, -12f);
                 offerButtons[i] = button;
+                offerLabels[i] = label;
             }
 
             attemptsText = Label("Attempts", panel.transform, string.Empty, 28, FontStyle.Bold);
@@ -140,7 +179,13 @@ namespace PickAndPlaceShop
         private void ChooseOffer(int offerIndex)
         {
             if (Time.frameCount <= openedFrame) return;
-            ShopNetworkGame.Instance?.RequestNegotiationOffer(offerIndex);
+            ShopNightSalesSystem sales = ShopNightSalesSystem.Instance;
+            if (sales != null && sales.CheckoutPromptActive.Value)
+                ShopNetworkGame.Instance?.RequestCheckoutPromptChoice(offerIndex);
+            else if (sales != null && sales.DiscountRequestActive.Value)
+                ShopNetworkGame.Instance?.RequestDiscountChoice(offerIndex);
+            else
+                ShopNetworkGame.Instance?.RequestNegotiationOffer(offerIndex);
         }
 
         private static GameObject Ui(string name, Transform parent, Color color)

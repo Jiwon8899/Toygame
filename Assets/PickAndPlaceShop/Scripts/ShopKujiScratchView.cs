@@ -21,6 +21,7 @@ namespace PickAndPlaceShop
         private RectTransform scratchCursor;
         private Text titleText;
         private Text instructionText;
+        private Text hiddenGradeHintText;
         private Text resultText;
         private Text progressText;
         private Image progressFill;
@@ -78,7 +79,7 @@ namespace PickAndPlaceShop
             canvasGroup = canvasObject.GetComponent<CanvasGroup>();
 
             Image backdrop = CreateImage("따뜻한 배경", canvasObject.transform, Vector2.zero,
-                ShopUiSkin.BrownDeep);
+                new Color(0f, 0f, 0f, 0f));
             backdrop.rectTransform.anchorMin = Vector2.zero;
             backdrop.rectTransform.anchorMax = Vector2.one;
             backdrop.rectTransform.offsetMin = backdrop.rectTransform.offsetMax = Vector2.zero;
@@ -96,12 +97,15 @@ namespace PickAndPlaceShop
                 new Vector2(0f, 274f), ShopUiSkin.BrownDeep);
             instructionText = CreateText("안내", panel, "왼쪽 마우스를 누른 채 은박을 긁으세요", 25,
                 new Vector2(760f, 42f), new Vector2(0f, 226f), ShopUiSkin.TextMuted);
+            hiddenGradeHintText = CreateText("숨은 등급 안내", panel,
+                "은박 아래에 등급이 숨겨져 있습니다", 20, new Vector2(760f, 32f),
+                new Vector2(0f, 184f), ShopUiSkin.Teal);
 
             Image scratchImage = CreateImage("스크래치 영역", panel, new Vector2(760f, 300f),
                 new Color32(0x1F, 0x26, 0x3B, 0xFF));
             ShopUiSkin.Round(scratchImage, 20);
             scratchArea = scratchImage.rectTransform;
-            scratchArea.anchoredPosition = new Vector2(0f, 56f);
+            scratchArea.anchoredPosition = new Vector2(0f, 10f);
             rankGlow = CreateImage("등급 광채", scratchArea, new Vector2(570f, 250f),
                 new Color(0.25f, 0.45f, 1f, 0.3f));
             resultText = CreateText("결과", scratchArea, "등급 공개 대기", 38, new Vector2(620f, 230f),
@@ -135,9 +139,9 @@ namespace PickAndPlaceShop
             scratchCursor.gameObject.SetActive(false);
 
             progressText = CreateText("진행도", panel, "긁기 진행도 0%", 20, new Vector2(760f, 34f),
-                new Vector2(0f, -118f), ShopUiSkin.TextBody);
+                new Vector2(0f, -160f), ShopUiSkin.TextBody);
             Image progressTrack = CreateImage("진행 트랙", panel, new Vector2(760f, 14f), ShopUiSkin.Divider);
-            progressTrack.rectTransform.anchoredPosition = new Vector2(0f, -144f);
+            progressTrack.rectTransform.anchoredPosition = new Vector2(0f, -184f);
             ShopUiSkin.Pill(progressTrack);
             progressFill = CreateImage("진행 채움", progressTrack.transform, Vector2.zero, ShopUiSkin.Orange);
             progressFill.rectTransform.anchorMin = Vector2.zero;
@@ -234,11 +238,13 @@ namespace PickAndPlaceShop
             if (state == ShopKujiState.AwaitingScratch || state == ShopKujiState.Scratching)
             {
                 instructionText.text = "왼쪽 마우스를 누른 채 65% 이상 긁으세요";
-                resultText.text = "은박 아래에 등급이 숨겨져 있습니다";
+                resultText.text = string.Empty;
+                if (hiddenGradeHintText != null) hiddenGradeHintText.gameObject.SetActive(true);
                 return;
             }
 
             scratchCursor.gameObject.SetActive(false);
+            if (hiddenGradeHintText != null) hiddenGradeHintText.gameObject.SetActive(false);
             foreach (Image tile in coverTiles) tile.gameObject.SetActive(false);
             string bonus = station.CurrentDrawHasCeiling.Value ? "\n천장 보너스: " + station.CeilingPrize : string.Empty;
             if (station.CurrentDrawHasLastPrize.Value) bonus += "\n마지막상: " + station.LastPrize;
@@ -264,7 +270,7 @@ namespace PickAndPlaceShop
         private void CreateRewardChip(Transform parent, string label, ShopUiIcon icon, Color accent, float x)
         {
             Image chip = CreateImage(label, parent, new Vector2(300f, 62f), ShopUiSkin.CreamBackground);
-            chip.rectTransform.anchoredPosition = new Vector2(x, -190f);
+            chip.rectTransform.anchoredPosition = new Vector2(x, -230f);
             ShopUiSkin.Pill(chip);
             ShopUiSkin.AddIcon(label, chip.transform, icon, accent, new Vector2(46f, 46f),
                 new Vector2(8f, -8f), new Vector2(0f, 1f));
@@ -284,7 +290,7 @@ namespace PickAndPlaceShop
             for (int i = 0; i < ranks.Length; i++)
             {
                 Image chip = CreateImage("Rank" + ranks[i], parent, new Vector2(116f, 44f), colors[i]);
-                chip.rectTransform.anchoredPosition = new Vector2(-198f + i * 132f, -260f);
+                chip.rectTransform.anchoredPosition = new Vector2(-198f + i * 132f, -298f);
                 ShopUiSkin.Pill(chip);
                 CreateText("Label", chip.transform, ranks[i] + "상", 17, new Vector2(116f, 44f),
                     Vector2.zero, ShopUiSkin.BrownDeep);

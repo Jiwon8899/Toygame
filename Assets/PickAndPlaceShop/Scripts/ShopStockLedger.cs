@@ -7,6 +7,7 @@ namespace PickAndPlaceShop
         private readonly Dictionary<int, int> stock = new();
         private readonly Dictionary<int, int> reserved = new();
         private readonly Dictionary<ulong, int> customerReservations = new();
+        private readonly HashSet<ulong> pickedUpCustomers = new();
         private readonly HashSet<ulong> completedCustomers = new();
 
         public int GetStock(int productId) => stock.TryGetValue(productId, out int value) ? value : 0;
@@ -38,14 +39,44 @@ namespace PickAndPlaceShop
 
         public bool CancelReservation(ulong customerId)
         {
+            return CancelReservation(customerId, true);
+        }
+
+        public bool CancelReservation(ulong customerId, bool restorePickedUpStock)
+        {
             if (!customerReservations.Remove(customerId, out int productId))
             {
                 return false;
             }
 
-            reserved[productId] = System.Math.Max(0, GetReserved(productId) - 1);
+            if (pickedUpCustomers.Remove(customerId))
+            {
+                if (restorePickedUpStock) stock[productId] = GetStock(productId) + 1;
+            }
+            else
+            {
+                reserved[productId] = System.Math.Max(0, GetReserved(productId) - 1);
+            }
             return true;
         }
+
+        public bool TryPickupReservation(ulong customerId, out int productId)
+        {
+            productId = -1;
+            if (!customerReservations.TryGetValue(customerId, out int reservedProduct) ||
+                pickedUpCustomers.Contains(customerId) || GetStock(reservedProduct) <= 0)
+            {
+                return false;
+            }
+
+            reserved[reservedProduct] = System.Math.Max(0, GetReserved(reservedProduct) - 1);
+            stock[reservedProduct] = System.Math.Max(0, GetStock(reservedProduct) - 1);
+            pickedUpCustomers.Add(customerId);
+            productId = reservedProduct;
+            return true;
+        }
+
+        public bool HasPickedUp(ulong customerId) => pickedUpCustomers.Contains(customerId);
 
         public bool TryCheckout(ulong customerId, out int productId)
         {
@@ -55,15 +86,19 @@ namespace PickAndPlaceShop
                 return false;
             }
 
-            if (GetStock(reservedProduct) <= 0)
+            bool pickedUp = pickedUpCustomers.Remove(customerId);
+            if (!pickedUp && GetStock(reservedProduct) <= 0)
             {
                 CancelReservation(customerId);
                 return false;
             }
 
             customerReservations.Remove(customerId);
-            reserved[reservedProduct] = System.Math.Max(0, GetReserved(reservedProduct) - 1);
-            stock[reservedProduct] = System.Math.Max(0, GetStock(reservedProduct) - 1);
+            if (!pickedUp)
+            {
+                reserved[reservedProduct] = System.Math.Max(0, GetReserved(reservedProduct) - 1);
+                stock[reservedProduct] = System.Math.Max(0, GetStock(reservedProduct) - 1);
+            }
             completedCustomers.Add(customerId);
             productId = reservedProduct;
             return true;
@@ -80,6 +115,7 @@ namespace PickAndPlaceShop
         {
             customerReservations.Clear();
             reserved.Clear();
+            pickedUpCustomers.Clear();
             completedCustomers.Clear();
         }
     }

@@ -45,9 +45,12 @@ namespace PickAndPlaceShop.Editor
         {
             ModelImporter importer = AssetImporter.GetAtPath(path) as ModelImporter;
             if (importer == null) throw new InvalidOperationException(path + " 모델 임포터를 찾지 못했습니다.");
-            bool changed = importer.animationType != ModelImporterAnimationType.Human ||
+            // The visible player model is imported as a Generic rig. Humanoid-only
+            // attack clips advance in the Animator but cannot bind to that rig,
+            // which leaves the rendered character frozen on the first pose.
+            bool changed = importer.animationType != ModelImporterAnimationType.Generic ||
                            !importer.importAnimation;
-            importer.animationType = ModelImporterAnimationType.Human;
+            importer.animationType = ModelImporterAnimationType.Generic;
             importer.importAnimation = true;
             if (changed) importer.SaveAndReimport();
         }
@@ -65,6 +68,7 @@ namespace PickAndPlaceShop.Editor
             if (controller == null) throw new InvalidOperationException("PlayerLocomotion.controller가 없습니다.");
             EnsureTrigger(controller, "Attack1");
             EnsureTrigger(controller, "Attack2");
+            EnsureFloat(controller, "AttackSpeed", 1f);
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
             AnimatorState idle = machine.states.Select(child => child.state)
                 .FirstOrDefault(state => state.name == "Idle");
@@ -80,6 +84,13 @@ namespace PickAndPlaceShop.Editor
             controller.AddParameter(name, AnimatorControllerParameterType.Trigger);
         }
 
+        private static void EnsureFloat(AnimatorController controller, string name, float defaultValue)
+        {
+            if (controller.parameters.Any(parameter => parameter.name == name)) return;
+            controller.AddParameter(name, AnimatorControllerParameterType.Float);
+            controller.parameters.First(parameter => parameter.name == name).defaultFloat = defaultValue;
+        }
+
         private static void ConfigureAttackState(AnimatorStateMachine machine, AnimatorState idle,
             string name, AnimationClip clip, Vector3 position)
         {
@@ -89,6 +100,8 @@ namespace PickAndPlaceShop.Editor
             if (state == null) state = machine.AddState(name, position);
             state.motion = clip;
             state.speed = 1f;
+            state.speedParameterActive = true;
+            state.speedParameter = "AttackSpeed";
             foreach (AnimatorStateTransition transition in machine.anyStateTransitions
                          .Where(item => item.destinationState == state).ToArray())
                 machine.RemoveAnyStateTransition(transition);
@@ -100,8 +113,8 @@ namespace PickAndPlaceShop.Editor
                 state.RemoveTransition(transition);
             AnimatorStateTransition exit = state.AddTransition(idle);
             exit.hasExitTime = true;
-            exit.exitTime = 0.88f;
-            exit.duration = 0.1f;
+            exit.exitTime = 1f;
+            exit.duration = 0.06f;
         }
 
         private static void ConfigurePlayerPrefab()

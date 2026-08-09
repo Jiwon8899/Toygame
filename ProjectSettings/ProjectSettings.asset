@@ -13,7 +13,8 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: "미야옹 츄르 부자가 될거야 : 소품샵 뽑기 시뮬레이터"
+  productName: "\uBBF8\uC57C\uC639 \uCE04\uB974 \uBD80\uC790\uAC00 \uB420\uAC70\uC57C
+    : \uC18C\uD488\uC0F5 \uBF51\uAE30 \uC2DC\uBBAC\uB808\uC774\uD130"
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -527,6 +528,9 @@ PlayerSettings:
   - m_BuildTarget: Standalone
     m_StaticBatching: 1
     m_DynamicBatching: 0
+  - m_BuildTarget: WebGL
+    m_StaticBatching: 0
+    m_DynamicBatching: 0
   m_BuildTargetShaderSettings: []
   m_BuildTargetGraphicsJobs:
   - m_BuildTarget: MacStandaloneSupport
@@ -809,14 +813,14 @@ PlayerSettings:
   webGLDebugSymbols: 0
   webGLEmscriptenArgs: 
   webGLModulesDirectory: 
-  webGLTemplate: APPLICATION:Default
+  webGLTemplate: PROJECT:ToyGameResponsive
   webGLAnalyzeBuildSize: 0
   webGLUseEmbeddedResources: 0
-  webGLCompressionFormat: 0
+  webGLCompressionFormat: 1
   webGLWasmArithmeticExceptions: 0
   webGLLinkerTarget: 1
   webGLThreadsSupport: 0
-  webGLDecompressionFallback: 0
+  webGLDecompressionFallback: 1
   webGLInitialMemorySize: 32
   webGLMaximumMemorySize: 2048
   webGLMemoryGrowthMode: 2
@@ -873,7 +877,7 @@ PlayerSettings:
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: "Meow Churu Tycoon : Prop Shop Simulator"
+  metroApplicationDescription: 'Meow Churu Tycoon : Prop Shop Simulator'
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -948,7 +952,7 @@ PlayerSettings:
   cloudProjectId: eb0e9d73-1d07-4e62-825f-73bfb865eafb
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: MeowChuruTycoon
+  projectName: ToyGame
   organizationId: tommy801077
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

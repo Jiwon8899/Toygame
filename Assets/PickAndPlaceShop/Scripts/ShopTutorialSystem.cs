@@ -18,11 +18,15 @@ namespace PickAndPlaceShop
     {
         [SerializeField, Min(0.1f)] private float movementDistance = 2.5f;
         [SerializeField, Min(0)] private int completionReward = 200;
+        [SerializeField, Min(0)] private int skipReward = 3000;
         [SerializeField, Range(0.2f, 1f)] private float skipDoubleTapSeconds = 0.5f;
+        [SerializeField, Range(0.2f, 0.3f)] private float objectiveToggleSeconds = 0.25f;
 
         public float MovementDistance => movementDistance;
         public int CompletionReward => completionReward;
+        public int SkipReward => Mathf.Max(0, skipReward);
         public float SkipDoubleTapSeconds => Mathf.Clamp(skipDoubleTapSeconds, 0.2f, 1f);
+        public float ObjectiveToggleSeconds => Mathf.Clamp(objectiveToggleSeconds, 0.2f, 0.3f);
 
         public static ShopTutorialConfig Load() =>
             Resources.Load<ShopTutorialConfig>("Progression/ShopTutorialConfig");

@@ -12,7 +12,7 @@ namespace PickAndPlaceShop
         public static ShopProductHotbarSystem Instance { get; private set; }
         public static bool IsHoldingLocal => Instance != null && Instance.heldVisual != null;
 
-        private readonly Image[] icons = new Image[5];
+        private readonly RawImage[] icons = new RawImage[5];
         private readonly Image[] backgrounds = new Image[5];
         private readonly Text[] labels = new Text[5];
         private Canvas canvas;
@@ -20,7 +20,8 @@ namespace PickAndPlaceShop
         private ShopContainerItem heldItem;
         private GameObject heldVisual;
         private int activeSlot = -1;
-        private float nextRefresh;
+        private ShopNetworkGame observedGame;
+        private bool initialContainerSync;
 
         public int HeldProductId => heldVisual != null ? heldItem.ProductId : -1;
 
@@ -44,17 +45,20 @@ namespace PickAndPlaceShop
             BuildUi();
         }
 
+        private void OnDestroy()
+        {
+            if (observedGame != null)
+                observedGame.ItemContainers.OnListChanged -= OnContainerChanged;
+            if (Instance == this) Instance = null;
+        }
+
         private void Update()
         {
             bool gameplay = ShopNetworkGame.Instance != null;
-            if (canvas != null) canvas.enabled = gameplay && !ShopLocalPauseState.IsPaused;
+            if (canvas != null) canvas.enabled = gameplay && !ShopLocalPauseState.IsPaused &&
+                                                 !ShopClawMachineNetwork.LocalOperatorActive;
             if (!gameplay) return;
-
-            if (Time.unscaledTime >= nextRefresh)
-            {
-                nextRefresh = Time.unscaledTime + 0.2f;
-                RefreshHotbar();
-            }
+            BindContainerEvents();
 
             UpdateHeldVisual();
             Keyboard keyboard = Keyboard.current;
@@ -65,6 +69,44 @@ namespace PickAndPlaceShop
                 return;
             }
             HandleHotbarInput(keyboard);
+        }
+
+        private void BindContainerEvents()
+        {
+            ShopNetworkGame current = ShopNetworkGame.Instance;
+            if (observedGame != current)
+            {
+                if (observedGame != null)
+                    observedGame.ItemContainers.OnListChanged -= OnContainerChanged;
+                observedGame = current;
+                initialContainerSync = false;
+                if (observedGame != null)
+                    observedGame.ItemContainers.OnListChanged += OnContainerChanged;
+            }
+            if (!initialContainerSync && observedGame != null && ShopProgressionManager.Instance != null)
+            {
+                initialContainerSync = true;
+                SynchronizeHotbarFromInventory();
+            }
+        }
+
+        private void OnContainerChanged(NetworkListEvent<ShopContainerItem> _) =>
+            SynchronizeHotbarFromInventory();
+
+        private void SynchronizeHotbarFromInventory()
+        {
+            ShopProgressionManager manager = ShopProgressionManager.Instance;
+            NetworkManager network = NetworkManager.Singleton;
+            if (manager == null || observedGame == null || network == null) return;
+            ulong owner = network.LocalClientId;
+            for (int i = 0; i < observedGame.ItemContainers.Count; i++)
+            {
+                ShopContainerItem item = observedGame.ItemContainers[i];
+                if (item.OwnerClientId != owner || item.Container != ShopContainerKind.PersonalInventory ||
+                    item.Quantity <= 0) continue;
+                manager.AutoAssignHotbarProduct(item.ProductId);
+            }
+            RefreshHotbar();
         }
 
         public void SetHotbarAssignmentCandidate(ShopContainerItem item)
@@ -193,8 +235,10 @@ namespace PickAndPlaceShop
                     if (activeSlot == i) clearHeldItem = true;
                 }
                 ShopProductDefinition product = ShopProductVisuals.Find(productId);
-                icons[i].sprite = product != null ? product.Icon : null;
-                icons[i].enabled = icons[i].sprite != null;
+                Sprite icon = ShopProductVisuals.FindIcon(productId);
+                icons[i].texture = icon != null ? icon.texture : null;
+                icons[i].color = icons[i].texture != null ? Color.white : Color.clear;
+                icons[i].enabled = icons[i].texture != null;
                 labels[i].text = product != null ? product.DisplayName : "+";
                 bool active = activeSlot == i && heldVisual != null;
                 backgrounds[i].color = active ? ShopUiSkin.Teal : ShopUiSkin.CreamBackground;
@@ -244,9 +288,9 @@ namespace PickAndPlaceShop
                 slotRect.anchoredPosition = new Vector2(16f + i * 124f, 0f);
                 slotRect.sizeDelta = new Vector2(112f, 104f);
 
-                Image icon = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                RawImage icon = new GameObject("Icon", typeof(RectTransform), typeof(RawImage))
+                    .GetComponent<RawImage>();
                 icon.transform.SetParent(slot.transform, false);
-                icon.preserveAspect = true;
                 icon.raycastTarget = false;
                 icon.rectTransform.anchorMin = new Vector2(0.15f, 0.28f);
                 icon.rectTransform.anchorMax = new Vector2(0.85f, 0.95f);

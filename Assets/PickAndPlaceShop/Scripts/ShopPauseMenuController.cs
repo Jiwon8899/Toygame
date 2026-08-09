@@ -39,6 +39,7 @@ namespace PickAndPlaceShop
             if (ShopUpgradeUI.IsOpen) return;
             bool menuPressed = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             menuPressed |= Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame;
+            if (ShopClawInventoryUI.IsOpen && menuPressed) return;
             if (!menuPressed || ShopClawMachineNetwork.LocalOperatorActive) return;
             if (open && !FindObject("PauseMainPanel").activeSelf) ShowMain();
             else if (open) Close();
@@ -333,6 +334,8 @@ namespace PickAndPlaceShop
         {
             if (soloTimePaused) Time.timeScale = 1f;
             ShopLocalPauseState.IsPaused = false;
+            // Capture network-owned containers and upgrades before NetworkManager destroys them.
+            ShopProgressionManager.Instance?.SaveNow();
             NetworkManager manager = NetworkManager.Singleton;
             if (manager != null)
             {

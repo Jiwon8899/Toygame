@@ -155,6 +155,26 @@ namespace PickAndPlaceShop
         [Range(0.1f, 1f)] [SerializeField] private float closingItemInterval = 0.4f;
         [Range(0.2f, 2f)] [SerializeField] private float closingRevenueCountSeconds = 0.8f;
 
+        [Header("Day lighting")]
+        [Range(0.1f, 10f)] [SerializeField] private float lightingTransitionSeconds = 3f;
+        [SerializeField] private Vector3 morningDirectionalEuler = new(24f, 150f, 0f);
+        [SerializeField] private Color morningDirectionalColor = new(1f, 0.72f, 0.5f, 1f);
+        [Range(0f, 3f)] [SerializeField] private float morningDirectionalIntensity = 0.82f;
+        [SerializeField] private Color morningAmbientColor = new(0.52f, 0.4f, 0.34f, 1f);
+        [SerializeField] private Vector3 dayDirectionalEuler = new(48f, 200f, 0f);
+        [SerializeField] private Color dayDirectionalColor = new(1f, 0.95f, 0.82f, 1f);
+        [Range(0f, 3f)] [SerializeField] private float dayDirectionalIntensity = 1.05f;
+        [SerializeField] private Color dayAmbientColor = new(0.56f, 0.62f, 0.72f, 1f);
+        [SerializeField] private Vector3 nightDirectionalEuler = new(18f, 25f, 0f);
+        [SerializeField] private Color nightDirectionalColor = new(0.43f, 0.56f, 0.86f, 1f);
+        [Range(0f, 3f)] [SerializeField] private float nightDirectionalIntensity = 0.42f;
+        [SerializeField] private Color nightAmbientColor = new(0.14f, 0.18f, 0.3f, 1f);
+
+        [Header("Warehouse floor stock")]
+        [Range(1, 50)] [SerializeField] private int warehouseItemsPerCrate = 10;
+        [Range(1, 24)] [SerializeField] private int warehouseMaximumVisualCrates = 12;
+        [SerializeField] private Vector3 warehouseCrateSize = new(0.72f, 0.46f, 0.62f);
+
         [Header("Narrative AI")]
         [SerializeField] private bool narrativeAIEnabled = true;
         [SerializeField] private string narrativeEndpoint = "https://api.anthropic.com/v1/messages";
@@ -254,6 +274,23 @@ namespace PickAndPlaceShop
         public float ClosingFadeSeconds => Mathf.Clamp(closingFadeSeconds, 0.1f, 1.5f);
         public float ClosingItemInterval => Mathf.Clamp(closingItemInterval, 0.1f, 1f);
         public float ClosingRevenueCountSeconds => Mathf.Clamp(closingRevenueCountSeconds, 0.2f, 2f);
+        public float LightingTransitionSeconds => Mathf.Clamp(lightingTransitionSeconds, 0.1f, 10f);
+        public Vector3 MorningDirectionalEuler => morningDirectionalEuler;
+        public Color MorningDirectionalColor => morningDirectionalColor;
+        public float MorningDirectionalIntensity => Mathf.Max(0f, morningDirectionalIntensity);
+        public Color MorningAmbientColor => morningAmbientColor;
+        public Vector3 DayDirectionalEuler => dayDirectionalEuler;
+        public Color DayDirectionalColor => dayDirectionalColor;
+        public float DayDirectionalIntensity => Mathf.Max(0f, dayDirectionalIntensity);
+        public Color DayAmbientColor => dayAmbientColor;
+        public Vector3 NightDirectionalEuler => nightDirectionalEuler;
+        public Color NightDirectionalColor => nightDirectionalColor;
+        public float NightDirectionalIntensity => Mathf.Max(0f, nightDirectionalIntensity);
+        public Color NightAmbientColor => nightAmbientColor;
+        public int WarehouseItemsPerCrate => Mathf.Clamp(warehouseItemsPerCrate, 1, 50);
+        public int WarehouseMaximumVisualCrates => Mathf.Clamp(warehouseMaximumVisualCrates, 1, 24);
+        public Vector3 WarehouseCrateSize => new(Mathf.Max(0.2f, warehouseCrateSize.x),
+            Mathf.Max(0.15f, warehouseCrateSize.y), Mathf.Max(0.2f, warehouseCrateSize.z));
         public bool NarrativeAIEnabled => narrativeAIEnabled;
         public string NarrativeEndpoint => narrativeEndpoint;
         public string NarrativeModel => narrativeModel;

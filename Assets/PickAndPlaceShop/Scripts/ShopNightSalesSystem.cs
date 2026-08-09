@@ -46,6 +46,13 @@ namespace PickAndPlaceShop
         public NetworkVariable<ulong> NegotiationOwner = new(ShopClawRules.NoOccupant);
         public NetworkVariable<int> NegotiationBasePrice = new(0);
         public NetworkVariable<int> NegotiationAttemptsRemaining = new(0);
+        public NetworkVariable<bool> DiscountRequestActive = new(false);
+        public NetworkVariable<ulong> DiscountRequestOwner = new(ShopClawRules.NoOccupant);
+        public NetworkVariable<int> DiscountRequestBasePrice = new(0);
+        public NetworkVariable<int> DiscountRequestPercent = new(0);
+        public NetworkVariable<bool> CheckoutPromptActive = new(false);
+        public NetworkVariable<ulong> CheckoutPromptOwner = new(ShopClawRules.NoOccupant);
+        public NetworkVariable<int> CheckoutPromptBasePrice = new(0);
         public NetworkVariable<int> TotalRevenue = new(0);
         public NetworkVariable<int> ReputationDelta = new(0);
         public NetworkVariable<FixedString64Bytes> TopProductName = new(new FixedString64Bytes("없음"));
@@ -62,12 +69,15 @@ namespace PickAndPlaceShop
         private readonly HashSet<ulong> giveUpsProcessed = new();
         private readonly Dictionary<ulong, int> browsePointReservations = new();
         private readonly Dictionary<ulong, int> inspectPointReservations = new();
+        private readonly Dictionary<ulong, ShopContainerItem> heldCustomerItems = new();
         private float operatingRemaining;
         private float spawnElapsed;
         private int restockCursor;
         private bool sessionActive;
         private bool checkoutBusy;
         private ShopCustomerNetwork negotiationCustomer;
+        private ShopCustomerNetwork discountCustomer;
+        private ShopCustomerNetwork checkoutPromptCustomer;
 
         public Vector3 ExitPosition => exitPoint != null ? exitPoint.position : transform.position;
         public Vector3 EntrancePosition => entrancePoint != null ? entrancePoint.position : transform.position;
@@ -143,6 +153,10 @@ namespace PickAndPlaceShop
         {
             if (!IsServer || !IsSpawned || ShopNetworkGame.Instance == null) return;
 
+            if (CheckoutPromptActive.Value &&
+                (checkoutPromptCustomer == null || !checkoutPromptCustomer.IsSpawned))
+                ClearCheckoutPrompt(true);
+
             if (ShopNetworkGame.Instance.Phase.Value == ShopPhase.Open && !sessionActive)
             {
                 ServerBeginOpenSession();
@@ -182,7 +196,7 @@ namespace PickAndPlaceShop
             }
         }
 
-        public void ServerHandleRegister()
+        public void ServerHandleRegister(ulong requester = 0)
         {
             if (!IsServer || ShopNetworkGame.Instance == null) return;
             ShopNetworkGame game = ShopNetworkGame.Instance;
@@ -225,7 +239,92 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            StartCoroutine(ServerCheckoutRoutine(queue[0], 1f));
+            ShopSideContentConfig sideContent = ShopSideContentConfig.Load();
+            if (sideContent != null && Random.value < sideContent.DiscountRequestChance)
+            {
+                discountCustomer = queue[0];
+                queue.RemoveAt(0);
+                QueueCount.Value = queue.Count;
+                checkoutBusy = true;
+                discountCustomer.ServerBeginCheckout(CheckoutPosition);
+                ShopProductDefinition product = FindProduct(discountCustomer.DesiredProductId.Value);
+                DiscountRequestOwner.Value = requester;
+                DiscountRequestBasePrice.Value = product != null ? GetSalePrice(product) : 0;
+                DiscountRequestPercent.Value = Mathf.RoundToInt(sideContent.FullDiscount * 100f);
+                DiscountRequestActive.Value = true;
+                discountCustomer.ServerSetDialogue("저기요, 이 상품 조금만 할인해 주실 수 있나요?");
+                game.ServerSetEvent("할인 요청 손님 · 가볍게 선택해 주세요. 거절해도 큰 불이익은 없습니다.");
+                Debug.Log("[SideContent:Discount] opened customer=" + discountCustomer.NetworkObjectId +
+                          " requested=" + DiscountRequestPercent.Value + "%", this);
+                return;
+            }
+
+            game.ServerSetEvent("계산 확인 · 바로 결제를 진행합니다. [Shift+E]를 누르면 흥정을 시도할 수 있습니다.");
+            checkoutPromptCustomer = queue[0];
+            queue.RemoveAt(0);
+            QueueCount.Value = queue.Count;
+            checkoutBusy = true;
+            checkoutPromptCustomer.ServerBeginCheckout(CheckoutPosition);
+            ShopProductDefinition checkoutProduct = FindProduct(checkoutPromptCustomer.DesiredProductId.Value);
+            CheckoutPromptOwner.Value = requester;
+            CheckoutPromptBasePrice.Value = checkoutProduct != null ? GetSalePrice(checkoutProduct) : 0;
+            CheckoutPromptActive.Value = true;
+            game.ServerSetEvent("계산 확인 창을 열었습니다. 바로 계산하거나 Shift+E로 흥정할 수 있습니다.");
+        }
+
+        public void ServerResolveCheckoutPrompt(ulong requester, int choiceIndex)
+        {
+            if (!IsServer || !CheckoutPromptActive.Value || requester != CheckoutPromptOwner.Value ||
+                checkoutPromptCustomer == null || !checkoutPromptCustomer.IsSpawned) return;
+
+            ShopCustomerNetwork customer = checkoutPromptCustomer;
+            ClearCheckoutPrompt(false);
+            if (choiceIndex == 1)
+            {
+                negotiationCustomer = customer;
+                ShopProductDefinition product = FindProduct(customer.DesiredProductId.Value);
+                NegotiationBasePrice.Value = product != null ? GetSalePrice(product) : 0;
+                NegotiationOwner.Value = requester;
+                NegotiationAttemptsRemaining.Value = ShopOperationsConfig.Load()?.NegotiationAttemptsPerSale ?? 3;
+                NegotiationActive.Value = true;
+                ShopNetworkGame.Instance.ServerSetEvent("흥정을 시작했습니다. 원하는 제안을 선택해 주세요.");
+                return;
+            }
+
+            // The confirmation itself is the checkout action.  Do not put the
+            // customer back behind the normal E-driven checkout cadence.
+            StartCoroutine(ServerCheckoutRoutine(customer, 1f, 1f, true));
+        }
+
+        private void ClearCheckoutPrompt(bool releaseCheckout)
+        {
+            CheckoutPromptActive.Value = false;
+            CheckoutPromptOwner.Value = ShopClawRules.NoOccupant;
+            CheckoutPromptBasePrice.Value = 0;
+            checkoutPromptCustomer = null;
+            if (releaseCheckout) checkoutBusy = false;
+        }
+
+        public void ServerResolveDiscountChoice(ulong requester, int choiceIndex)
+        {
+            if (!IsServer || !DiscountRequestActive.Value || requester != DiscountRequestOwner.Value ||
+                discountCustomer == null || !discountCustomer.IsSpawned) return;
+            ShopSideContentConfig settings = ShopSideContentConfig.Load();
+            float discount = choiceIndex == 0
+                ? (settings != null ? settings.FullDiscount : 0.15f)
+                : choiceIndex == 1 ? (settings != null ? settings.PartialDiscount : 0.07f) : 0f;
+            ShopCustomerNetwork customer = discountCustomer;
+            DiscountRequestActive.Value = false;
+            DiscountRequestOwner.Value = ShopClawRules.NoOccupant;
+            DiscountRequestBasePrice.Value = 0;
+            DiscountRequestPercent.Value = 0;
+            discountCustomer = null;
+            customer.ServerSetDialogue(choiceIndex == 2 ? "알겠습니다. 정가로 살게요!" : "고맙습니다!");
+            ShopNetworkGame.Instance.ServerSetEvent(choiceIndex == 2
+                ? "할인을 정중히 거절했습니다. 손님은 정가로 구매합니다."
+                : "할인 요청을 조정해 결제를 진행합니다.");
+            Debug.Log("[SideContent:Discount] choice=" + choiceIndex + " discount=" + discount, this);
+            StartCoroutine(ServerCheckoutRoutine(customer, 1f, Mathf.Max(0.5f, 1f - discount)));
         }
 
         public void ServerBeginNegotiation(ulong requester)
@@ -413,6 +512,32 @@ namespace PickAndPlaceShop
             }
 
             bool reserved = productId >= 0 && ledger.TryReserve(customer.NetworkObjectId, productId);
+            if (reserved && !customer.IsRobber.Value)
+            {
+                ShopNetworkGame game = ShopNetworkGame.Instance;
+                ShopContainerItem pickedUp = default;
+                bool removed = game != null &&
+                               game.ServerTryConsumeDisplayedProduct(productId, out pickedUp);
+                bool pickedUpInLedger = removed &&
+                                        ledger.TryPickupReservation(customer.NetworkObjectId,
+                                            out int pickedUpProduct) &&
+                                        pickedUpProduct == productId;
+                if (!pickedUpInLedger)
+                {
+                    if (removed) game.ServerTryRestoreDisplayedProduct(pickedUp);
+                    ledger.CancelReservation(customer.NetworkObjectId, false);
+                    reserved = false;
+                }
+                else
+                {
+                    heldCustomerItems[customer.NetworkObjectId] = pickedUp;
+                    customer.ServerSetHeldProduct(pickedUp.ProductId, pickedUp.VisualPrefabIndex);
+                    SyncStockVariables();
+                    if (Debug.isDebugBuild)
+                        Debug.Log($"[SalesFlow:PickupStock] customer={customer.NetworkObjectId} " +
+                                  $"product={pickedUp.ProductId} display={game.Displayed.Value}", this);
+                }
+            }
             if (Debug.isDebugBuild)
             {
                 Debug.Log($"[CustomerMatch] customer={customer.NetworkObjectId} " +
@@ -508,7 +633,7 @@ namespace PickAndPlaceShop
         {
             if (!IsServer || customer == null || !giveUpsProcessed.Add(customer.NetworkObjectId)) return;
             queue.Remove(customer);
-            ledger.CancelReservation(customer.NetworkObjectId);
+            ServerReleaseCustomerProduct(customer);
             ReleaseCustomerPoints(customer.NetworkObjectId);
             QueueCount.Value = queue.Count;
             GiveUpCount.Value++;
@@ -519,11 +644,22 @@ namespace PickAndPlaceShop
             ShopNetworkGame.Instance.ServerSetEvent("손님이 구매를 포기했습니다: " + reason);
         }
 
+        public void ServerRegisterAttackExit(ShopCustomerNetwork customer)
+        {
+            if (!IsServer || customer == null || !giveUpsProcessed.Add(customer.NetworkObjectId)) return;
+            queue.Remove(customer);
+            ServerReleaseCustomerProduct(customer);
+            ReleaseCustomerPoints(customer.NetworkObjectId);
+            QueueCount.Value = queue.Count;
+            GiveUpCount.Value++;
+            ShopNetworkGame.Instance.ServerSetEvent("공격받은 손님이 구매하지 않고 떠납니다.");
+        }
+
         public void ServerCustomerReachedExit(ShopCustomerNetwork customer)
         {
             if (!IsServer || customer == null) return;
             queue.Remove(customer);
-            ledger.CancelReservation(customer.NetworkObjectId);
+            ServerReleaseCustomerProduct(customer);
             ReleaseCustomerPoints(customer.NetworkObjectId);
             activeCustomers.Remove(customer.NetworkObjectId);
             QueueCount.Value = queue.Count;
@@ -653,6 +789,8 @@ namespace PickAndPlaceShop
                 ? roadsideEntryPoint.position
                 : ServerGetBrowsePoint(networkObject.NetworkObjectId);
             customer.ServerInitialize(archetype, budget, position, entryTarget);
+            customer.ServerConfigureRobber(ShopNetworkGame.Instance != null &&
+                                           ShopNetworkGame.Instance.ServerTryClaimRobberSpawn());
             activeCustomers[networkObject.NetworkObjectId] = customer;
             VisitCount.Value++;
             CustomersInStore.Value = activeCustomers.Count;
@@ -663,8 +801,39 @@ namespace PickAndPlaceShop
             }
         }
 
+        public bool ServerRobberSteal(ShopCustomerNetwork customer, int productId,
+            out ShopContainerItem stolen)
+        {
+            stolen = default;
+            if (!IsServer || customer == null || ShopNetworkGame.Instance == null) return false;
+            ledger.CancelReservation(customer.NetworkObjectId);
+            bool removed = ShopNetworkGame.Instance.ServerTryConsumeDisplayedProduct(productId, out stolen);
+            RebuildLedgerFromNetworkStock();
+            SyncStockVariables();
+            return removed;
+        }
+
+        private void ServerReleaseCustomerProduct(ShopCustomerNetwork customer)
+        {
+            if (customer == null) return;
+            ulong customerId = customer.NetworkObjectId;
+            bool restoredToDisplay = false;
+            if (heldCustomerItems.Remove(customerId, out ShopContainerItem held))
+            {
+                bool preserved = ShopNetworkGame.Instance != null &&
+                                 ShopNetworkGame.Instance.ServerTryRestoreDisplayedProduct(held,
+                                     out restoredToDisplay);
+                if (!preserved)
+                    Debug.LogError("[SalesFlow:RestoreFailed] customer=" + customerId +
+                                   " product=" + held.ProductId, this);
+                customer.ServerSetHeldProduct(-1, -1);
+            }
+            ledger.CancelReservation(customerId, restoredToDisplay);
+            SyncStockVariables();
+        }
+
         private IEnumerator ServerCheckoutRoutine(ShopCustomerNetwork customer, float durationMultiplier,
-            float salePriceMultiplier = 1f)
+            float salePriceMultiplier = 1f, bool skipCheckoutDelay = false)
         {
             checkoutBusy = true;
             queue.Remove(customer);
@@ -674,7 +843,8 @@ namespace PickAndPlaceShop
                 Debug.Log($"[SalesFlow:CheckoutBegin] customer={customer.NetworkObjectId} " +
                           $"product={customer.DesiredProductId.Value}", this);
             ShopNetworkGame.Instance.ServerSetEvent("계산 중입니다...");
-            yield return new WaitForSeconds(GetScaledCheckoutDuration() * Mathf.Max(1f, durationMultiplier));
+            if (!skipCheckoutDelay)
+                yield return new WaitForSeconds(GetScaledCheckoutDuration() * Mathf.Max(1f, durationMultiplier));
 
             if (customer == null || !customer.IsSpawned)
             {
@@ -684,24 +854,25 @@ namespace PickAndPlaceShop
 
             ShopProductDefinition product = FindProduct(customer.DesiredProductId.Value);
             int price = product != null ? GetSalePrice(product) : 0;
-            if (product != null && ShopNetworkGame.Instance.ServerTryPeekDisplayedProduct(
-                    customer.DesiredProductId.Value, out ShopContainerItem displayedItem) &&
-                displayedItem.IsAppraised)
+            bool hasPickedUpItem = heldCustomerItems.TryGetValue(customer.NetworkObjectId,
+                out ShopContainerItem displayedItem);
+            if (!hasPickedUpItem)
+                hasPickedUpItem = ShopNetworkGame.Instance.ServerTryPeekDisplayedProduct(
+                    customer.DesiredProductId.Value, out displayedItem);
+            if (product != null && hasPickedUpItem && displayedItem.IsAppraised)
             {
                 float trendFactor = product.SalePrice > 0
                     ? price / (float)product.SalePrice : 1f;
                 price = Mathf.RoundToInt(displayedItem.UnitPrice * trendFactor);
             }
-            price = Mathf.Max(0, Mathf.RoundToInt(price * Mathf.Max(1f, salePriceMultiplier)));
+            price = ShopSideContentRules.ApplySaleMultiplier(price, salePriceMultiplier);
             int coins = ShopNetworkGame.Instance.Coins.Value;
             int sold = ShopNetworkGame.Instance.SoldToday.Value;
             bool completed = ShopSaleProcessor.TryComplete(ledger, customer.NetworkObjectId, price,
                 ref coins, ref sold, out int productId);
             if (completed)
             {
-                if (!ShopNetworkGame.Instance.ServerTryConsumeDisplayedProduct(productId, out _))
-                    Debug.LogError("[Containers] 판매 완료 상품이 공용 진열 컨테이너에 없습니다. product=" +
-                                   productId, this);
+                heldCustomerItems.Remove(customer.NetworkObjectId);
                 int reputation = ShopLiveOperationsNetwork.Instance != null
                     ? ShopLiveOperationsNetwork.Instance.Config.SuccessfulSaleReputationReward : 1;
                 ShopNetworkGame.Instance.Coins.Value = coins;
@@ -790,9 +961,14 @@ namespace PickAndPlaceShop
         {
             int trend = ShopNetworkGame.Instance != null ? ShopNetworkGame.Instance.TrendPercent.Value : 0;
             int legacyPrice = Mathf.Max(1, Mathf.RoundToInt(product.SalePrice * (1f + trend / 100f)));
-            return ShopLiveOperationsNetwork.Instance != null
+            int basePrice = ShopLiveOperationsNetwork.Instance != null
                 ? ShopLiveOperationsNetwork.Instance.ApplyTrendPrice(product, product.SalePrice)
                 : legacyPrice;
+            float collectionMultiplier = ShopProgressionManager.Instance != null
+                ? ShopProgressionManager.Instance.CollectionSaleMultiplier(
+                    ShopProductLocalization.CategoryId(product.Category))
+                : 1f;
+            return Mathf.Max(1, Mathf.RoundToInt(basePrice * collectionMultiplier));
         }
 
         private int GetScaledMaximumCustomers()

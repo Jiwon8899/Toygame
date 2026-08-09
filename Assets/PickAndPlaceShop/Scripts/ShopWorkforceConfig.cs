@@ -22,6 +22,8 @@ namespace PickAndPlaceShop
         [Min(1f)] [SerializeField] private float cashierDurationMultiplier = 1.5f;
         [Min(0.25f)] [SerializeField] private float stockerWorkInterval = 4f;
         [Min(0.25f)] [SerializeField] private float collectorWorkInterval = 5f;
+        [Min(0.25f)] [SerializeField] private float machineWorkInterval = 6f;
+        [Range(0.1f, 1f)] [SerializeField] private float staffMachineCostMultiplier = 0.5f;
         [Min(0.1f)] [SerializeField] private float walkSpeed = 1.45f;
         [Min(0.1f)] [SerializeField] private float workReachDistance = 0.8f;
 
@@ -31,6 +33,8 @@ namespace PickAndPlaceShop
         public float CashierDurationMultiplier => Mathf.Max(1f, cashierDurationMultiplier);
         public float StockerWorkInterval => Mathf.Max(0.25f, stockerWorkInterval);
         public float CollectorWorkInterval => Mathf.Max(0.25f, collectorWorkInterval);
+        public float MachineWorkInterval => Mathf.Max(0.25f, machineWorkInterval);
+        public float StaffMachineCostMultiplier => Mathf.Clamp(staffMachineCostMultiplier, 0.1f, 1f);
         public float WalkSpeed => Mathf.Max(0.1f, walkSpeed);
         public float WorkReachDistance => Mathf.Max(0.1f, workReachDistance);
         public GameObject[] AppearancePrefabs => appearancePrefabs;

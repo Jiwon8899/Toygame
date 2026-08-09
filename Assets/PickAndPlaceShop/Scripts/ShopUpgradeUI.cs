@@ -34,6 +34,14 @@ namespace PickAndPlaceShop
         private Text moneyText;
         private Font uiFont;
         private bool open;
+        private GameObject staffAssignmentPanel;
+        private Transform staffAssignmentRows;
+        private Text staffAssignmentStatus;
+        private Button staffHireButton;
+        private Text staffHireLabel;
+        private int observedStaffMask = -1;
+        private int observedSlot2 = -1;
+        private int observedSlot3 = -1;
 
         public static bool IsOpen => instance != null && instance.open;
 
@@ -80,13 +88,37 @@ namespace PickAndPlaceShop
                 if (keyboard.digit8Key.wasPressedThisFrame) Purchase(7);
             }
             Refresh();
+            if (staffAssignmentPanel != null && staffAssignmentPanel.activeSelf)
+            {
+                ShopNetworkGame game = ShopNetworkGame.Instance;
+                if (game != null && (observedStaffMask != game.StaffHiredMask.Value ||
+                                     observedSlot2 != game.StaffAssignmentSlot2.Value ||
+                                     observedSlot3 != game.StaffAssignmentSlot3.Value))
+                    RefreshStaffAssignments();
+            }
         }
 
         private void Purchase(int index)
         {
             if (index < 0 || index >= Categories.Length || ShopNetworkGame.Instance == null) return;
+            ShopUpgradeCategory category = Categories[index];
+            if (category == ShopUpgradeCategory.Staff &&
+                ShopNetworkGame.Instance.GetUpgradeLevel(ShopUpgradeCategory.Staff) >= 2)
+            {
+                OpenStaffAssignments();
+                return;
+            }
             StartCoroutine(Punch(cards[index].Background.rectTransform));
-            ShopNetworkGame.Instance.RequestUpgradePurchase(Categories[index]);
+            ShopNetworkGame.Instance.RequestUpgradePurchase(category);
+            if (category == ShopUpgradeCategory.Staff) StartCoroutine(OpenStaffAssignmentsAfterPurchase());
+        }
+
+        private IEnumerator OpenStaffAssignmentsAfterPurchase()
+        {
+            yield return new WaitForSecondsRealtime(0.3f);
+            if (ShopNetworkGame.Instance != null &&
+                ShopNetworkGame.Instance.GetUpgradeLevel(ShopUpgradeCategory.Staff) >= 2)
+                OpenStaffAssignments();
         }
 
         private static IEnumerator Punch(RectTransform rect)
@@ -175,6 +207,125 @@ namespace PickAndPlaceShop
                 "1~8 구매 · X 닫기 · 고용된 알바는 직접 걸어 다니며 공용 자원만 사용합니다.", 20,
                 FontStyle.Bold, TextAnchor.MiddleCenter, ShopUiSkin.TextMuted);
             SetRect(footer.rectTransform, new Vector2(50f, 16f), new Vector2(1440f, 42f), Vector2.zero);
+            BuildStaffAssignmentPanel(panel.transform);
+        }
+
+        private void BuildStaffAssignmentPanel(Transform parent)
+        {
+            staffAssignmentPanel = CreatePanel("StaffAssignmentPanel", parent, new Vector2(1480f, 720f),
+                ShopUiSkin.CreamCard);
+            SetRect(staffAssignmentPanel.GetComponent<RectTransform>(), Vector2.zero,
+                new Vector2(1480f, 720f), new Vector2(0.5f, 0.5f));
+            ShopUiSkin.Round(staffAssignmentPanel.GetComponent<Image>(), 26);
+            Text title = CreateText("Title", staffAssignmentPanel.transform, "알바 기계 배치", 38,
+                FontStyle.Bold, TextAnchor.MiddleLeft, ShopUiSkin.BrownDeep);
+            SetRect(title.rectTransform, new Vector2(42f, -26f), new Vector2(850f, 60f), new Vector2(0f, 1f));
+            Text help = CreateText("Help", staffAssignmentPanel.transform,
+                "2·3번 알바를 쿠지 또는 뽑기 기계에 배치합니다. 다시 선택하면 즉시 재배치됩니다.", 20,
+                FontStyle.Normal, TextAnchor.MiddleLeft, ShopUiSkin.TextMuted);
+            SetRect(help.rectTransform, new Vector2(44f, -88f), new Vector2(1250f, 42f), new Vector2(0f, 1f));
+
+            GameObject close = CreatePanel("Close", staffAssignmentPanel.transform, new Vector2(58f, 58f),
+                ShopUiSkin.BrownMid);
+            SetRect(close.GetComponent<RectTransform>(), new Vector2(-24f, -24f), new Vector2(58f, 58f), Vector2.one);
+            ShopUiSkin.Round(close.GetComponent<Image>(), 29);
+            Button closeButton = close.AddComponent<Button>();
+            closeButton.targetGraphic = close.GetComponent<Image>();
+            closeButton.onClick.AddListener(() => staffAssignmentPanel.SetActive(false));
+            Text closeLabel = CreateText("Label", close.transform, "X", 26, FontStyle.Bold,
+                TextAnchor.MiddleCenter, Color.white);
+            SetRect(closeLabel.rectTransform, Vector2.zero, new Vector2(58f, 58f), new Vector2(0.5f, 0.5f));
+
+            GameObject rows = new("AssignmentRows", typeof(RectTransform));
+            rows.transform.SetParent(staffAssignmentPanel.transform, false);
+            SetRect(rows.GetComponent<RectTransform>(), new Vector2(44f, -150f), new Vector2(1390f, 420f),
+                new Vector2(0f, 1f));
+            staffAssignmentRows = rows.transform;
+
+            GameObject hire = CreatePanel("HireNext", staffAssignmentPanel.transform, new Vector2(420f, 64f),
+                ShopUiSkin.Orange);
+            SetRect(hire.GetComponent<RectTransform>(), new Vector2(44f, 34f), new Vector2(420f, 64f), Vector2.zero);
+            ShopUiSkin.Pill(hire.GetComponent<Image>());
+            staffHireButton = hire.AddComponent<Button>();
+            staffHireButton.targetGraphic = hire.GetComponent<Image>();
+            staffHireButton.onClick.AddListener(() =>
+            {
+                ShopNetworkGame.Instance?.RequestUpgradePurchase(ShopUpgradeCategory.Staff);
+                StartCoroutine(RefreshStaffAssignmentsSoon());
+            });
+            staffHireLabel = CreateText("Label", hire.transform, "3번 알바 추가 고용", 21, FontStyle.Bold,
+                TextAnchor.MiddleCenter, Color.white);
+            SetRect(staffHireLabel.rectTransform, Vector2.zero, new Vector2(420f, 64f), new Vector2(0.5f, 0.5f));
+            staffAssignmentStatus = CreateText("Status", staffAssignmentPanel.transform, string.Empty, 20,
+                FontStyle.Bold, TextAnchor.MiddleRight, ShopUiSkin.Teal);
+            SetRect(staffAssignmentStatus.rectTransform, new Vector2(-44f, 38f), new Vector2(850f, 54f), Vector2.one);
+            staffAssignmentPanel.SetActive(false);
+        }
+
+        private IEnumerator RefreshStaffAssignmentsSoon()
+        {
+            yield return new WaitForSecondsRealtime(0.3f);
+            RefreshStaffAssignments();
+        }
+
+        private void OpenStaffAssignments()
+        {
+            if (staffAssignmentPanel == null) return;
+            staffAssignmentPanel.SetActive(true);
+            staffAssignmentPanel.transform.SetAsLastSibling();
+            RefreshStaffAssignments();
+        }
+
+        private void RefreshStaffAssignments()
+        {
+            if (staffAssignmentRows == null || ShopNetworkGame.Instance == null) return;
+            for (int i = staffAssignmentRows.childCount - 1; i >= 0; i--)
+                Destroy(staffAssignmentRows.GetChild(i).gameObject);
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            observedStaffMask = game.StaffHiredMask.Value;
+            observedSlot2 = game.StaffAssignmentSlot2.Value;
+            observedSlot3 = game.StaffAssignmentSlot3.Value;
+            List<ShopStaffMachineOption> options = ShopStaffMachineAssignment.Options();
+            for (int slot = 2; slot <= 3; slot++)
+            {
+                bool hired = game.IsStaffHired((ShopStaffRole)(slot - 1));
+                Text rowTitle = CreateText("Slot" + slot + "Title", staffAssignmentRows,
+                    slot + "번 알바 " + (hired ? "배치 선택" : "(아직 고용되지 않음)"), 24,
+                    FontStyle.Bold, TextAnchor.MiddleLeft, hired ? ShopUiSkin.BrownDeep : ShopUiSkin.TextMuted);
+                SetRect(rowTitle.rectTransform, new Vector2(0f, -(slot - 2) * 190f), new Vector2(420f, 44f),
+                    new Vector2(0f, 1f));
+                int current = game.GetStaffMachineAssignment(slot);
+                for (int i = 0; i < options.Count && i < 7; i++)
+                {
+                    ShopStaffMachineOption option = options[i];
+                    Color color = option.Assignment == current ? ShopUiSkin.Teal : ShopUiSkin.CreamBackground;
+                    GameObject buttonObject = CreatePanel("Slot" + slot + "_" + option.Assignment,
+                        staffAssignmentRows, new Vector2(185f, 66f), color);
+                    SetRect(buttonObject.GetComponent<RectTransform>(),
+                        new Vector2(i * 195f, -52f - (slot - 2) * 190f), new Vector2(185f, 66f),
+                        new Vector2(0f, 1f));
+                    ShopUiSkin.Round(buttonObject.GetComponent<Image>(), 14);
+                    Button button = buttonObject.AddComponent<Button>();
+                    button.targetGraphic = buttonObject.GetComponent<Image>();
+                    button.interactable = hired;
+                    int capturedSlot = slot;
+                    int capturedAssignment = option.Assignment;
+                    button.onClick.AddListener(() =>
+                    {
+                        ShopNetworkGame.Instance?.RequestStaffMachineAssignment(capturedSlot, capturedAssignment);
+                        StartCoroutine(RefreshStaffAssignmentsSoon());
+                    });
+                    Text label = CreateText("Label", buttonObject.transform, option.Label, 16, FontStyle.Bold,
+                        TextAnchor.MiddleCenter, option.Assignment == current ? Color.white : ShopUiSkin.TextBody);
+                    SetRect(label.rectTransform, Vector2.zero, new Vector2(175f, 60f), new Vector2(0.5f, 0.5f));
+                }
+            }
+            staffAssignmentStatus.text = "2번: " + ShopStaffMachineAssignment.Label(game.StaffAssignmentSlot2.Value) +
+                                         "  ·  3번: " + ShopStaffMachineAssignment.Label(game.StaffAssignmentSlot3.Value);
+            bool canHireThird = !game.IsStaffHired(ShopStaffRole.Collector);
+            if (staffHireButton != null) staffHireButton.interactable = canHireThird;
+            if (staffHireLabel != null)
+                staffHireLabel.text = canHireThird ? "3번 알바 추가 고용" : "알바 3명 고용 완료";
         }
 
         private Card CreateCard(Transform parent, ShopUpgradeCategory category, int key, Color accent)

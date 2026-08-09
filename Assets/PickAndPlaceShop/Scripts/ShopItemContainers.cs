@@ -205,5 +205,40 @@ namespace PickAndPlaceShop
             }
             return -1;
         }
+
+        public static int FindNearestFreeSlot(NetworkList<ShopContainerItem> items, ulong owner,
+            ShopContainerKind container, int requestedSlot, int capacity, int rowSize = 5)
+        {
+            if (items == null || capacity <= 0) return -1;
+            requestedSlot = Mathf.Clamp(requestedSlot, 0, capacity - 1);
+            rowSize = Mathf.Max(1, rowSize);
+            int requestedRow = requestedSlot / rowSize;
+            int requestedColumn = requestedSlot % rowSize;
+            int bestSlot = -1;
+            int bestRowDistance = int.MaxValue;
+            int bestColumnDistance = int.MaxValue;
+            for (int slot = 0; slot < capacity; slot++)
+            {
+                bool occupied = false;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    ShopContainerItem item = items[i];
+                    if (BelongsTo(item, owner, container) && item.SlotIndex == slot && item.Quantity > 0)
+                    {
+                        occupied = true;
+                        break;
+                    }
+                }
+                if (occupied) continue;
+                int rowDistance = Mathf.Abs(slot / rowSize - requestedRow);
+                int columnDistance = Mathf.Abs(slot % rowSize - requestedColumn);
+                if (rowDistance > bestRowDistance ||
+                    rowDistance == bestRowDistance && columnDistance >= bestColumnDistance) continue;
+                bestSlot = slot;
+                bestRowDistance = rowDistance;
+                bestColumnDistance = columnDistance;
+            }
+            return bestSlot;
+        }
     }
 }

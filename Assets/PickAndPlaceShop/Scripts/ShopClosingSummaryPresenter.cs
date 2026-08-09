@@ -67,6 +67,7 @@ namespace PickAndPlaceShop
 
         private void BeginPresentation()
         {
+            ShopCapsuleOpeningPresenter.DismissImmediate();
             if (presentation != null) StopCoroutine(presentation);
             presentation = StartCoroutine(PlayPresentation());
         }
@@ -190,11 +191,11 @@ namespace PickAndPlaceShop
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
 
-            Image backdrop = CreateImage("Backdrop", canvas.transform, ShopUiSkin.BrownDeep);
+            Image backdrop = CreateImage("Backdrop", canvas.transform, Color.clear);
+            backdrop.raycastTarget = false;
             RectTransform bg = backdrop.rectTransform;
             bg.anchorMin = Vector2.zero; bg.anchorMax = Vector2.one;
             bg.offsetMin = bg.offsetMax = Vector2.zero;
-            AddConfetti(backdrop.transform);
             Image card = CreateImage("SummaryCard", backdrop.transform, ShopUiSkin.CreamCard);
             RectTransform cardRect = card.rectTransform;
             cardRect.anchorMin = cardRect.anchorMax = new Vector2(0.5f, 0.5f);

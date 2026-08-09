@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>미야옹 츄르 부자가 될거야  소품샵 뽑기 시뮬레이터</title>
+    <style>
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #05090d;
+      }
+      #unity-container {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+      }
+      #unity-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #231F20;
+        outline: none;
+      }
+      #unity-loading-bar {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: min(420px, 72vw);
+        transform: translate(-50%, -50%);
+        color: #ffe6a3;
+        font: 600 18px/1.4 sans-serif;
+        text-align: center;
+      }
+      #unity-progress-track {
+        height: 12px;
+        margin-top: 14px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #1a2732;
+      }
+      #unity-progress-bar-full {
+        width: 0;
+        height: 100%;
+        background: #db8a28;
+      }
+      #unity-warning {
+        position: absolute;
+        z-index: 10;
+        left: 50%;
+        top: 12px;
+        width: min(760px, 90vw);
+        transform: translateX(-50%);
+      }
+      #unity-fullscreen-button {
+        position: absolute;
+        z-index: 5;
+        right: 12px;
+        bottom: 12px;
+        width: 42px;
+        height: 42px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 8px;
+        color: white;
+        background: rgba(5, 9, 13, 0.68);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div>Loading game...</div>
+        <div id="unity-progress-track"><div id="unity-progress-bar-full"></div></div>
+      </div>
+      <div id="unity-warning"></div>
+      <button id="unity-fullscreen-button" type="button" aria-label="Fullscreen">&#x26F6;</button>
+    </div>
+    <script>
+      const canvas = document.querySelector("#unity-canvas");
+      const loadingBar = document.querySelector("#unity-loading-bar");
+      const loadingText = loadingBar.querySelector("div");
+      const progressBar = document.querySelector("#unity-progress-bar-full");
+      const warningBanner = document.querySelector("#unity-warning");
+
+      function unityShowBanner(message, type) {
+        const item = document.createElement("div");
+        item.textContent = message;
+        item.style.cssText = "margin:4px;padding:10px;border-radius:6px;color:#fff;background:" +
+          (type === "error" ? "#a52626" : "#8a641b");
+        warningBanner.appendChild(item);
+        if (type !== "error") setTimeout(() => item.remove(), 5000);
+      }
+
+      const buildUrl = "Build";
+      const config = {
+        arguments: [],
+        dataUrl: buildUrl + "/docs.data.unityweb",
+        frameworkUrl: buildUrl + "/docs.framework.js.unityweb",
+        codeUrl: buildUrl + "/docs.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "미야옹 츄르 부자가 될거야  소품샵 뽑기 시뮬레이터",
+        productVersion: "0.1.0",
+        autoSyncPersistentDataPath: true,
+        showBanner: unityShowBanner
+      };
+
+      async function prepareSplitDataUrl() {
+        const manifestUrl = config.dataUrl + ".parts.json";
+        const manifestResponse = await fetch(manifestUrl, { cache: "no-cache" });
+        if (manifestResponse.status === 404) return null;
+        if (!manifestResponse.ok) {
+          throw new Error("Failed to download WebGL data manifest: " + manifestResponse.status);
+        }
+
+        const manifest = await manifestResponse.json();
+        if (!manifest.parts || !manifest.parts.length || !manifest.totalBytes) {
+          throw new Error("WebGL data manifest is invalid.");
+        }
+
+        const chunks = [];
+        let downloadedBytes = 0;
+        loadingText.textContent = "Loading game data...";
+        for (const part of manifest.parts) {
+          const partResponse = await fetch(buildUrl + "/" + part.file, { cache: "no-cache" });
+          if (!partResponse.ok) {
+            throw new Error("Failed to download WebGL data chunk " + part.file + ": " + partResponse.status);
+          }
+          const chunk = await partResponse.blob();
+          if (chunk.size !== part.size) {
+            throw new Error("WebGL data chunk size mismatch: " + part.file);
+          }
+          chunks.push(chunk);
+          downloadedBytes += chunk.size;
+          progressBar.style.width = ((downloadedBytes / manifest.totalBytes) * 85) + "%";
+        }
+
+        if (downloadedBytes !== manifest.totalBytes) {
+          throw new Error("WebGL data total size mismatch.");
+        }
+        const blobUrl = URL.createObjectURL(new Blob(chunks, { type: "application/octet-stream" }));
+        return blobUrl + "#" + manifest.originalFile;
+      }
+
+      const loader = document.createElement("script");
+      loader.src = buildUrl + "/docs.loader.js";
+      loader.onload = async () => {
+        let splitDataUrl = null;
+        try {
+          splitDataUrl = await prepareSplitDataUrl();
+          if (splitDataUrl) config.dataUrl = splitDataUrl;
+          loadingText.textContent = "Starting game...";
+          const unityInstance = await createUnityInstance(canvas, config, progress => {
+            progressBar.style.width = ((splitDataUrl ? 85 : 0) + progress * (splitDataUrl ? 15 : 100)) + "%";
+          });
+          loadingBar.style.display = "none";
+          canvas.focus();
+          document.querySelector("#unity-fullscreen-button").onclick = () => unityInstance.SetFullscreen(1);
+        } catch (message) {
+          unityShowBanner(String(message), "error");
+        } finally {
+          if (splitDataUrl) URL.revokeObjectURL(splitDataUrl.split("#")[0]);
+        }
+      };
+      document.body.appendChild(loader);
+    </script>
+  </body>
+</html>

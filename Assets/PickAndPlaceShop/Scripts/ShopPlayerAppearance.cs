@@ -9,8 +9,10 @@ namespace PickAndPlaceShop
         private static readonly int SpeedParameter = Animator.StringToHash("Speed");
         private static readonly int Attack1Parameter = Animator.StringToHash("Attack1");
         private static readonly int Attack2Parameter = Animator.StringToHash("Attack2");
+        private static readonly int AttackSpeedParameter = Animator.StringToHash("AttackSpeed");
         private static readonly int Attack1State = Animator.StringToHash("Attack1");
         private static readonly int Attack2State = Animator.StringToHash("Attack2");
+        private static readonly int IdleState = Animator.StringToHash("Idle");
 
         [SerializeField] private Animator appearanceAnimator;
         [Min(0.1f)] [SerializeField] private float runThreshold = 3.8f;
@@ -20,8 +22,22 @@ namespace PickAndPlaceShop
         public Animator AppearanceAnimator => appearanceAnimator;
         public float CurrentSpeed { get; private set; }
         public bool IsRunning { get; private set; }
+        public bool AttackAnimationActive
+        {
+            get
+            {
+                if (appearanceAnimator == null || !appearanceAnimator.isActiveAndEnabled) return false;
 
-        public void PlayAttack(int comboIndex, float transitionSeconds)
+                AnimatorStateInfo current = appearanceAnimator.GetCurrentAnimatorStateInfo(0);
+                if (IsAttackState(current.shortNameHash) && current.normalizedTime < 1f) return true;
+
+                if (!appearanceAnimator.IsInTransition(0)) return false;
+                AnimatorStateInfo next = appearanceAnimator.GetNextAnimatorStateInfo(0);
+                return IsAttackState(next.shortNameHash);
+            }
+        }
+
+        public void PlayAttack(int comboIndex, float transitionSeconds, float playbackSpeed)
         {
             if (appearanceAnimator == null) return;
             appearanceAnimator.ResetTrigger(comboIndex == 0 ? Attack2Parameter : Attack1Parameter);
@@ -33,7 +49,13 @@ namespace PickAndPlaceShop
                                (comboIndex == 0 ? "Attack1" : "Attack2"), this);
                 return;
             }
+            appearanceAnimator.SetFloat(AttackSpeedParameter, Mathf.Max(0.01f, playbackSpeed));
             appearanceAnimator.CrossFadeInFixedTime(state, Mathf.Max(0f, transitionSeconds), 0, 0f);
+        }
+
+        private static bool IsAttackState(int shortNameHash)
+        {
+            return shortNameHash == Attack1State || shortNameHash == Attack2State;
         }
 
 #if UNITY_EDITOR
@@ -78,6 +100,17 @@ namespace PickAndPlaceShop
             appearanceAnimator.SetFloat(SpeedParameter, CurrentSpeed);
             appearanceAnimator.SetBool(MovingParameter, moving);
             appearanceAnimator.SetBool(RunningParameter, IsRunning);
+            FinishAttackStateIfNeeded();
+        }
+
+        private void FinishAttackStateIfNeeded()
+        {
+            AnimatorStateInfo current = appearanceAnimator.GetCurrentAnimatorStateInfo(0);
+            if (!IsAttackState(current.shortNameHash) || current.normalizedTime < 1f) return;
+
+            appearanceAnimator.SetFloat(AttackSpeedParameter, 1f);
+            if (!appearanceAnimator.IsInTransition(0) && appearanceAnimator.HasState(0, IdleState))
+                appearanceAnimator.CrossFadeInFixedTime(IdleState, 0.06f, 0, 0f);
         }
     }
 }

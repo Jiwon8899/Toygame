@@ -24,6 +24,8 @@ namespace PickAndPlaceShop
         private readonly HashSet<string> unlockedDistrictIds = new(StringComparer.Ordinal);
         private readonly HashSet<string> ownedCollectionItemIds = new(StringComparer.Ordinal);
         private readonly HashSet<int> grantedCollectionMilestones = new();
+        private readonly HashSet<string> grantedCollectionSets = new(StringComparer.Ordinal);
+        private readonly HashSet<string> completedCollectionCategories = new(StringComparer.Ordinal);
         private readonly List<ShopProgressGoalSave> dailyGoals = new();
         private readonly List<ShopProgressGoalSave> weeklyGoals = new();
         private readonly List<ShopContainerItemSave> pendingContainerItems = new();
@@ -252,6 +254,23 @@ namespace PickAndPlaceShop
             MarkChanged();
         }
 
+        public bool CaptureAuthoritativeSessionState()
+        {
+            if (boundGame == null || !boundGame.IsSpawned || !boundGame.IsServer) return false;
+
+            int authoritativeDay = Mathf.Max(1, boundGame.Day.Value);
+            bool dayChanged = currentDay != authoritativeDay;
+            teamFunds = Mathf.Max(0, boundGame.Coins.Value);
+            reputation = Mathf.Max(0, boundGame.Reputation.Value);
+            currentDay = authoritativeDay;
+            observedGameFunds = teamFunds;
+            observedGameReputation = reputation;
+            observedGameDay = currentDay;
+            if (dayChanged) BeginGoalCyclesForDay(currentDay);
+            MarkChanged();
+            return true;
+        }
+
         public void AdvanceTutorial(int completionReward)
         {
             if (tutorialCompleted) return;
@@ -281,11 +300,15 @@ namespace PickAndPlaceShop
         public void SkipTutorial()
         {
             if (tutorialCompleted) return;
+            ShopTutorialConfig tutorialConfig = ShopTutorialConfig.Load();
+            int reward = tutorialConfig != null ? tutorialConfig.SkipReward : 0;
             tutorialStep = ShopTutorialRuntime.StepCount;
             tutorialCompleted = true;
+            ChangeTeamFunds(reward);
             MarkChanged();
             SaveNow();
-            RaiseNotification("튜토리얼을 건너뛰었습니다. 일반 목표를 표시합니다.");
+            RaiseNotification("튜토리얼을 건너뛰었습니다. 시작 지원금 " + reward +
+                              "원을 받고 일반 목표를 표시합니다.");
         }
 
         public void RecordSale(string itemId, string displayName, string categoryId,
@@ -304,8 +327,50 @@ namespace PickAndPlaceShop
             int positiveAmount = Mathf.Max(1, amount);
             if (rare) rareItemsAcquired += positiveAmount;
             string registeredId = ResolveCollectionItemId(itemId, displayName, categoryId);
-            if (!string.IsNullOrWhiteSpace(registeredId)) ownedCollectionItemIds.Add(registeredId);
+            bool newlyOwned = !string.IsNullOrWhiteSpace(registeredId) && ownedCollectionItemIds.Add(registeredId);
+            if (newlyOwned) EvaluateCollectionSets(categoryId);
             MarkChanged();
+        }
+
+        public float CollectionSaleMultiplier(string categoryId)
+        {
+            if (string.IsNullOrWhiteSpace(categoryId) ||
+                !completedCollectionCategories.Contains(categoryId)) return 1f;
+            ShopSideContentConfig config = ShopSideContentConfig.Load();
+            return 1f + (config != null ? config.CategoryCompletionSaleBonus : 0.08f);
+        }
+
+        private void EvaluateCollectionSets(string categoryId)
+        {
+            if (catalog == null || string.IsNullOrWhiteSpace(categoryId)) return;
+            List<ShopCollectionItem> categoryItems = catalog.CollectionItems
+                .Where(item => item != null && item.CategoryId == categoryId).ToList();
+            if (categoryItems.Count == 0) return;
+            ShopSideContentConfig config = ShopSideContentConfig.Load();
+            int setSize = config != null ? config.SmallSetSize : 5;
+            int setCount = Mathf.CeilToInt(categoryItems.Count / (float)setSize);
+            for (int set = 0; set < setCount; set++)
+            {
+                int start = set * setSize;
+                int end = Mathf.Min(categoryItems.Count, start + setSize);
+                bool complete = true;
+                for (int i = start; i < end; i++)
+                    if (!ownedCollectionItemIds.Contains(categoryItems[i].ItemId)) { complete = false; break; }
+                string setId = categoryId + ":set:" + set;
+                if (!complete || !grantedCollectionSets.Add(setId)) continue;
+                int reward = config != null ? config.SmallSetReward : 250;
+                ChangeTeamFunds(reward);
+                RaiseNotification("도감 소형 세트 완성! +" + reward + "원");
+                Debug.Log("[SideContent:CollectionSet] set=" + setId + " reward=" + reward, this);
+            }
+            bool categoryComplete = categoryItems.All(item => ownedCollectionItemIds.Contains(item.ItemId));
+            if (categoryComplete && completedCollectionCategories.Add(categoryId))
+            {
+                float bonus = config != null ? config.CategoryCompletionSaleBonus : 0.08f;
+                RaiseNotification("도감 카테고리 완성! 해당 상품 판매가 +" +
+                                  Mathf.RoundToInt(bonus * 100f) + "% 영구 효과");
+                Debug.Log("[SideContent:CollectionCategory] category=" + categoryId + " bonus=" + bonus, this);
+            }
         }
 
         public void RecordOnlineOrder(int amount = 1)
@@ -396,13 +461,22 @@ namespace PickAndPlaceShop
         public bool SaveNow()
         {
             ShopProgressionSaveData data = CreateSaveData();
-            ShopLiveOperationsNetwork.Instance?.WriteSave(data);
+            ShopLiveOperationsNetwork liveOperations = ShopLiveOperationsNetwork.Instance;
+            if (liveOperations != null && liveOperations.IsSpawned && liveOperations.IsServer)
+                liveOperations.WriteSave(data);
+            Debug.Log("[Progression] SAVE_BEGIN path=" + ShopProgressionSaveStore.SavePath +
+                      " liveServer=" + HasLiveServerGame() +
+                      " items=" + data.containerItems.Count +
+                      " upgrades=" + data.playerUpgradeLevel + "/" + data.operationsUpgradeLevel + "/" +
+                      data.facilityUpgradeLevel + "/" + data.clawUpgradeLevel + "/" +
+                      data.gachaUpgradeLevel + "/" + data.kujiUpgradeLevel, this);
             bool saved = ShopProgressionSaveStore.Save(data);
             if (saved)
             {
                 dirty = false;
                 loadedSaveData = data;
             }
+            Debug.Log("[Progression] SAVE_END success=" + saved + " items=" + data.containerItems.Count, this);
             return saved;
         }
 
@@ -422,8 +496,9 @@ namespace PickAndPlaceShop
 
         public bool SaveNowWithFeedback()
         {
-            NotificationRaised?.Invoke("저장 중...");
             bool saved = SaveNow();
+            // SaveNow is synchronous. Queueing a separate "saving" toast before the result made the
+            // first toast remain visible for a full notification cycle even though disk I/O had ended.
             NotificationRaised?.Invoke(saved
                 ? "진행 상황을 저장했습니다."
                 : "저장하지 못했습니다.");
@@ -474,6 +549,8 @@ namespace PickAndPlaceShop
             unlockedDistrictIds.Clear();
             ownedCollectionItemIds.Clear();
             grantedCollectionMilestones.Clear();
+            grantedCollectionSets.Clear();
+            completedCollectionCategories.Clear();
             dailyGoals.Clear();
             weeklyGoals.Clear();
             loadedFromSave = false;
@@ -555,6 +632,8 @@ namespace PickAndPlaceShop
                     loadedSaveData.clawUpgradeLevel, loadedSaveData.gachaUpgradeLevel,
                     loadedSaveData.kujiUpgradeLevel, loadedSaveData.staffHiredMask,
                     loadedSaveData.staffAttendanceMask);
+                boundGame.ServerRestoreStaffAssignments(loadedSaveData.staffAssignmentSlot2,
+                    loadedSaveData.staffAssignmentSlot3);
                 boundGame.UpcycleDecorMask.Value = Mathf.Max(0, loadedSaveData.upcycleDecorMask);
                 boundGame.LastOneAwards.Value = Mathf.Max(0, loadedSaveData.lastOneAwards);
                 boundGame.RecentLastOneRecords.Value = new Unity.Collections.FixedString512Bytes(
@@ -757,6 +836,8 @@ namespace PickAndPlaceShop
 
         private ShopProgressionSaveData CreateSaveData()
         {
+            bool liveServer = HasLiveServerGame();
+            ShopProgressionSaveData previous = loadedSaveData;
             return new ShopProgressionSaveData
             {
                 currentDay = currentDay,
@@ -781,36 +862,43 @@ namespace PickAndPlaceShop
                 unlockedDistrictIds = unlockedDistrictIds.ToList(),
                 ownedCollectionItemIds = ownedCollectionItemIds.ToList(),
                 grantedCollectionMilestones = grantedCollectionMilestones.ToList(),
+                grantedCollectionSets = grantedCollectionSets.ToList(),
+                completedCollectionCategories = completedCollectionCategories.ToList(),
                 dailyGoals = CloneGoals(dailyGoals),
                 weeklyGoals = CloneGoals(weeklyGoals),
-                containerItems = CaptureContainerItems(),
-                clawMachines = CaptureClawMachines(),
-                kujiStations = CaptureKujiStations(),
-                playerUpgradeLevel = boundGame != null ? boundGame.PlayerUpgradeLevel.Value : 0,
-                operationsUpgradeLevel = boundGame != null ? boundGame.ShopUpgradeLevel.Value : 0,
-                facilityUpgradeLevel = boundGame != null ? boundGame.FacilityUpgradeLevel.Value : 0,
-                clawUpgradeLevel = boundGame != null ? boundGame.ClawUpgradeLevel.Value : 0,
-                gachaUpgradeLevel = boundGame != null ? boundGame.GachaUpgradeLevel.Value : 0,
-                kujiUpgradeLevel = boundGame != null ? boundGame.KujiUpgradeLevel.Value : 0,
-                staffHiredMask = boundGame != null ? boundGame.StaffHiredMask.Value : 0,
-                staffAttendanceMask = boundGame != null ? boundGame.StaffAttendanceMask.Value : 0,
+                containerItems = liveServer ? CaptureContainerItems() :
+                    CloneContainerItems(previous != null ? previous.containerItems : pendingContainerItems),
+                clawMachines = liveServer ? CaptureClawMachines() :
+                    CloneClawMachines(previous != null ? previous.clawMachines : pendingClawMachines),
+                kujiStations = liveServer ? CaptureKujiStations() :
+                    CloneKujiStations(previous != null ? previous.kujiStations : pendingKujiStations),
+                playerUpgradeLevel = liveServer ? boundGame.PlayerUpgradeLevel.Value : previous?.playerUpgradeLevel ?? 0,
+                operationsUpgradeLevel = liveServer ? boundGame.ShopUpgradeLevel.Value : previous?.operationsUpgradeLevel ?? 0,
+                facilityUpgradeLevel = liveServer ? boundGame.FacilityUpgradeLevel.Value : previous?.facilityUpgradeLevel ?? 0,
+                clawUpgradeLevel = liveServer ? boundGame.ClawUpgradeLevel.Value : previous?.clawUpgradeLevel ?? 0,
+                gachaUpgradeLevel = liveServer ? boundGame.GachaUpgradeLevel.Value : previous?.gachaUpgradeLevel ?? 0,
+                kujiUpgradeLevel = liveServer ? boundGame.KujiUpgradeLevel.Value : previous?.kujiUpgradeLevel ?? 0,
+                staffHiredMask = liveServer ? boundGame.StaffHiredMask.Value : previous?.staffHiredMask ?? 0,
+                staffAttendanceMask = liveServer ? boundGame.StaffAttendanceMask.Value : previous?.staffAttendanceMask ?? 0,
+                staffAssignmentSlot2 = liveServer ? boundGame.StaffAssignmentSlot2.Value : previous?.staffAssignmentSlot2 ?? 0,
+                staffAssignmentSlot3 = liveServer ? boundGame.StaffAssignmentSlot3.Value : previous?.staffAssignmentSlot3 ?? 0,
                 tutorialStep = tutorialStep,
                 tutorialCompleted = tutorialCompleted,
-                upcycleDecorMask = boundGame != null ? boundGame.UpcycleDecorMask.Value : 0,
-                lastOneAwards = boundGame != null ? boundGame.LastOneAwards.Value : 0,
-                recentLastOneRecords = boundGame != null ? boundGame.RecentLastOneRecords.Value.ToString() : string.Empty,
-                reviewHistory = boundGame != null ? boundGame.ReviewHistory.Value.ToString() : string.Empty,
-                latestReviewDay = boundGame != null ? boundGame.LatestReviewDay.Value : 0,
-                appraisalSequence = boundGame != null ? boundGame.AppraisalSequence.Value : 0,
-                consignmentOfferCount = boundGame != null ? boundGame.ConsignmentOfferCount.Value : 0,
-                consignmentOfferProduct0 = boundGame != null ? boundGame.ConsignmentOfferProduct0.Value : -1,
-                consignmentOfferProduct1 = boundGame != null ? boundGame.ConsignmentOfferProduct1.Value : -1,
-                consignmentOfferProduct2 = boundGame != null ? boundGame.ConsignmentOfferProduct2.Value : -1,
-                consignmentOfferPrice0 = boundGame != null ? boundGame.ConsignmentOfferPrice0.Value : 0,
-                consignmentOfferPrice1 = boundGame != null ? boundGame.ConsignmentOfferPrice1.Value : 0,
-                consignmentOfferPrice2 = boundGame != null ? boundGame.ConsignmentOfferPrice2.Value : 0,
-                consignmentSecondsRemaining = boundGame != null ? boundGame.ConsignmentSecondsRemaining.Value : 0f,
-                consignmentOfferSerial = boundGame != null ? boundGame.ConsignmentOfferSerial.Value : 0,
+                upcycleDecorMask = liveServer ? boundGame.UpcycleDecorMask.Value : previous?.upcycleDecorMask ?? 0,
+                lastOneAwards = liveServer ? boundGame.LastOneAwards.Value : previous?.lastOneAwards ?? 0,
+                recentLastOneRecords = liveServer ? boundGame.RecentLastOneRecords.Value.ToString() : previous?.recentLastOneRecords ?? string.Empty,
+                reviewHistory = liveServer ? boundGame.ReviewHistory.Value.ToString() : previous?.reviewHistory ?? string.Empty,
+                latestReviewDay = liveServer ? boundGame.LatestReviewDay.Value : previous?.latestReviewDay ?? 0,
+                appraisalSequence = liveServer ? boundGame.AppraisalSequence.Value : previous?.appraisalSequence ?? 0,
+                consignmentOfferCount = liveServer ? boundGame.ConsignmentOfferCount.Value : previous?.consignmentOfferCount ?? 0,
+                consignmentOfferProduct0 = liveServer ? boundGame.ConsignmentOfferProduct0.Value : previous?.consignmentOfferProduct0 ?? -1,
+                consignmentOfferProduct1 = liveServer ? boundGame.ConsignmentOfferProduct1.Value : previous?.consignmentOfferProduct1 ?? -1,
+                consignmentOfferProduct2 = liveServer ? boundGame.ConsignmentOfferProduct2.Value : previous?.consignmentOfferProduct2 ?? -1,
+                consignmentOfferPrice0 = liveServer ? boundGame.ConsignmentOfferPrice0.Value : previous?.consignmentOfferPrice0 ?? 0,
+                consignmentOfferPrice1 = liveServer ? boundGame.ConsignmentOfferPrice1.Value : previous?.consignmentOfferPrice1 ?? 0,
+                consignmentOfferPrice2 = liveServer ? boundGame.ConsignmentOfferPrice2.Value : previous?.consignmentOfferPrice2 ?? 0,
+                consignmentSecondsRemaining = liveServer ? boundGame.ConsignmentSecondsRemaining.Value : previous?.consignmentSecondsRemaining ?? 0f,
+                consignmentOfferSerial = liveServer ? boundGame.ConsignmentOfferSerial.Value : previous?.consignmentOfferSerial ?? 0,
                 hotbarProduct0 = hotbarProductIds[0],
                 hotbarProduct1 = hotbarProductIds[1],
                 hotbarProduct2 = hotbarProductIds[2],
@@ -818,6 +906,88 @@ namespace PickAndPlaceShop
                 hotbarProduct4 = hotbarProductIds[4],
                 selectedHotbarSlot = selectedHotbarSlot
             };
+        }
+
+        private bool HasLiveServerGame() => boundGame != null && boundGame.IsSpawned && boundGame.IsServer;
+
+        private static List<ShopContainerItemSave> CloneContainerItems(IEnumerable<ShopContainerItemSave> source)
+        {
+            List<ShopContainerItemSave> result = new();
+            if (source == null) return result;
+            foreach (ShopContainerItemSave item in source)
+            {
+                if (item == null) continue;
+                result.Add(new ShopContainerItemSave
+                {
+                    ownerClientId = item.ownerClientId,
+                    container = item.container,
+                    slotIndex = item.slotIndex,
+                    productId = item.productId,
+                    visualPrefabIndex = item.visualPrefabIndex,
+                    quantity = item.quantity,
+                    maxStack = item.maxStack,
+                    unitPrice = item.unitPrice,
+                    rarity = item.rarity,
+                    displayName = item.displayName,
+                    instanceId = item.instanceId,
+                    appraisalGrade = item.appraisalGrade
+                });
+            }
+            return result;
+        }
+
+        private static List<ShopClawMachineSave> CloneClawMachines(IEnumerable<ShopClawMachineSave> source)
+        {
+            List<ShopClawMachineSave> result = new();
+            if (source == null) return result;
+            foreach (ShopClawMachineSave machine in source)
+            {
+                if (machine == null) continue;
+                ShopClawMachineSave clone = new()
+                {
+                    machineId = machine.machineId,
+                    remainingCapsules = machine.remainingCapsules,
+                    prizes = new List<ShopClawPrizeSave>()
+                };
+                if (machine.prizes != null)
+                    foreach (ShopClawPrizeSave prize in machine.prizes)
+                        if (prize != null)
+                            clone.prizes.Add(new ShopClawPrizeSave
+                            {
+                                productId = prize.productId,
+                                rarity = prize.rarity,
+                                visualPrefabIndex = prize.visualPrefabIndex,
+                                localPosition = prize.localPosition,
+                                localRotation = prize.localRotation
+                            });
+                result.Add(clone);
+            }
+            return result;
+        }
+
+        private static List<ShopKujiStationSave> CloneKujiStations(IEnumerable<ShopKujiStationSave> source)
+        {
+            List<ShopKujiStationSave> result = new();
+            if (source == null) return result;
+            foreach (ShopKujiStationSave station in source)
+            {
+                if (station == null) continue;
+                result.Add(new ShopKujiStationSave
+                {
+                    poolId = station.poolId,
+                    setNumber = station.setNumber,
+                    stockS = station.stockS,
+                    stockA = station.stockA,
+                    stockB = station.stockB,
+                    stockC = station.stockC,
+                    stockD = station.stockD,
+                    drawsSinceCeiling = station.drawsSinceCeiling,
+                    lastPrizeAwarded = station.lastPrizeAwarded,
+                    refilling = station.refilling,
+                    refillSecondsRemaining = station.refillSecondsRemaining
+                });
+            }
+            return result;
         }
 
         private void ApplySaveData(ShopProgressionSaveData save)
@@ -846,6 +1016,8 @@ namespace PickAndPlaceShop
             weeklySetRewardClaimed = save.weeklySetRewardClaimed;
             ReplaceSet(unlockedDistrictIds, save.unlockedDistrictIds);
             ReplaceSet(ownedCollectionItemIds, save.ownedCollectionItemIds);
+            ReplaceSet(grantedCollectionSets, save.grantedCollectionSets);
+            ReplaceSet(completedCollectionCategories, save.completedCollectionCategories);
             grantedCollectionMilestones.Clear();
             if (save.grantedCollectionMilestones != null)
                 for (int i = 0; i < save.grantedCollectionMilestones.Count; i++)

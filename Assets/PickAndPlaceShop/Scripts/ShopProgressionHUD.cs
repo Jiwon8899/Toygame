@@ -43,10 +43,13 @@ namespace PickAndPlaceShop
         private int observedAnnouncementDay = -1;
         private float nextRefresh;
         private float hideNotificationAt;
-        private float lastTutorialSkipTap = float.NegativeInfinity;
+        private float lastSkipTap = float.NegativeInfinity;
         private int activeTab;
         private bool open;
+        private bool objectiveVisible = true;
         private bool resetScroll;
+        private RectTransform objectiveVisualRoot;
+        private float objectiveVisibility = 1f;
 
         public static bool IsOpen => instance != null && instance.open;
 
@@ -83,7 +86,7 @@ namespace PickAndPlaceShop
         private void OnDestroy()
         {
             CloseTutorialSkipConfirmation();
-            ShopHudStack.Instance.RemoveItem(this);
+            if (ShopHudStack.TryGetExisting(out ShopHudStack hudStack)) hudStack.RemoveItem(this);
             Detach();
             if (toggleStatusAction != null)
             {
@@ -105,9 +108,7 @@ namespace PickAndPlaceShop
             HandleInput();
             ObserveDayAnnouncement();
             UpdateNotification();
-            if (objectiveGroup != null && objectivePanel.activeSelf)
-                objectiveGroup.alpha = Mathf.MoveTowards(
-                    objectiveGroup.alpha, 1f, Time.unscaledDeltaTime * 4.5f);
+            AnimateObjectiveVisibility();
 
             if (manager == null || Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + 0.2f;
@@ -118,6 +119,23 @@ namespace PickAndPlaceShop
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
+
+            if (keyboard.capsLockKey.wasPressedThisFrame)
+            {
+                SetObjectiveVisible(!objectiveVisible);
+                return;
+            }
+
+            if (keyboard.bKey.wasPressedThisFrame)
+            {
+                if (open && activeTab == 2) SetOpen(false);
+                else if (!ShopUpgradeUI.IsOpen)
+                {
+                    if (!open) SetOpen(true);
+                    SelectTab(2);
+                }
+                return;
+            }
 
             if (tutorialSkipConfirmation != null && tutorialSkipConfirmation.activeSelf)
             {
@@ -134,15 +152,15 @@ namespace PickAndPlaceShop
             if (manager != null && keyboard.f6Key.wasPressedThisFrame)
                 manager.SaveNowWithFeedback();
 
-            if (manager != null && !manager.TutorialCompleted && keyboard.yKey.wasPressedThisFrame)
+            if (manager != null && keyboard.yKey.wasPressedThisFrame)
             {
                 ShopTutorialConfig tutorialConfig = ShopTutorialConfig.Load();
                 if (tutorialConfig == null) return;
                 float window = tutorialConfig.SkipDoubleTapSeconds;
                 if (ShopTutorialInputRules.RegisterSkipTap(
-                        ref lastTutorialSkipTap, Time.unscaledTime, window))
+                        ref lastSkipTap, Time.unscaledTime, window))
                 {
-                    OpenTutorialSkipConfirmation();
+                    HandleSkipShortcut();
                 }
                 return;
             }
@@ -163,6 +181,14 @@ namespace PickAndPlaceShop
         private void OnStatusTogglePerformed(InputAction.CallbackContext context)
         {
             if (!context.ReadValueAsButton()) return;
+            Keyboard keyboard = Keyboard.current;
+            bool shiftHeld = keyboard != null &&
+                             (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed);
+            if (shiftHeld && !open)
+            {
+                SetObjectiveVisible(!objectiveVisible);
+                return;
+            }
             if (!ShopUpgradeUI.IsOpen) SetOpen(!open);
         }
 
@@ -193,7 +219,7 @@ namespace PickAndPlaceShop
         {
             open = value;
             if (overlay != null) overlay.SetActive(value);
-            if (objectivePanel != null) objectivePanel.SetActive(!value);
+            if (objectivePanel != null) objectivePanel.SetActive(!value && objectiveVisible);
             if (tabHint != null) tabHint.gameObject.SetActive(false);
             if (value) ShopInputModeManager.Push(this, ShopInputMode.UI);
             else ShopInputModeManager.Pop(this);
@@ -248,8 +274,14 @@ namespace PickAndPlaceShop
             objectivePanel = ShopHudStack.Instance.CreateItem(this, ShopHudStackSlot.Objective,
                 "CurrentObjective", 124f);
             objectiveGroup = objectivePanel.AddComponent<CanvasGroup>();
+            objectiveVisualRoot = new GameObject("ObjectiveContent", typeof(RectTransform))
+                .GetComponent<RectTransform>();
+            objectiveVisualRoot.SetParent(objectivePanel.transform, false);
+            objectiveVisualRoot.anchorMin = Vector2.zero;
+            objectiveVisualRoot.anchorMax = Vector2.one;
+            objectiveVisualRoot.offsetMin = objectiveVisualRoot.offsetMax = Vector2.zero;
 
-            GameObject stepBadge = CreatePanel("StepBadge", objectivePanel.transform,
+            GameObject stepBadge = CreatePanel("StepBadge", objectiveVisualRoot,
                 new Vector2(60f, 60f), ShopUiSkin.Pink);
             SetRect(stepBadge.GetComponent<RectTransform>(), new Vector2(16f, -16f),
                 new Vector2(60f, 60f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
@@ -260,15 +292,15 @@ namespace PickAndPlaceShop
             objectiveStepText.rectTransform.anchorMax = Vector2.one;
             objectiveStepText.rectTransform.offsetMin = objectiveStepText.rectTransform.offsetMax = Vector2.zero;
 
-            objectiveText = CreateText("ObjectiveText", objectivePanel.transform, "목표를 불러오는 중",
-                19, FontStyle.Bold, TextAnchor.UpperLeft, ShopUiSkin.TextBody);
-            SetRect(objectiveText.rectTransform, new Vector2(88f, -16f), new Vector2(248f, 70f),
+            objectiveText = CreateText("ObjectiveText", objectiveVisualRoot, "목표를 불러오는 중",
+                17, FontStyle.Bold, TextAnchor.UpperLeft, ShopUiSkin.TextBody);
+            SetRect(objectiveText.rectTransform, new Vector2(88f, -16f), new Vector2(202f, 70f),
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
 
-            tutorialSkipButton = CreateButton("TutorialSkip", objectivePanel.transform, "건너뛰기",
-                new Vector2(96f, 36f), OpenTutorialSkipConfirmation);
+            tutorialSkipButton = CreateButton("TutorialSkip", objectiveVisualRoot, "건너뛰기 (Y×2)",
+                new Vector2(136f, 36f), HandleSkipButton);
             SetRect(tutorialSkipButton.GetComponent<RectTransform>(), new Vector2(-16f, -16f),
-                new Vector2(96f, 36f), Vector2.one, Vector2.one, Vector2.one);
+                new Vector2(136f, 36f), Vector2.one, Vector2.one, Vector2.one);
             Image skipImage = tutorialSkipButton.GetComponent<Image>();
             skipImage.color = ShopUiSkin.CreamBackground;
             ShopUiSkin.Pill(skipImage);
@@ -277,7 +309,7 @@ namespace PickAndPlaceShop
             skipLabel.fontSize = 15;
             tutorialSkipButton.gameObject.SetActive(false);
 
-            GameObject track = CreatePanel("ProgressTrack", objectivePanel.transform,
+            GameObject track = CreatePanel("ProgressTrack", objectiveVisualRoot,
                 new Vector2(420f, 10f), ShopUiSkin.Divider);
             SetRect(track.GetComponent<RectTransform>(), new Vector2(16f, 14f), new Vector2(420f, 10f),
                 Vector2.zero, Vector2.zero, Vector2.zero);
@@ -291,6 +323,28 @@ namespace PickAndPlaceShop
             fillRect.anchorMax = Vector2.one;
             fillRect.pivot = new Vector2(0f, 0.5f);
             fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+        }
+
+        private void SetObjectiveVisible(bool visible)
+        {
+            objectiveVisible = visible;
+            if (objectivePanel != null) objectivePanel.SetActive(true);
+        }
+
+        private void AnimateObjectiveVisibility()
+        {
+            if (objectiveGroup == null || objectivePanel == null) return;
+            float duration = ShopTutorialConfig.Load()?.ObjectiveToggleSeconds ?? 0.25f;
+            float target = objectiveVisible ? 1f : 0f;
+            objectiveVisibility = Mathf.MoveTowards(objectiveVisibility, target,
+                Time.unscaledDeltaTime / Mathf.Max(0.01f, duration));
+            objectiveGroup.alpha = objectiveVisibility;
+            objectiveGroup.blocksRaycasts = objectiveVisibility > 0.98f;
+            objectiveGroup.interactable = objectiveVisibility > 0.98f;
+            if (objectiveVisualRoot != null)
+                objectiveVisualRoot.anchoredPosition = Vector2.right *
+                    Mathf.Lerp(54f, 0f, objectiveVisibility);
+            if (!objectiveVisible && objectiveVisibility <= 0f) objectivePanel.SetActive(false);
         }
 
         private void BuildStatusScreen(Transform parent)
@@ -372,9 +426,9 @@ namespace PickAndPlaceShop
         private void BuildNotification(Transform parent)
         {
             notificationPanel = CreatePanel("ProgressionNotification", parent,
-                new Vector2(1120f, 142f), new Color(0.02f, 0.08f, 0.12f, 0.96f));
-            SetRect(notificationPanel.GetComponent<RectTransform>(), new Vector2(0f, -76f),
-                new Vector2(1120f, 142f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(920f, 112f), new Color(0.02f, 0.08f, 0.12f, 0.96f));
+            SetRect(notificationPanel.GetComponent<RectTransform>(), new Vector2(0f, -300f),
+                new Vector2(920f, 112f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f));
             notificationText = CreateText("Content", notificationPanel.transform, string.Empty,
                 27, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
@@ -448,6 +502,26 @@ namespace PickAndPlaceShop
             if (manager == null || manager.TutorialCompleted || tutorialSkipConfirmation == null) return;
             tutorialSkipConfirmation.SetActive(true);
             ShopInputModeManager.Push(tutorialSkipConfirmation, ShopInputMode.UI);
+        }
+
+        private void HandleSkipButton()
+        {
+            if (manager != null && !manager.TutorialCompleted) OpenTutorialSkipConfirmation();
+            else RequestPreparationSkip();
+        }
+
+        private void HandleSkipShortcut()
+        {
+            if (manager != null && !manager.TutorialCompleted) OpenTutorialSkipConfirmation();
+            else RequestPreparationSkip();
+        }
+
+        private static void RequestPreparationSkip()
+        {
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            ShopLiveOperationsNetwork live = ShopLiveOperationsNetwork.Instance;
+            if (game != null && live != null && game.Phase.Value == ShopPhase.Setup)
+                live.RequestSkipPreparation();
         }
 
         private void ConfirmTutorialSkip()
@@ -526,7 +600,14 @@ namespace PickAndPlaceShop
                     tutorialTarget <= 0 ? 0f : Mathf.Clamp01(tutorialCurrent / (float)tutorialTarget), 1f);
                 return;
             }
-            if (tutorialSkipButton != null) tutorialSkipButton.gameObject.SetActive(false);
+            bool canSkipPreparation = ShopNetworkGame.Instance != null &&
+                                      ShopNetworkGame.Instance.Phase.Value == ShopPhase.Setup;
+            if (tutorialSkipButton != null)
+            {
+                tutorialSkipButton.gameObject.SetActive(canSkipPreparation);
+                Text skipLabel = tutorialSkipButton.GetComponentInChildren<Text>();
+                if (skipLabel != null) skipLabel.text = "건너뛰기 (Y×2)";
+            }
             if (objectiveStepText != null) objectiveStepText.text = "목표";
             string key;
             string label;

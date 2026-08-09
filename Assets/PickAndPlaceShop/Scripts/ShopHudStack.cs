@@ -32,6 +32,12 @@ namespace PickAndPlaceShop
             }
         }
 
+        public static bool TryGetExisting(out ShopHudStack existing)
+        {
+            existing = instance;
+            return existing != null;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => instance = null;
 

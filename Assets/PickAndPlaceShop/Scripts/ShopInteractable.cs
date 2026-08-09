@@ -12,6 +12,8 @@ namespace PickAndPlaceShop
         private ShopKujiStationNetwork kujiStation;
         private ShopDistrictPortalNetwork districtPortal;
         private ShopUpgradeTerminal upgradeTerminal;
+        private ShopTrashSearchPoint trashSearchPoint;
+        private ShopRivalShelfInteractable rivalShelf;
         private Collider[] interactionColliders;
         private bool interactionCollidersCached;
 
@@ -36,7 +38,8 @@ namespace PickAndPlaceShop
             get
             {
                 CacheHandlers();
-                if (networkClaw != null) return networkClaw.InteractionPrompt;
+                if (networkClaw != null) return networkClaw.InteractionPrompt +
+                    "\n[R 누르고 있기] 쇠꼬챙이로 캡슐 꺼내기";
                 if (gachaMachine != null) return gachaMachine.InteractionPrompt;
                 if (kujiStation != null) return kujiStation.InteractionPrompt;
                 if (districtPortal != null) return districtPortal.InteractionPrompt;
@@ -105,6 +108,16 @@ namespace PickAndPlaceShop
                 upgradeTerminal.Interact();
                 return;
             }
+            if (trashSearchPoint != null)
+            {
+                trashSearchPoint.Interact();
+                return;
+            }
+            if (rivalShelf != null)
+            {
+                rivalShelf.Interact();
+                return;
+            }
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null)
             {
@@ -121,6 +134,8 @@ namespace PickAndPlaceShop
             if (kujiStation == null) kujiStation = GetComponent<ShopKujiStationNetwork>();
             if (districtPortal == null) districtPortal = GetComponent<ShopDistrictPortalNetwork>();
             if (upgradeTerminal == null) upgradeTerminal = GetComponent<ShopUpgradeTerminal>();
+            if (trashSearchPoint == null) trashSearchPoint = GetComponent<ShopTrashSearchPoint>();
+            if (rivalShelf == null) rivalShelf = GetComponent<ShopRivalShelfInteractable>();
         }
 
         private void CacheInteractionColliders()

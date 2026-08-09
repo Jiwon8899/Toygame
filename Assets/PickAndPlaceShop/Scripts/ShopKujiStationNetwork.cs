@@ -21,6 +21,8 @@ namespace PickAndPlaceShop
         [SerializeField, Range(0.4f, 0.9f)] private float requiredScratchProgress = 0.65f;
         [SerializeField, Min(5f)] private float scratchTimeout = 20f;
         [SerializeField, Min(0.5f)] private float minimumScratchSeconds = 1.25f;
+        [SerializeField] private bool enforceAuthoredLocalPosition;
+        [SerializeField] private Vector3 authoredLocalPosition;
 
         public NetworkVariable<ShopKujiState> State = new(ShopKujiState.Idle);
         public NetworkVariable<ulong> OccupantClientId = new(ShopClawRules.NoOccupant);
@@ -56,6 +58,7 @@ namespace PickAndPlaceShop
         private ShopTheftConfig theftConfig;
 
         public string PoolId => config != null ? config.PoolId : name;
+        public string DisplayName => config != null ? config.DisplayName : "쿠지 뽑기";
         public int TicketPrice => config != null ? config.TicketPrice : 0;
         public int EffectiveTicketPrice => config == null
             ? 0
@@ -95,6 +98,7 @@ namespace PickAndPlaceShop
         public override void OnNetworkSpawn()
         {
             theftConfig = ShopTheftConfig.Load();
+            if (enforceAuthoredLocalPosition) transform.localPosition = authoredLocalPosition;
             damageVisualBasePosition = transform.localPosition;
             if (IsServer)
             {
@@ -122,6 +126,50 @@ namespace PickAndPlaceShop
         public void RequestUse()
         {
             if (IsSpawned) RequestUseRpc();
+        }
+
+        public bool ServerTryStaffDraw(float costMultiplier, out int charged, out int storedRewards)
+        {
+            charged = 0;
+            storedRewards = 0;
+            ShopNetworkGame game = ShopNetworkGame.Instance;
+            if (!IsServer || config == null || game == null || IsBroken ||
+                State.Value != ShopKujiState.Idle || !ShopClawRules.CanOperateDuring(game.Phase.Value)) return false;
+            ShopKujiStock stock = CurrentStock();
+            if (stock.Total <= 0) return false;
+            charged = Mathf.Max(1, Mathf.RoundToInt(EffectiveTicketPrice *
+                Mathf.Clamp(costMultiplier, 0.1f, 1f)));
+            if (game.Coins.Value < charged) { charged = 0; return false; }
+            game.Coins.Value -= charged;
+
+            ShopKujiRank rank = ShopAcquisitionRules.SelectKujiRank(Random.Range(0, stock.Total), stock);
+            if (!stock.TryTake(rank)) return true;
+            ApplyStock(stock);
+            bool lastPrize = ShopAcquisitionRules.ShouldAwardLastPrize(stock.Total, LastPrizeAwarded.Value);
+            if (lastPrize) LastPrizeAwarded.Value = true;
+            bool ceiling = ShopAcquisitionRules.ShouldAwardCeilingPrize(DrawsSinceCeiling.Value,
+                config.CeilingDraws);
+            DrawsSinceCeiling.Value = ceiling ? 0 : DrawsSinceCeiling.Value + 1;
+            AttemptId.Value++;
+            ResultRank.Value = rank;
+            ResultProduct.Value = new FixedString64Bytes(config.PrizeFor(rank, AttemptId.Value));
+
+            List<ShopProductDefinition> products = new() { config.PrizeDefinitionFor(rank, AttemptId.Value) };
+            if (lastPrize && config.LastPrizeDefinition != null) products.Add(config.LastPrizeDefinition);
+            if (ceiling && config.CeilingPrizeDefinition != null) products.Add(config.CeilingPrizeDefinition);
+            for (int i = 0; i < products.Count; i++)
+            {
+                ShopProductDefinition product = products[i];
+                if (product == null) continue;
+                int visualIndex = ShopClawPrizeNetwork.FindCatalogIndex(product.PrizePrefab);
+                if (game.ServerTryAcquireSharedContainer(product, visualIndex, ShopContainerKind.SharedStorage,
+                        game.SharedStorageCapacity)) storedRewards++;
+            }
+            game.ServerRecordAcquired(storedRewards);
+            ResultStorageMessage.Value = new FixedString128Bytes("알바 자동 플레이 · 창고 " +
+                                                                storedRewards + "개 보관");
+            if (TotalRemaining <= 0) BeginRefill();
+            return true;
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -375,16 +423,6 @@ namespace PickAndPlaceShop
                     : storedRewards + "개 상품을 창고로 보냈습니다."
                 : storedRewards + "/" + rewards + "개 보관 · 용량 부족");
             game.ServerRecordAcquired(storedRewards);
-            ShopProgressionManager progression = ShopProgressionManager.Instance;
-            if (progression == null)
-                Debug.LogError("[Progression] 쿠지 컬렉션 관리자를 찾지 못했습니다.", this);
-            else
-                progression.RecordAcquisition(config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)?.StableItemId,
-                    config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)?.DisplayName,
-                    ShopProductLocalization.CategoryId(
-                        config.PrizeDefinitionFor(ResultRank.Value, AttemptId.Value)?.Category ??
-                        ShopProductCategory.CatSeasonal),
-                    rare, storedRewards);
             game.ServerSetEvent(config.DisplayName + " " + ResultRank.Value + "상: " +
                                 ResultProduct.Value + " · " + storedRewards + "/" + rewards + "개 보관");
             Debug.Log("[Arcade Kuji] AWARD pool=" + PoolId + " attempt=" + AttemptId.Value +

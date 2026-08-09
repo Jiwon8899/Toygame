@@ -7377,7 +7377,8 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1.1
-  m_Text: "\uD63C\uC790\uC11C, \uB610\uB294 \uCE5C\uAD6C\uC640 \uD568\uAED8 \uC6B4\uC601\uD558\uB294 \uACE0\uC591\uC774 \uAD7F\uC988 \uBF51\uAE30 \uC18C\uD488\uC0F5"
+  m_Text: "\uD63C\uC790\uC11C, \uB610\uB294 \uCE5C\uAD6C\uC640 \uD568\uAED8 \uC6B4\uC601\uD558\uB294
+    \uACE0\uC591\uC774 \uAD7F\uC988 \uBF51\uAE30 \uC18C\uD488\uC0F5"
 --- !u!222 &1021828202
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9518,7 +9519,8 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 0.9
-  m_Text: "\uBBF8\uC57C\uC639 \uCE04\uB974 \uBD80\uC790\uAC00 \uB420\uAC70\uC57C : \n\uC18C\uD488\uC0F5 \uBF51\uAE30 \uC2DC\uBBAC\uB808\uC774\uD130"
+  m_Text: "\uBBF8\uC57C\uC639 \uCE04\uB974 \uBD80\uC790\uAC00 \uB420\uAC70\uC57C
+    : \n\uC18C\uD488\uC0F5 \uBF51\uAE30 \uC2DC\uBBAC\uB808\uC774\uD130"
 --- !u!222 &1356137287
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11090,7 +11092,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac6d01d49c9503f479464955e6cc6aac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopMainMenuController
-  gameTitle: "미야옹 츄르 부자가 될거야 : 소품샵 뽑기 시뮬레이터"
+  gameTitle: "\uBBF8\uC57C\uC639 \uCE04\uB974 \uBD80\uC790\uAC00 \uB420\uAC70\uC57C
+    : \uC18C\uD488\uC0F5 \uBF51\uAE30 \uC2DC\uBBAC\uB808\uC774\uD130"
 --- !u!4 &1515044861
 Transform:
   m_ObjectHideFlags: 0

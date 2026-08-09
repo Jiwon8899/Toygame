@@ -24,11 +24,23 @@ namespace PickAndPlaceShop
             return null;
         }
 
+        public static Sprite FindIcon(int productId)
+        {
+            ShopProductDefinition product = Find(productId);
+            Sprite resourceIcon = Resources.Load<Sprite>(
+                $"ProductIcons/Generated/ProductIcon_{productId:D4}");
+            return resourceIcon != null ? resourceIcon : product != null ? product.Icon : null;
+        }
+
         public static GameObject Instantiate(ShopProductDefinition product, Transform parent)
         {
             if (product == null) return null;
-            GameObject visual = product.VisualPrefab != null
-                ? Object.Instantiate(product.VisualPrefab, parent)
+            // Legacy catalog entries already have their real prize prefab but predate
+            // the dedicated display-visual field. Reuse that canonical model before
+            // falling back to a placeholder so every acquisition route looks alike.
+            GameObject source = product.VisualPrefab != null ? product.VisualPrefab : product.PrizePrefab;
+            GameObject visual = source != null
+                ? Object.Instantiate(source, parent)
                 : CreateFallbackVisual(product, parent);
             DisablePhysics(visual);
             ApplyTint(visual, product.Tint);
@@ -61,9 +73,11 @@ namespace PickAndPlaceShop
         {
             if (root == null) return;
             foreach (Collider item in root.GetComponentsInChildren<Collider>(true))
-                Object.Destroy(item);
+                if (Application.isPlaying) Object.Destroy(item);
+                else Object.DestroyImmediate(item);
             foreach (Rigidbody item in root.GetComponentsInChildren<Rigidbody>(true))
-                Object.Destroy(item);
+                if (Application.isPlaying) Object.Destroy(item);
+                else Object.DestroyImmediate(item);
         }
 
         private static void EnsureCatalog()

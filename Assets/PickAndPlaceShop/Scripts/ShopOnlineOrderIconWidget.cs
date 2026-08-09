@@ -81,7 +81,7 @@ namespace PickAndPlaceShop
         private void OnDestroy()
         {
             if (observed != null) observed.OnlineOrders.OnListChanged -= Changed;
-            ShopHudStack.Instance.RemoveItem(this);
+            if (ShopHudStack.TryGetExisting(out ShopHudStack hudStack)) hudStack.RemoveItem(this);
             if (instance == this) instance = null;
         }
     }

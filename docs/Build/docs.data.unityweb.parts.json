@@ -1,0 +1,44 @@
+{
+    "originalFile": "docs.data.unityweb",
+    "totalBytes": 812847054,
+    "chunkSizeBytes": 94371840,
+    "sha256": "023fdbf58c1bb4a228870060f77e423a5ba20b3fe775ffb67b7287568dcebf1c",
+    "parts": [
+        {
+            "file": "docs.data.unityweb.part000",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part001",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part002",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part003",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part004",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part005",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part006",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part007",
+            "size": 94371840
+        },
+        {
+            "file": "docs.data.unityweb.part008",
+            "size": 57872334
+        }
+    ]
+}

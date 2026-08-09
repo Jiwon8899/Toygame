@@ -61,9 +61,34 @@ namespace PickAndPlaceShop
                 if (product != null) instance.Enqueue(sourceLabel, product, accentColor, storageMessage);
         }
 
+        public static void ShowDud(Color capsuleColor)
+        {
+            EnsureInstance();
+            instance.ShowDudResult(capsuleColor);
+        }
+
         public static void Dismiss()
         {
             if (instance != null) instance.closeRequested = true;
+        }
+
+        public static void DismissImmediate()
+        {
+            if (instance == null) return;
+            if (instance.sequence != null)
+            {
+                instance.StopCoroutine(instance.sequence);
+                instance.sequence = null;
+            }
+            if (instance.batchDelay != null)
+            {
+                instance.StopCoroutine(instance.batchDelay);
+                instance.batchDelay = null;
+            }
+            instance.pending.Clear();
+            instance.closeRequested = false;
+            instance.Hide();
+            ShopInputModeManager.Pop(instance);
         }
 
         private static void EnsureInstance()
@@ -137,6 +162,30 @@ namespace PickAndPlaceShop
             BuildCards(batch);
             closeRequested = false;
             sequence = StartCoroutine(PlaySequence(batch.Count));
+        }
+
+        private void ShowDudResult(Color capsuleColor)
+        {
+            if (sequence != null) StopCoroutine(sequence);
+            for (int i = cardsRoot.childCount - 1; i >= 0; i--) Destroy(cardsRoot.GetChild(i).gameObject);
+            rareCards.Clear();
+            grid.constraintCount = 1;
+            grid.cellSize = new Vector2(520f, 360f);
+            cardsRoot.sizeDelta = new Vector2(520f, 360f);
+            sourceText.text = "뽑기 결과";
+            countText.text = "캡슐은 사용되었지만 상품은 없습니다";
+            GameObject card = CreateImage("DudResultCard", cardsRoot, null,
+                new Color(0.05f, 0.06f, 0.075f, 0.98f), Vector2.zero);
+            Outline outline = card.AddComponent<Outline>();
+            outline.effectColor = new Color(capsuleColor.r, capsuleColor.g, capsuleColor.b, 0.8f);
+            outline.effectDistance = new Vector2(4f, -4f);
+            Text title = CreateText("DudTitle", card.transform, "아쉽지만 꽝이에요!", 44,
+                new Vector2(470f, 90f), new Vector2(0f, 35f));
+            title.color = new Color(1f, 0.78f, 0.28f);
+            CreateText("DudBody", card.transform, "다음 캡슐에는 행운이 있기를!", 24,
+                new Vector2(440f, 60f), new Vector2(0f, -55f));
+            closeRequested = false;
+            sequence = StartCoroutine(PlaySequence(1));
         }
 
         private void BuildCards(IReadOnlyList<ResultItem> batch)

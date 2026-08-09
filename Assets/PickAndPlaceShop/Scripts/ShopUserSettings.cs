@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Blocks.Gameplay.Core;
 using UnityEngine;
@@ -33,9 +34,7 @@ namespace PickAndPlaceShop
         {
             return new ShopUserSettingsData
             {
-                Fullscreen = Screen.fullScreen,
-                Width = Screen.currentResolution.width,
-                Height = Screen.currentResolution.height
+                Fullscreen = Screen.fullScreen
             };
         }
 
@@ -89,7 +88,13 @@ namespace PickAndPlaceShop
             QualitySettings.vSyncCount = data.VSync ? 1 : 0;
             if (applyResolution)
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                // The browser owns the canvas size. Setting a fixed pixel resolution here makes
+                // Unity render into only part of a responsive high-DPI canvas until fullscreen.
+                Screen.fullScreen = data.Fullscreen;
+#else
                 Screen.SetResolution(Mathf.Max(640, data.Width), Mathf.Max(360, data.Height), data.Fullscreen);
+#endif
             }
             ShopUserSettingsApplier.ApplyNow();
         }
@@ -120,6 +125,35 @@ namespace PickAndPlaceShop
             }
             instance = this;
             SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void Start()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Let the responsive WebGL template and browser resize the render buffer together.
+            // Browser fullscreen can still be requested from the settings UI through Apply().
+            ShopUserSettingsData data = ShopUserSettings.Current;
+            Debug.Log("[Settings] WEBGL_BROWSER_RESOLUTION " + Screen.width + "x" + Screen.height, this);
+#else
+            // Unity remembers the last standalone window size independently from our settings.
+            // Re-apply the saved game resolution once at boot so QA command-line sizes cannot
+            // leak into the next normal launch and leave a 1920x1080 UI rendered at 1280x720.
+            ShopUserSettingsData data = ShopUserSettings.Current;
+            Screen.SetResolution(Mathf.Max(640, data.Width), Mathf.Max(360, data.Height), data.Fullscreen);
+            Debug.Log("[Settings] RESOLUTION_REQUESTED " + data.Width + "x" + data.Height +
+                      " fullscreen=" + data.Fullscreen, this);
+#endif
+            ApplyInternal();
+            StartCoroutine(LogAppliedResolution());
+        }
+
+        private IEnumerator LogAppliedResolution()
+        {
+            // SetResolution completes at the end of the frame in a standalone player.
+            yield return null;
+            yield return null;
+            Debug.Log("[Settings] RESOLUTION_APPLIED " + Screen.width + "x" + Screen.height +
+                      " fullscreen=" + Screen.fullScreen, this);
         }
 
         private void OnDestroy()

@@ -17,6 +17,8 @@ namespace PickAndPlaceShop
         [SerializeField] private Renderer statusLamp;
         [SerializeField] private TextMesh informationText;
         [SerializeField] private float interactionRange = 4.5f;
+        [SerializeField] private bool enforceAuthoredLocalPosition;
+        [SerializeField] private Vector3 authoredLocalPosition;
 
         public NetworkVariable<ShopGachaState> State = new(ShopGachaState.Idle);
         public NetworkVariable<ulong> OccupantClientId = new(ShopClawRules.NoOccupant);
@@ -73,6 +75,7 @@ namespace PickAndPlaceShop
         public override void OnNetworkSpawn()
         {
             theftConfig = ShopTheftConfig.Load();
+            if (enforceAuthoredLocalPosition) transform.localPosition = authoredLocalPosition;
             damageVisualBasePosition = transform.localPosition;
             if (IsServer)
             {
@@ -295,12 +298,6 @@ namespace PickAndPlaceShop
                 game.ServerRecordAcquired(1);
                 ShopDifferentiationController.Instance?.ServerCollectEmptyCapsule();
             }
-            ShopProgressionManager progression = ShopProgressionManager.Instance;
-            if (progression == null)
-                Debug.LogError("[Progression] 가챠 컬렉션 관리자를 찾지 못했습니다.", this);
-            else
-                progression.RecordAcquisition(product.StableItemId, product.DisplayName,
-                    config.MachineId, rare, stored ? 1 : 0);
             game.ServerSetEvent(config.DisplayName + " 결과: " + ResultProduct.Value + " (" +
                                 RarityLabel(ResultRarity.Value) + ") - " +
                                 (stored

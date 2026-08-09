@@ -23,6 +23,7 @@ namespace PickAndPlaceShop
         private GameObject nightPanel;
         private GameObject nightOwner;
         private Text nightLabel;
+        private GameObject promptPanel;
 
         private void Awake() => PrepareWarmLayout();
 
@@ -60,11 +61,16 @@ namespace PickAndPlaceShop
                 SetChip(reputationChipText, "평판 0");
                 if (networkLabel != null) networkLabel.text = "서버에 연결하는 중입니다";
                 if (nightPanel != null) nightPanel.SetActive(false);
-                if (promptText != null) promptText.gameObject.SetActive(false);
+                if (promptPanel != null) promptPanel.SetActive(false);
+                else if (promptText != null) promptText.gameObject.SetActive(false);
                 return;
             }
 
-            SetChip(dayChipText, $"{game.Day.Value}일차 · {TimePeriod(game.Phase.Value)}");
+            ShopLiveOperationsNetwork live = ShopLiveOperationsNetwork.Instance;
+            string remaining = live != null && live.IsSpawned
+                ? " · " + FormatRemaining(live.PhaseSecondsRemaining.Value)
+                : string.Empty;
+            SetChip(dayChipText, $"{game.Day.Value}일차 · {TimePeriod(game.Phase.Value)}{remaining}");
             SetChip(moneyChipText, game.Coins.Value.ToString("N0") + "원");
             SetChip(reputationChipText, "평판 " + game.Reputation.Value.ToString("N0"));
             if (networkLabel != null)
@@ -79,7 +85,11 @@ namespace PickAndPlaceShop
             {
                 string prompt = ShopPlayerInteractor.LocalPrompt;
                 promptText.text = prompt;
-                promptText.gameObject.SetActive(!modalOpen && !string.IsNullOrWhiteSpace(prompt));
+                bool showPrompt = !modalOpen && ShopInputModeManager.AllowsGameplay &&
+                                  !ShopClawMachineNetwork.LocalOperatorActive &&
+                                  !string.IsNullOrWhiteSpace(prompt);
+                if (promptPanel != null) promptPanel.SetActive(showPrompt);
+                else promptText.gameObject.SetActive(showPrompt);
             }
 
             if (summaryText != null) summaryText.gameObject.SetActive(false);
@@ -95,12 +105,12 @@ namespace PickAndPlaceShop
                 RectTransform rect = statusPanel.GetComponent<RectTransform>();
                 rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
                 rect.anchoredPosition = new Vector2(24f, -24f);
-                rect.sizeDelta = new Vector2(760f, 64f);
+                rect.sizeDelta = new Vector2(808f, 64f);
                 Image oldBackground = statusPanel.GetComponent<Image>();
                 if (oldBackground != null) oldBackground.color = Color.clear;
-                dayChipText = CreateChip("DayChip", statusPanel.transform, ShopUiIcon.Moon, 0f, 228f);
-                moneyChipText = CreateChip("MoneyChip", statusPanel.transform, ShopUiIcon.Coin, 240f, 236f);
-                reputationChipText = CreateChip("ReputationChip", statusPanel.transform, ShopUiIcon.Star, 488f, 248f);
+                dayChipText = CreateChip("DayChip", statusPanel.transform, ShopUiIcon.Moon, 0f, 288f);
+                moneyChipText = CreateChip("MoneyChip", statusPanel.transform, ShopUiIcon.Coin, 300f, 236f);
+                reputationChipText = CreateChip("ReputationChip", statusPanel.transform, ShopUiIcon.Star, 548f, 248f);
             }
 
             if (promptText != null)
@@ -137,6 +147,8 @@ namespace PickAndPlaceShop
                 background.color = new Color(brown.r, brown.g, brown.b, 0.94f);
                 background.raycastTarget = false;
                 ShopUiSkin.Pill(background);
+                promptPanel = background.gameObject;
+                promptPanel.SetActive(false);
             }
 
             Transform controls = transform.Find("Controls");
@@ -222,8 +234,11 @@ namespace PickAndPlaceShop
 
         private void OnDestroy()
         {
-            ShopHudStack.Instance.RemoveItem(this);
-            if (nightOwner != null) ShopHudStack.Instance.RemoveItem(nightOwner);
+            if (ShopHudStack.TryGetExisting(out ShopHudStack hudStack))
+            {
+                hudStack.RemoveItem(this);
+                if (nightOwner != null) hudStack.RemoveItem(nightOwner);
+            }
         }
 
         private static string TimePeriod(ShopPhase phase)
@@ -237,6 +252,12 @@ namespace PickAndPlaceShop
                 ShopPhase.Complete => "영업 완료",
                 _ => "준비"
             };
+        }
+
+        private static string FormatRemaining(int totalSeconds)
+        {
+            int safe = Mathf.Max(0, totalSeconds);
+            return (safe / 60).ToString("0") + ":" + (safe % 60).ToString("00");
         }
     }
 }

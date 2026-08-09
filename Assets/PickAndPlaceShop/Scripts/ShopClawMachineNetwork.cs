@@ -84,6 +84,7 @@ namespace PickAndPlaceShop
         private float recoveryCheckElapsed;
         private int observedDay;
         private int roundAwardCount;
+        private bool roundHadDud;
         private bool roundHadPhysicalLift;
         private bool localMode;
         private Camera previousCamera;
@@ -341,6 +342,7 @@ namespace PickAndPlaceShop
             AutoDropSecondsRemaining.Value = Mathf.CeilToInt(config.AutoDropDelay);
             LastResultSuccess.Value = false;
             roundAwardCount = 0;
+            roundHadDud = false;
             roundHadPhysicalLift = false;
             ResultMessage.Value = new FixedString128Bytes("WASD로 위치를 정하고 Space를 눌러 투하하세요.");
             SetState(ShopClawMachineState.Reserved);
@@ -914,7 +916,7 @@ namespace PickAndPlaceShop
                 return;
             }
             if (!theftAward && config != null && config.MultiPrizePolicy == ShopMultiPrizePolicy.SingleAndReturnExtras &&
-                roundAwardCount > 0)
+                (roundAwardCount > 0 || roundHadDud))
             {
                 ResultMessage.Value = new FixedString128Bytes("기본 기계는 한 판에 1개만 획득합니다. 추가 캡슐을 부드럽게 돌려보냅니다.");
                 ServerReturnPrizeToField(prize);
@@ -924,6 +926,22 @@ namespace PickAndPlaceShop
                 prize.SpawnedRarity.Value, 0, (int)ShopProductRarity.UltraRare);
             if (theftAward && spawnedRarity == ShopProductRarity.UltraRare)
                 spawnedRarity = ShopProductRarity.Common;
+            ShopSideContentConfig sideContent = ShopSideContentConfig.Load();
+            if (!theftAward && ShopSideContentRules.IsClawDud(spawnedRarity, UnityEngine.Random.value, sideContent))
+            {
+                if (!awardLedger.TryAward(prize.NetworkObjectId, true, false, false) ||
+                    !prize.ServerMarkAwarded()) return;
+                RemainingCapsules.Value = Mathf.Max(0, RemainingCapsules.Value - 1);
+                awardedAttemptId = AttemptId.Value;
+                roundHadDud = true;
+                LastResultSuccess.Value = false;
+                ResultMessage.Value = new FixedString128Bytes("아쉽지만 꽝이에요! 캡슐 재고 1개가 사용되었습니다.");
+                game?.ServerSetEvent("일반 캡슐을 열었지만 꽝이었습니다.");
+                ShowDudResultRpc(prize.VisualColor.Value);
+                Debug.Log("[SideContent:ClawDud] rarity=" + spawnedRarity + " stock=" + RemainingCapsules.Value, this);
+                StartCoroutine(ServerDespawnAwardedPrize(prize));
+                return;
+            }
             ShopProductDefinition product = FindProductForRarity(spawnedRarity,
                 AttemptId.Value * 397 ^ (int)prize.NetworkObjectId);
             int awardedVisualIndex = product != null
@@ -960,15 +978,6 @@ namespace PickAndPlaceShop
             if (!staffAward) game.ServerRecordAcquired(1);
             if (theftAward)
                 ShopPlayerTheftNetwork.ServerReportTheftSuccess(rewardOwner, ShopTheftAction.ClawChute);
-            ShopProgressionManager progression = ShopProgressionManager.Instance;
-            if (progression == null)
-                Debug.LogError("[Progression] 컬렉션 관리자를 찾지 못했습니다.", this);
-            else
-                progression.RecordAcquisition(
-                    product != null ? "product:" + product.ProductId : "claw:" + awardedVisualIndex,
-                    product != null ? product.DisplayName : "인형뽑기 상품",
-                    product != null ? ShopProductLocalization.CategoryId(product.Category) : "cat_plush",
-                    product != null && product.Rarity >= ShopProductRarity.Rare);
             LastAwardedName.Value = new FixedString64Bytes(
                 product != null ? product.DisplayName : prize.VisualDisplayName.Value.ToString());
             LastAwardedRarity.Value = product != null ? (int)product.Rarity : 0;
@@ -986,6 +995,13 @@ namespace PickAndPlaceShop
                                     ? " 1개를 개인 인벤토리에 획득했습니다."
                                     : " 1개가 공용 창고로 자동 이동했습니다."));
             StartCoroutine(ServerDespawnAwardedPrize(prize));
+        }
+
+        [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Server)]
+        private void ShowDudResultRpc(Color capsuleColor)
+        {
+            if (NetworkManager != null && NetworkManager.LocalClientId == OccupantClientId.Value)
+                ShopCapsuleOpeningPresenter.ShowDud(capsuleColor);
         }
 
         private void OnAwardedCountChanged(int previous, int current)
@@ -1142,6 +1158,7 @@ namespace PickAndPlaceShop
             LastJointBreakForce.Value = 0f;
             LastResultSuccess.Value = false;
             roundAwardCount = 0;
+            roundHadDud = false;
             roundHadPhysicalLift = false;
             chuteStableSeconds.Clear();
             chuteLastObservationTime.Clear();
@@ -1199,6 +1216,7 @@ namespace PickAndPlaceShop
             autoDropIdleElapsed = 0f;
             OccupantClientId.Value = ShopClawRules.NoOccupant;
             roundAwardCount = 0;
+            roundHadDud = false;
             roundHadPhysicalLift = false;
             chuteStableSeconds.Clear();
             chuteLastObservationTime.Clear();

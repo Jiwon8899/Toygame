@@ -170,5 +170,35 @@ namespace PickAndPlaceShop.Tests
             Assert.AreEqual(1, ShopGameIdentity.KoreanFormalName.Split(':').Length - 1);
             StringAssert.Contains(" : ", ShopGameIdentity.KoreanFormalName);
         }
+
+        [Test]
+        public void CustomerPickup_RemovesDisplayStockImmediately_WithoutDoubleCheckout()
+        {
+            ShopStockLedger ledger = new();
+            ledger.SetStock(41, 3);
+            Assert.IsTrue(ledger.TryReserve(1001, 41));
+            Assert.IsTrue(ledger.TryPickupReservation(1001, out int pickedProduct));
+            Assert.AreEqual(41, pickedProduct);
+            Assert.AreEqual(2, ledger.GetStock(41));
+            Assert.AreEqual(0, ledger.GetReserved(41));
+
+            Assert.IsTrue(ledger.TryCheckout(1001, out int soldProduct));
+            Assert.AreEqual(41, soldProduct);
+            Assert.AreEqual(2, ledger.GetStock(41), "Checkout must not consume the picked item twice.");
+        }
+
+        [Test]
+        public void CustomerPickupCancellation_RestoresDisplayStock()
+        {
+            ShopStockLedger ledger = new();
+            ledger.SetStock(52, 1);
+            Assert.IsTrue(ledger.TryReserve(2002, 52));
+            Assert.IsTrue(ledger.TryPickupReservation(2002, out _));
+            Assert.AreEqual(0, ledger.GetStock(52));
+
+            Assert.IsTrue(ledger.CancelReservation(2002, true));
+            Assert.AreEqual(1, ledger.GetStock(52));
+            Assert.AreEqual(0, ledger.GetReserved(52));
+        }
     }
 }

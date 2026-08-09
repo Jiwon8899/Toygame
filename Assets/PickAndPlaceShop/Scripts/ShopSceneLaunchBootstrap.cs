@@ -1,7 +1,7 @@
 using System.Collections;
 using Blocks.Gameplay.Core;
 using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
+using Unity.Netcode.Transports.SinglePlayer;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -44,17 +44,15 @@ namespace PickAndPlaceShop
                 networkUi.enabled = false;
             }
 
-            UnityTransport transport = manager.NetworkConfig.NetworkTransport as UnityTransport;
+            SinglePlayerTransport transport = manager.GetComponent<SinglePlayerTransport>();
             if (transport == null)
             {
-                yield return FailAndReturn("UnityTransport를 찾지 못했습니다.");
-                yield break;
+                transport = manager.gameObject.AddComponent<SinglePlayerTransport>();
             }
 
             manager.PlayerName = string.IsNullOrWhiteSpace(request.PlayerName) ? "플레이어" : request.PlayerName.Trim();
             manager.NetworkConfig.ConnectionApproval = true;
-            request.Port = (ushort)Random.Range(20000, 60000);
-            transport.SetConnectionData(true, "127.0.0.1", request.Port, "127.0.0.1");
+            manager.NetworkConfig.NetworkTransport = transport;
             manager.ConnectionApprovalCallback = ApproveConnection;
             manager.StartHostConnection();
 

@@ -14,4 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopTutorialConfig
   movementDistance: 2.5
   completionReward: 200
+  skipReward: 3000
   skipDoubleTapSeconds: 0.5
+  objectiveToggleSeconds: 0.25

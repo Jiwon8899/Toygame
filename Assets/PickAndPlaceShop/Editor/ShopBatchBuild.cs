@@ -8,15 +8,24 @@ namespace PickAndPlaceShop.Editor
 {
     public static class ShopBatchBuild
     {
+        [MenuItem("Tools/Pick And Place Shop/Configure GitHub Pages WebGL")]
+        public static void ConfigureGitHubPagesWebGL()
+        {
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            AssetDatabase.SaveAssets();
+            Debug.Log("[ShopBatchBuild] GitHub Pages WebGL: Gzip + decompression fallback enabled.");
+        }
+
         public static void BuildWebGL()
         {
             string output = CommandLineValue("-shopBuildOutput") ??
-                            "Build/DocCodeAlignmentWebGLBatch";
+                            "docs";
             string[] scenes = EditorBuildSettings.scenes
                 .Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
+            ConfigureGitHubPagesWebGL();
             BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = scenes,

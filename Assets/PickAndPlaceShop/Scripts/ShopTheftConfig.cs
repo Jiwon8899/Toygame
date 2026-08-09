@@ -15,8 +15,11 @@ namespace PickAndPlaceShop
         public const string ResourcePath = "ShopTheftConfig";
 
         [Header("Attack")]
-        [Min(0.1f)] [SerializeField] private float attackCooldown = 0.65f;
+        [Range(0.04f, 0.2f)] [SerializeField] private float attackMinimumClickInterval = 0.08f;
+        [Range(0.2f, 1.5f)] [SerializeField] private float attackReferenceClickInterval = 0.65f;
         [Range(0f, 0.25f)] [SerializeField] private float attackTransitionSeconds = 0.06f;
+        [Range(0.5f, 3f)] [SerializeField] private float attackAnimationSpeed = 1.15f;
+        [Range(1f, 4f)] [SerializeField] private float attackMaximumAnimationSpeed = 2.8f;
         [Range(0.1f, 1f)] [SerializeField] private float attackMoveMultiplier = 0.4f;
         [Min(0.05f)] [SerializeField] private float attackMoveSlowSeconds = 0.5f;
         [Min(0.2f)] [SerializeField] private float hitRadius = 2.2f;
@@ -55,6 +58,7 @@ namespace PickAndPlaceShop
         [Min(0f)] [SerializeField] private float outsideShopDecayPerSecond = 0.1f;
         [Min(1f)] [SerializeField] private float shopSafeRadius = 18f;
         [Range(0f, 1f)] [SerializeField] private float alertAfterArrestNormalized;
+        [Min(0.05f)] [SerializeField] private float alertHudFadeSeconds = 0.45f;
 
         [Header("Police")]
         [SerializeField] private GameObject policeAppearancePrefab;
@@ -71,9 +75,22 @@ namespace PickAndPlaceShop
         [Min(0.1f)] [SerializeField] private float policeAccelerationMultiplier = 2f;
         [Min(1f)] [SerializeField] private float policeAngularSpeed = 720f;
         [Range(0f, 1f)] [SerializeField] private float policeStoppingDistanceMultiplier = 0.65f;
+        [Range(-180f, 180f)] [SerializeField] private float policeVisualYawOffset = 180f;
+        [Min(0.1f)] [SerializeField] private float policeCollisionRadius = 0.32f;
+        [Min(0.5f)] [SerializeField] private float policeCollisionHeight = 1.75f;
+        [Min(0.05f)] [SerializeField] private float policeObstacleAvoidanceSeconds = 0.65f;
+        [Range(10f, 85f)] [SerializeField] private float policeObstacleAvoidanceAngle = 68f;
 
-        public float AttackCooldown => Mathf.Max(0.1f, attackCooldown);
+        public float AttackMinimumClickInterval => Mathf.Clamp(attackMinimumClickInterval, 0.04f, 0.2f);
+        public float AttackReferenceClickInterval =>
+            Mathf.Max(AttackMinimumClickInterval, attackReferenceClickInterval);
         public float AttackTransitionSeconds => Mathf.Clamp(attackTransitionSeconds, 0f, 0.25f);
+        public float AttackAnimationSpeed => Mathf.Clamp(attackAnimationSpeed, 0.5f, 3f);
+        public float AttackMaximumAnimationSpeed =>
+            Mathf.Max(AttackAnimationSpeed, attackMaximumAnimationSpeed);
+        public float AttackSpeedForClickInterval(float clickInterval) => ShopTheftRules.AttackSpeedForClickInterval(
+            clickInterval, AttackMinimumClickInterval, AttackReferenceClickInterval,
+            AttackAnimationSpeed, AttackMaximumAnimationSpeed);
         public float AttackMoveMultiplier => Mathf.Clamp(attackMoveMultiplier, 0.1f, 1f);
         public float AttackMoveSlowSeconds => Mathf.Max(0.05f, attackMoveSlowSeconds);
         public float HitRadius => Mathf.Max(0.2f, hitRadius);
@@ -110,6 +127,7 @@ namespace PickAndPlaceShop
         public float OutsideShopDecayPerSecond => Mathf.Max(0f, outsideShopDecayPerSecond);
         public float ShopSafeRadius => Mathf.Max(1f, shopSafeRadius);
         public float AlertAfterArrest => MaximumAlert * Mathf.Clamp01(alertAfterArrestNormalized);
+        public float AlertHudFadeSeconds => Mathf.Max(0.05f, alertHudFadeSeconds);
         public GameObject PoliceAppearancePrefab => policeAppearancePrefab;
         public float PoliceSpeed => Mathf.Max(0.1f, policeSpeed);
         public float PoliceTargetRefreshSeconds => Mathf.Max(0.02f, policeTargetRefreshSeconds);
@@ -124,6 +142,11 @@ namespace PickAndPlaceShop
         public float PoliceAccelerationMultiplier => Mathf.Max(0.1f, policeAccelerationMultiplier);
         public float PoliceAngularSpeed => Mathf.Max(1f, policeAngularSpeed);
         public float PoliceStoppingDistanceMultiplier => Mathf.Clamp01(policeStoppingDistanceMultiplier);
+        public float PoliceVisualYawOffset => Mathf.Clamp(policeVisualYawOffset, -180f, 180f);
+        public float PoliceCollisionRadius => Mathf.Max(0.1f, policeCollisionRadius);
+        public float PoliceCollisionHeight => Mathf.Max(PoliceCollisionRadius * 2f, policeCollisionHeight);
+        public float PoliceObstacleAvoidanceSeconds => Mathf.Max(0.05f, policeObstacleAvoidanceSeconds);
+        public float PoliceObstacleAvoidanceAngle => Mathf.Clamp(policeObstacleAvoidanceAngle, 10f, 85f);
 
         public static ShopTheftConfig Load() => Resources.Load<ShopTheftConfig>(ResourcePath);
 
@@ -134,6 +157,16 @@ namespace PickAndPlaceShop
 
     public static class ShopTheftRules
     {
+        public static float AttackSpeedForClickInterval(float clickInterval, float minimumInterval,
+            float referenceInterval, float baseSpeed, float maximumSpeed)
+        {
+            float minimum = Mathf.Max(0.001f, minimumInterval);
+            float reference = Mathf.Max(minimum, referenceInterval);
+            float interval = Mathf.Clamp(clickInterval, minimum, reference);
+            float fastAmount = Mathf.InverseLerp(reference, minimum, interval);
+            return Mathf.Lerp(Mathf.Max(0.01f, baseSpeed), Mathf.Max(baseSpeed, maximumSpeed), fastAmount);
+        }
+
         public static bool IsInsideAttackArc(Vector3 attackerForward, Vector3 toTarget, float radius, float angle)
         {
             Vector3 flatForward = Vector3.ProjectOnPlane(attackerForward, Vector3.up).normalized;

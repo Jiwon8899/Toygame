@@ -76,6 +76,60 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
+        public void SoloLaunch_UsesTheInProcessSinglePlayerTransport()
+        {
+            const string path = "Assets/PickAndPlaceShop/Scripts/ShopSceneLaunchBootstrap.cs";
+            string source = File.ReadAllText(path);
+            StringAssert.Contains("Unity.Netcode.Transports.SinglePlayer", source);
+            StringAssert.Contains("GetComponent<SinglePlayerTransport>()", source);
+            StringAssert.Contains("NetworkConfig.NetworkTransport = transport", source);
+            StringAssert.DoesNotContain("SetConnectionData", source);
+        }
+
+        [Test]
+        public void WebGlTemplate_FillsTheBrowserViewport()
+        {
+            const string path = "Assets/WebGLTemplates/ToyGameResponsive/index.html";
+            Assert.IsTrue(File.Exists(path));
+            string source = File.ReadAllText(path);
+            StringAssert.Contains("width: 100vw", source);
+            StringAssert.Contains("height: 100vh", source);
+            StringAssert.Contains("autoSyncPersistentDataPath: true", source);
+            StringAssert.DoesNotContain("960px", source);
+        }
+
+        [Test]
+        public void WebGlSettings_LeaveResolutionSizingToTheBrowser()
+        {
+            const string path = "Assets/PickAndPlaceShop/Scripts/ShopUserSettings.cs";
+            string source = File.ReadAllText(path);
+            StringAssert.Contains("#if UNITY_WEBGL && !UNITY_EDITOR", source);
+            StringAssert.Contains("[Settings] WEBGL_BROWSER_RESOLUTION", source);
+            StringAssert.Contains("Screen.fullScreen = data.Fullscreen", source);
+        }
+
+        [Test]
+        public void WebGlGameplay_DoesNotRequestUnsupportedPointerLock()
+        {
+            string inputModes = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopInputModeManager.cs");
+            string gameManager = File.ReadAllText(
+                "Assets/Core/Scripts/Runtime/Components/GameManager.cs");
+
+            StringAssert.Contains("#if UNITY_WEBGL && !UNITY_EDITOR", inputModes);
+            StringAssert.Contains("Cursor.lockState = CursorLockMode.None", inputModes);
+            StringAssert.Contains("Cursor.visible = pointerFree", inputModes);
+            Assert.GreaterOrEqual(
+                gameManager.Split(new[] { "#if UNITY_WEBGL && !UNITY_EDITOR" },
+                    System.StringSplitOptions.None).Length - 1,
+                2);
+            Assert.GreaterOrEqual(
+                gameManager.Split(new[] { "Cursor.visible = false" },
+                    System.StringSplitOptions.None).Length - 1,
+                2);
+        }
+
+        [Test]
         public void ClawExit_HasOneCleanupFunctionForEveryExitPath()
         {
             const string path = "Assets/PickAndPlaceShop/Scripts/ShopClawMachineNetwork.cs";
@@ -193,12 +247,32 @@ namespace PickAndPlaceShop.Tests
                 "Assets/PickAndPlaceShop/Scripts/ShopPlayerAppearance.cs");
             StringAssert.Contains("CrossFadeInFixedTime", appearance);
             StringAssert.Contains("HasState(0, state)", appearance);
+            StringAssert.Contains("AttackAnimationActive", appearance);
+
+            string theft = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopPlayerTheftNetwork.cs");
+            StringAssert.Contains("leftButton.wasPressedThisFrame", theft);
+            StringAssert.Contains("AttackSpeedForClickInterval", theft);
+
+            string controller = File.ReadAllText(
+                "Assets/PickAndPlaceShop/GeneratedCharacters/PlayerLocomotion.controller");
+            Assert.AreEqual(2, System.Text.RegularExpressions.Regex.Matches(controller,
+                @"m_ExitTime: 1\r?\n  m_HasExitTime: 1").Count);
+            Assert.AreEqual(2, System.Text.RegularExpressions.Regex.Matches(controller,
+                @"m_SpeedParameterActive: 1[\s\S]{0,240}m_SpeedParameter: AttackSpeed").Count);
+            StringAssert.Contains("m_Name: AttackSpeed", controller);
             ShopTheftConfig config = ShopTheftConfig.Load();
             Assert.NotNull(config);
             Assert.AreEqual(0.06f, config.AttackTransitionSeconds, 0.001f);
+            Assert.AreEqual(1.15f, config.AttackAnimationSpeed, 0.001f);
+            Assert.AreEqual(2.8f, config.AttackMaximumAnimationSpeed, 0.001f);
+            Assert.AreEqual(1.05f, config.ClawImpulse, 0.001f);
 
             foreach (string path in new[] { "Assets/animation/attack1.fbx", "Assets/animation/attack2.fbx" })
             {
+                ModelImporter importer = AssetImporter.GetAtPath(path) as ModelImporter;
+                Assert.NotNull(importer, path);
+                Assert.AreEqual(ModelImporterAnimationType.Generic, importer.animationType, path);
                 AnimationClip clip = System.Array.Find(AssetDatabase.LoadAllAssetsAtPath(path),
                     asset => asset is AnimationClip && !asset.name.StartsWith("__preview__")) as AnimationClip;
                 Assert.NotNull(clip, path);
@@ -274,6 +348,34 @@ namespace PickAndPlaceShop.Tests
             Assert.NotNull(config.Logo);
             Assert.AreEqual(4f, config.IdleAmplitudePixels, 0.001f);
             Assert.AreEqual(2.6f, config.IdlePeriodSeconds, 0.001f);
+        }
+
+        [Test]
+        public void DayTransition_CapturesAuthoritativeFundsBeforeSaving()
+        {
+            string game = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopNetworkGame.cs");
+            int capture = game.IndexOf("nextDayProgression?.CaptureAuthoritativeSessionState();",
+                System.StringComparison.Ordinal);
+            int save = game.IndexOf("nextDayProgression?.SaveNowWithFeedback();",
+                System.StringComparison.Ordinal);
+            Assert.That(capture, Is.GreaterThanOrEqualTo(0));
+            Assert.That(save, Is.GreaterThan(capture));
+        }
+
+        [Test]
+        public void PreparationSkip_ReusesTutorialDoubleTapRuleAndStartsOpenPhase()
+        {
+            string hud = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopProgressionHUD.cs");
+            StringAssert.Contains("건너뛰기 (Y×2)", hud);
+            StringAssert.Contains("ShopTutorialInputRules.RegisterSkipTap", hud);
+            StringAssert.Contains("live.RequestSkipPreparation();", hud);
+            string operations = File.ReadAllText(
+                "Assets/PickAndPlaceShop/Scripts/ShopLiveOperationsNetwork.cs");
+            StringAssert.Contains("public bool ServerSkipPreparation()", operations);
+            StringAssert.Contains("ServerSetPhase(ShopPhase.Open);", operations);
+            StringAssert.Contains("phaseRemaining = DurationFor(observedPhase);", operations);
         }
     }
 }

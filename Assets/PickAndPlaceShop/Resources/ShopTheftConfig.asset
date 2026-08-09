@@ -12,16 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41fe8038089419b4cbc17d205a42c1c9, type: 3}
   m_Name: ShopTheftConfig
   m_EditorClassIdentifier: PickAndPlaceShop.Runtime::PickAndPlaceShop.ShopTheftConfig
-  attackCooldown: 0.65
+  attackMinimumClickInterval: 0.08
+  attackReferenceClickInterval: 0.65
   attackTransitionSeconds: 0.06
+  attackAnimationSpeed: 1.15
+  attackMaximumAnimationSpeed: 2.8
   attackMoveMultiplier: 0.4
   attackMoveSlowSeconds: 0.5
   hitRadius: 2.2
   hitAngle: 78
   hitForwardOffset: 0.8
   attackDamage: 15
-  clawImpulse: 0.72
-  clawVerticalImpulse: 0.18
+  clawImpulse: 1.05
+  clawVerticalImpulse: 0.22
+  clawVerticalImpulseMinimumMultiplier: 0.65
   clawTheftWindow: 3
   maximumCapsuleSpeed: 2.7
   maximumCapsuleAngularSpeed: 8
@@ -32,6 +36,10 @@ MonoBehaviour:
   theftRareChance: 0.015
   theftKujiBChance: 0.08
   theftKujiAChance: 0.015
+  theftKujiCChance: 0.455
+  damageShakeSeconds: 0.22
+  damageShakeFrequency: 85
+  damageShakeDistance: 0.035
   maximumAlert: 100
   clawAlert: 28
   gachaAlert: 46
@@ -41,6 +49,7 @@ MonoBehaviour:
   outsideShopDecayPerSecond: 0.1
   shopSafeRadius: 18
   alertAfterArrestNormalized: 0
+  alertHudFadeSeconds: 0.45
   policeAppearancePrefab: {fileID: 4304917915462873115, guid: 4e0a55fb8b16e8543b1b56979360648d, type: 3}
   policeSpeed: 4.8
   policeTargetRefreshSeconds: 0.15
@@ -51,3 +60,12 @@ MonoBehaviour:
   policeSpawnDistance: 8
   policeNavMeshSampleRadius: 6
   arrestTeleportHeightOffset: 0.15
+  policeProxyLerpSpeed: 12
+  policeAccelerationMultiplier: 2
+  policeAngularSpeed: 720
+  policeStoppingDistanceMultiplier: 0.65
+  policeVisualYawOffset: 180
+  policeCollisionRadius: 0.32
+  policeCollisionHeight: 1.75
+  policeObstacleAvoidanceSeconds: 0.65
+  policeObstacleAvoidanceAngle: 68
