@@ -72,6 +72,8 @@ namespace PickAndPlaceShop
     public sealed class ShopProgressionSaveData
     {
         public int version = ShopProgressionSaveStore.CurrentVersion;
+        public string playerShopName;
+        public string rivalShopName;
         public int currentDay = 1;
         public int teamFunds;
         public int reputation;
@@ -142,7 +144,7 @@ namespace PickAndPlaceShop
 
     public static class ShopProgressionSaveStore
     {
-        public const int CurrentVersion = 16;
+        public const int CurrentVersion = 17;
         private const string FileName = "ShopProgressionSave.json";
         private const string StableSaveFolderName = "ToyGame";
 

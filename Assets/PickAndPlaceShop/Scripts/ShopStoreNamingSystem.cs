@@ -112,9 +112,25 @@ namespace PickAndPlaceShop
             confirmButton = null;
             ShopInputModeManager.Pop(this);
             ApplyNamesToSigns();
+            ShopProgressionManager.Instance?.SetStoreNames(PlayerShopName, RivalShopName);
             NamesChanged?.Invoke();
             NamingCompleted?.Invoke();
             return true;
+        }
+
+        public void RestoreSavedNames(string playerName, string rivalName)
+        {
+            PlayerShopName = ResolveRestoredName(playerName, true);
+            RivalShopName = ResolveRestoredName(rivalName, false);
+            HasConfirmedNames = true;
+            if (namingCanvas != null) Destroy(namingCanvas);
+            namingCanvas = null;
+            playerNameInput = null;
+            rivalNameInput = null;
+            confirmButton = null;
+            ShopInputModeManager.Pop(this);
+            ApplyNamesToSigns();
+            NamesChanged?.Invoke();
         }
 
         public bool ApplyNamesToSigns()
@@ -215,6 +231,12 @@ namespace PickAndPlaceShop
 
         private static string Normalize(string value) => value?.Trim() ?? string.Empty;
         private bool IsValid(string value) => value.Length >= 1 && value.Length <= MaximumNameLength;
+        private string ResolveRestoredName(string value, bool player)
+        {
+            string fallback = player ? DefaultPlayerName : DefaultRivalName;
+            string normalized = string.IsNullOrWhiteSpace(value) ? fallback : Normalize(value);
+            return Limit(normalized);
+        }
 
         private void BuildNamingUi()
         {

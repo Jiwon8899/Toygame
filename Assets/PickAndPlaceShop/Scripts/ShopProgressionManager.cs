@@ -31,6 +31,8 @@ namespace PickAndPlaceShop
         private readonly List<ShopKujiStationSave> pendingKujiStations = new();
 
         private int currentDay = 1;
+        private string playerShopName;
+        private string rivalShopName;
         private int teamFunds;
         private int reputation;
         private int lifetimeRevenue;
@@ -64,6 +66,8 @@ namespace PickAndPlaceShop
 
         public ShopProgressionCatalog Catalog => catalog;
         public int CurrentDay => currentDay;
+        public string PlayerShopName => ResolveStoreName(playerShopName, true);
+        public string RivalShopName => ResolveStoreName(rivalShopName, false);
         public int TeamFunds => teamFunds;
         public int Reputation => reputation;
         public int LifetimeRevenue => lifetimeRevenue;
@@ -402,6 +406,20 @@ namespace PickAndPlaceShop
             return saved;
         }
 
+        public bool SetStoreNames(string playerName, string rivalName)
+        {
+            string normalizedPlayer = NormalizeStoreName(playerName, true);
+            string normalizedRival = NormalizeStoreName(rivalName, false);
+            if (string.IsNullOrWhiteSpace(normalizedPlayer) ||
+                string.IsNullOrWhiteSpace(normalizedRival)) return false;
+
+            playerShopName = normalizedPlayer;
+            rivalShopName = normalizedRival;
+            MarkChanged();
+            StateChanged?.Invoke();
+            return SaveNow();
+        }
+
         public bool SaveNowWithFeedback()
         {
             NotificationRaised?.Invoke("저장 중...");
@@ -430,6 +448,8 @@ namespace PickAndPlaceShop
             if (deleteSave) ShopProgressionSaveStore.Delete();
             currentDay = 1;
             teamFunds = boundGame != null ? boundGame.Coins.Value : 0;
+            playerShopName = ResolveStoreName(null, true);
+            rivalShopName = ResolveStoreName(null, false);
             reputation = 0;
             lifetimeRevenue = 0;
             unitsSold = 0;
@@ -741,6 +761,8 @@ namespace PickAndPlaceShop
             {
                 currentDay = currentDay,
                 teamFunds = teamFunds,
+                playerShopName = PlayerShopName,
+                rivalShopName = RivalShopName,
                 reputation = reputation,
                 lifetimeRevenue = lifetimeRevenue,
                 unitsSold = unitsSold,
@@ -803,6 +825,9 @@ namespace PickAndPlaceShop
             currentDay = Mathf.Max(1, save.currentDay);
             teamFunds = Mathf.Max(0, save.teamFunds);
             reputation = Mathf.Max(0, save.reputation);
+            playerShopName = NormalizeStoreName(save.playerShopName, true);
+            rivalShopName = NormalizeStoreName(save.rivalShopName, false);
+            ShopStoreNamingSystem.Instance.RestoreSavedNames(playerShopName, rivalShopName);
             lifetimeRevenue = Mathf.Max(0, save.lifetimeRevenue);
             unitsSold = Mathf.Max(0, save.unitsSold);
             rareItemsAcquired = Mathf.Max(0, save.rareItemsAcquired);
@@ -855,6 +880,20 @@ namespace PickAndPlaceShop
                 RestoreConsignment(boundGame, save);
             }
         }
+
+        private static string NormalizeStoreName(string value, bool player)
+        {
+            ShopStoreNamingConfig namingConfig = ShopStoreNamingConfig.Load();
+            string fallback = player
+                ? namingConfig != null ? namingConfig.DefaultPlayerShopName : "PickAndPlace"
+                : namingConfig != null ? namingConfig.DefaultRivalShopName : "Rival Shop";
+            string normalized = string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+            int maximum = namingConfig != null ? namingConfig.MaximumNameLength : 10;
+            return normalized.Length <= maximum ? normalized : normalized.Substring(0, maximum);
+        }
+
+        private static string ResolveStoreName(string value, bool player) =>
+            NormalizeStoreName(value, player);
 
         private static void RestoreConsignment(ShopNetworkGame game, ShopProgressionSaveData save)
         {
