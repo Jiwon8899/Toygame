@@ -1,4 +1,7 @@
 using System;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using System.Runtime.InteropServices;
+#endif
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -9,6 +12,18 @@ namespace PickAndPlaceShop
     [DefaultExecutionOrder(-720)]
     public sealed class ShopStoreNamingSystem : MonoBehaviour
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void ShopNamingWebInput_Create(string receiver, int maximumLength,
+            string playerValue, string rivalValue, string playerPlaceholder, string rivalPlaceholder);
+
+        [DllImport("__Internal")]
+        private static extern void ShopNamingWebInput_SetValues(string playerValue, string rivalValue);
+
+        [DllImport("__Internal")]
+        private static extern void ShopNamingWebInput_Destroy();
+#endif
+
         private static ShopStoreNamingSystem instance;
 
         private ShopStoreNamingConfig config;
@@ -67,6 +82,7 @@ namespace PickAndPlaceShop
 
         private void OnDestroy()
         {
+            DisableWebInput();
             if (instance == this) instance = null;
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             ShopInputModeManager.Pop(this);
@@ -80,6 +96,7 @@ namespace PickAndPlaceShop
             if (namingCanvas != null) Destroy(namingCanvas);
             BuildNamingUi();
             ShopInputModeManager.Push(this, ShopInputMode.Menu);
+            EnableWebInput();
             playerNameInput.ActivateInputField();
         }
 
@@ -89,6 +106,7 @@ namespace PickAndPlaceShop
             playerNameInput.text = Limit(playerName);
             rivalNameInput.text = Limit(rivalName);
             RefreshValidation();
+            SyncWebInputValues();
         }
 
         public bool TryConfirmNaming()
@@ -105,6 +123,7 @@ namespace PickAndPlaceShop
             PlayerShopName = playerName;
             RivalShopName = rivalName;
             HasConfirmedNames = true;
+            DisableWebInput();
             if (namingCanvas != null) Destroy(namingCanvas);
             namingCanvas = null;
             playerNameInput = null;
@@ -123,6 +142,7 @@ namespace PickAndPlaceShop
             PlayerShopName = ResolveRestoredName(playerName, true);
             RivalShopName = ResolveRestoredName(rivalName, false);
             HasConfirmedNames = true;
+            DisableWebInput();
             if (namingCanvas != null) Destroy(namingCanvas);
             namingCanvas = null;
             playerNameInput = null;
@@ -131,6 +151,59 @@ namespace PickAndPlaceShop
             ShopInputModeManager.Pop(this);
             ApplyNamesToSigns();
             NamesChanged?.Invoke();
+        }
+
+        public void HandleWebPlayerNameChanged(string value)
+        {
+            if (playerNameInput == null) return;
+            playerNameInput.SetTextWithoutNotify(Limit(value));
+            RefreshValidation();
+        }
+
+        public void HandleWebRivalNameChanged(string value)
+        {
+            if (rivalNameInput == null) return;
+            rivalNameInput.SetTextWithoutNotify(Limit(value));
+            RefreshValidation();
+        }
+
+        public void HandleWebNamingSubmit(string _)
+        {
+            TryConfirmNaming();
+        }
+
+        private void EnableWebInput()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (playerNameInput == null || rivalNameInput == null) return;
+            WebGLInput.captureAllKeyboardInput = false;
+            if (playerNameInput.textComponent != null) playerNameInput.textComponent.enabled = false;
+            if (rivalNameInput.textComponent != null) rivalNameInput.textComponent.enabled = false;
+            if (playerNameInput.placeholder != null) playerNameInput.placeholder.enabled = false;
+            if (rivalNameInput.placeholder != null) rivalNameInput.placeholder.enabled = false;
+            string playerPlaceholder = playerNameInput.placeholder is Text playerText
+                ? playerText.text : string.Empty;
+            string rivalPlaceholder = rivalNameInput.placeholder is Text rivalText
+                ? rivalText.text : string.Empty;
+            ShopNamingWebInput_Create(gameObject.name, MaximumNameLength,
+                playerNameInput.text, rivalNameInput.text, playerPlaceholder, rivalPlaceholder);
+#endif
+        }
+
+        private void SyncWebInputValues()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (playerNameInput != null && rivalNameInput != null)
+                ShopNamingWebInput_SetValues(playerNameInput.text, rivalNameInput.text);
+#endif
+        }
+
+        private void DisableWebInput()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            ShopNamingWebInput_Destroy();
+            WebGLInput.captureAllKeyboardInput = true;
+#endif
         }
 
         public bool ApplyNamesToSigns()
