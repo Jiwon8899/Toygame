@@ -161,6 +161,15 @@ namespace PickAndPlaceShop
         {
             if (!IsServer || Awarded.Value) return false;
             Awarded.Value = true;
+            if (Body != null)
+            {
+                Body.linearVelocity = Vector3.zero;
+                Body.angularVelocity = Vector3.zero;
+                Body.detectCollisions = false;
+                Body.isKinematic = true;
+            }
+            foreach (Collider prizeCollider in GetComponentsInChildren<Collider>(true))
+                prizeCollider.enabled = false;
             return true;
         }
 

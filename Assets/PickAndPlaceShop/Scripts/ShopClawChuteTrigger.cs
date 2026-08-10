@@ -17,12 +17,12 @@ namespace PickAndPlaceShop
 
         private void OnTriggerEnter(Collider other)
         {
-            Observe(other);
+            Enter(other);
         }
 
         private void OnTriggerStay(Collider other)
         {
-            Observe(other);
+            Enter(other);
         }
 
         private void OnTriggerExit(Collider other)
@@ -32,11 +32,11 @@ namespace PickAndPlaceShop
                 machine.ServerForgetChutePrize(prize);
         }
 
-        private void Observe(Collider other)
+        private void Enter(Collider other)
         {
             ShopClawPrizeNetwork prize = other.GetComponentInParent<ShopClawPrizeNetwork>();
             if (prize != null && machine != null)
-                machine.ServerObserveChutePrize(prize, triggerVolume);
+                machine.ServerEnterChutePrize(prize);
         }
     }
 }

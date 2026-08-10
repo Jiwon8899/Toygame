@@ -876,6 +876,20 @@ namespace PickAndPlaceShop
             ServerAwardChutePrize(prize);
         }
 
+        public void ServerEnterChutePrize(ShopClawPrizeNetwork prize)
+        {
+            if (!IsServer || prize == null || !prize.IsSpawned || prize.Awarded.Value) return;
+            bool paidRound = chargedAttempts.Contains(AttemptId.Value) &&
+                             ShopClawRules.CanAwardChutePrize(State.Value);
+            bool theftWindow = Time.time <= theftWindowUntil &&
+                               theftOwnerClientId != ShopClawRules.NoOccupant;
+            if (!paidRound && !theftWindow) return;
+
+            Debug.Log("[ClawChute] ENTER_AWARD prize=" + prize.NetworkObjectId +
+                      " attempt=" + AttemptId.Value + " theft=" + theftWindow, this);
+            ServerAwardChutePrize(prize);
+        }
+
         public void ServerForgetChutePrize(ShopClawPrizeNetwork prize)
         {
             if (prize == null) return;
