@@ -81,6 +81,8 @@ namespace PickAndPlaceShop
         [Min(0.5f)] [SerializeField] private float policeCollisionHeight = 1.75f;
         [Min(0.05f)] [SerializeField] private float policeObstacleAvoidanceSeconds = 0.65f;
         [Range(10f, 85f)] [SerializeField] private float policeObstacleAvoidanceAngle = 68f;
+        [Min(0.1f)] [SerializeField] private float policeReturnDespawnDistance = 0.35f;
+        [Min(0f)] [SerializeField] private float policeRedispatchCooldown = 8f;
 
         public float AttackMinimumClickInterval => Mathf.Clamp(attackMinimumClickInterval, 0.04f, 0.2f);
         public float AttackReferenceClickInterval =>
@@ -149,6 +151,8 @@ namespace PickAndPlaceShop
         public float PoliceCollisionHeight => Mathf.Max(PoliceCollisionRadius * 2f, policeCollisionHeight);
         public float PoliceObstacleAvoidanceSeconds => Mathf.Max(0.05f, policeObstacleAvoidanceSeconds);
         public float PoliceObstacleAvoidanceAngle => Mathf.Clamp(policeObstacleAvoidanceAngle, 10f, 85f);
+        public float PoliceReturnDespawnDistance => Mathf.Max(0.1f, policeReturnDespawnDistance);
+        public float PoliceRedispatchCooldown => Mathf.Max(0f, policeRedispatchCooldown);
 
         public static ShopTheftConfig Load() => Resources.Load<ShopTheftConfig>(ResourcePath);
 

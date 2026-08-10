@@ -70,3 +70,5 @@ MonoBehaviour:
   policeCollisionHeight: 1.75
   policeObstacleAvoidanceSeconds: 0.65
   policeObstacleAvoidanceAngle: 68
+  policeReturnDespawnDistance: 0.35
+  policeRedispatchCooldown: 8

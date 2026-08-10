@@ -51,12 +51,16 @@ namespace PickAndPlaceShop
         private int policeRouteAttempt;
         private Vector3 policeRouteWaypoint;
         private bool hasPoliceRouteWaypoint;
+        private bool policeReturning;
+        private Vector3 policeReturnPosition;
+        private float nextPoliceDispatchTime;
         private ShopTheftHud hud;
 
         public float AlertNormalized => config == null ? 0f : Mathf.Clamp01(Alert.Value / config.MaximumAlert);
         public float AlertHudFadeSeconds => config != null ? config.AlertHudFadeSeconds : 0.45f;
         public int ServerAcceptedAttackCount { get; private set; }
         public float LastAcceptedAttackSpeed { get; private set; }
+        public bool PoliceReturning => policeReturning;
 
         private void Awake()
         {
@@ -272,14 +276,21 @@ namespace PickAndPlaceShop
 
         private void ServerUpdateAlert()
         {
+            bool insideShop = IsInsideShop();
+            if (!PoliceActive.Value && Alert.Value >= config.MaximumAlert &&
+                !insideShop && Time.time >= nextPoliceDispatchTime)
+                ServerStartPolice();
             if (PoliceActive.Value || Alert.Value <= 0f ||
                 Time.time - lastTheftTime < config.AlertDecayDelay) return;
-            float decay = IsInsideShop() ? config.InsideShopDecayPerSecond : config.OutsideShopDecayPerSecond;
+            float decay = insideShop ? config.InsideShopDecayPerSecond : config.OutsideShopDecayPerSecond;
             Alert.Value = Mathf.Max(0f, Alert.Value - decay * Time.fixedDeltaTime);
         }
 
         private bool IsInsideShop()
         {
+            if (ShopExpansionVisualController.TryContainsActiveShopArea(transform.position, out bool inside))
+                return inside;
+
             ShopInteractable[] interactables = FindObjectsByType<ShopInteractable>(FindObjectsSortMode.None);
             float radiusSqr = config.ShopSafeRadius * config.ShopSafeRadius;
             for (int i = 0; i < interactables.Length; i++)
@@ -293,11 +304,17 @@ namespace PickAndPlaceShop
 
         private void ServerStartPolice()
         {
+            if (Time.time < nextPoliceDispatchTime || IsInsideShop()) return;
             PoliceActive.Value = true;
+            policeReturning = false;
             chaseElapsed = 0f;
             arrestElapsed = 0f;
             Vector3 desired = transform.position - transform.forward * config.PoliceSpawnDistance;
             PolicePosition.Value = SampleNavMesh(desired, out Vector3 sampled) ? sampled : desired;
+            policeReturnPosition = PolicePosition.Value;
+            if (ShopExpansionVisualController.TryContainsActiveShopArea(policeReturnPosition, out bool spawnInside) &&
+                spawnInside && ShopExpansionVisualController.TryGetNearestShopExit(policeReturnPosition, out Vector3 exit))
+                policeReturnPosition = SampleNavMesh(exit, out Vector3 sampledExit) ? sampledExit : exit;
             EnsurePoliceVisual(true);
             if (policeAgent != null && policeAgent.isOnNavMesh) policeAgent.Warp(PolicePosition.Value);
             policeNoProgressSeconds = 0f;
@@ -318,18 +335,33 @@ namespace PickAndPlaceShop
             chaseElapsed += Time.fixedDeltaTime;
             if (chaseElapsed >= config.ChaseTimeoutSeconds)
             {
-                PoliceActive.Value = false;
+                StopPoliceWithCooldown();
                 ServerSetPersonalStatus("경찰이 추격을 포기했습니다. 경고는 매장 안에서 감소합니다.");
+                return;
+            }
+
+            if (!policeReturning && IsInsideShop()) BeginPoliceReturn();
+            if (policeReturning)
+            {
+                if (Time.time >= nextPoliceTargetRefresh)
+                {
+                    nextPoliceTargetRefresh = Time.time + config.PoliceTargetRefreshSeconds;
+                    SetPoliceDestination(policeReturnPosition);
+                }
+                MovePoliceAuthority();
+                if (Vector3.Distance(PolicePosition.Value, policeReturnPosition) <=
+                    config.PoliceReturnDespawnDistance)
+                {
+                    StopPoliceWithCooldown();
+                    ServerSetPersonalStatus("매장 안전 구역에 들어와 경찰이 철수했습니다.");
+                }
                 return;
             }
 
             if (Time.time >= nextPoliceTargetRefresh)
             {
                 nextPoliceTargetRefresh = Time.time + config.PoliceTargetRefreshSeconds;
-                if (policeAgent != null && policeAgent.isOnNavMesh &&
-                    SampleNavMesh(transform.position, out Vector3 destination))
-                    policeAgent.SetDestination(destination);
-                else RefreshPoliceRoute();
+                SetPoliceDestination(transform.position);
             }
             MovePoliceAuthority();
 
@@ -342,7 +374,7 @@ namespace PickAndPlaceShop
 
         private void ServerArrest()
         {
-            PoliceActive.Value = false;
+            StopPoliceWithCooldown();
             Alert.Value = config.AlertAfterArrest;
             ArrestSequence.Value++;
             ShopNetworkGame game = ShopNetworkGame.Instance;
@@ -356,6 +388,39 @@ namespace PickAndPlaceShop
             Vector3 safe = FindArrestReturnPoint();
             Teleport(safe);
             TeleportOwnerRpc(safe);
+        }
+
+        private void BeginPoliceReturn()
+        {
+            policeReturning = true;
+            arrestElapsed = 0f;
+            policeNoProgressSeconds = 0f;
+            policeRouteAttempt = 0;
+            if (!ShopExpansionVisualController.TryContainsActiveShopArea(policeReturnPosition, out bool inside) || inside)
+            {
+                if (ShopExpansionVisualController.TryGetNearestShopExit(PolicePosition.Value, out Vector3 exit))
+                    policeReturnPosition = SampleNavMesh(exit, out Vector3 sampled) ? sampled : exit;
+            }
+            RefreshPoliceRoute();
+            ServerSetPersonalStatus("매장 안전 구역에 들어왔습니다. 경찰이 철수합니다.");
+        }
+
+        private void StopPoliceWithCooldown()
+        {
+            PoliceActive.Value = false;
+            policeReturning = false;
+            arrestElapsed = 0f;
+            nextPoliceDispatchTime = Time.time + config.PoliceRedispatchCooldown;
+            hasPoliceRouteWaypoint = false;
+            if (policeAgent != null && policeAgent.isOnNavMesh) policeAgent.ResetPath();
+        }
+
+        private void SetPoliceDestination(Vector3 target)
+        {
+            if (policeAgent != null && policeAgent.isOnNavMesh &&
+                SampleNavMesh(target, out Vector3 destination))
+                policeAgent.SetDestination(destination);
+            else RefreshPoliceRoute();
         }
 
         [Rpc(SendTo.Owner, InvokePermission = RpcInvokePermission.Server)]
@@ -406,7 +471,7 @@ namespace PickAndPlaceShop
             {
                 facingDirection = policeActualVelocity.sqrMagnitude > 0.01f
                     ? policeActualVelocity
-                    : transform.position - policeVisual.transform.position;
+                    : PoliceDestination - policeVisual.transform.position;
             }
             RotatePoliceTowards(facingDirection);
             if (policeAnimator != null)
@@ -439,7 +504,7 @@ namespace PickAndPlaceShop
             Vector3 desired = policeAgent != null && policeAgent.enabled && policeAgent.isOnNavMesh &&
                               policeAgent.desiredVelocity.sqrMagnitude > 0.01f
                 ? policeAgent.desiredVelocity
-                : (hasPoliceRouteWaypoint ? policeRouteWaypoint : transform.position) -
+                : (hasPoliceRouteWaypoint ? policeRouteWaypoint : PoliceDestination) -
                   policeVisual.transform.position;
             desired = Vector3.ProjectOnPlane(desired, Vector3.up);
             if (desired.sqrMagnitude <= 0.001f)
@@ -495,7 +560,7 @@ namespace PickAndPlaceShop
                 return;
             }
             hasPoliceRouteWaypoint = ShopNpcRoutePlanner.TryGetNextWaypoint(
-                policeVisual.transform.position, transform.position,
+                policeVisual.transform.position, PoliceDestination,
                 config.PoliceCollisionRadius, config.PoliceCollisionHeight,
                 policeRouteAttempt, policeVisual.transform, out policeRouteWaypoint,
                 out ShopNpcRouteStatus status);
@@ -506,6 +571,8 @@ namespace PickAndPlaceShop
                 Debug.Log("[PoliceNavigation] route=" + status + " attempt=" + policeRouteAttempt +
                           " waypoint=" + policeRouteWaypoint.ToString("F2"), policeVisual);
         }
+
+        private Vector3 PoliceDestination => policeReturning ? policeReturnPosition : transform.position;
 
         private void EnsurePoliceVisual(bool authoritative)
         {

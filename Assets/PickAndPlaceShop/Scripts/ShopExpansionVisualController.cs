@@ -12,6 +12,7 @@ namespace PickAndPlaceShop
         private static ShopExpansionVisualController instance;
         private readonly List<GameObject> generated = new();
         private readonly List<Vector3> customerBrowsePoints = new();
+        private readonly List<Bounds> activeShopFloorBounds = new();
         private readonly Dictionary<GameObject, bool> sceneDefaults = new();
         private ShopExpansionVisualConfig config;
         private int appliedLevel;
@@ -32,6 +33,21 @@ namespace PickAndPlaceShop
             if (instance == null || index < 0 || index >= instance.customerBrowsePoints.Count) return false;
             position = instance.customerBrowsePoints[index];
             return true;
+        }
+
+        public static bool TryContainsActiveShopArea(Vector3 position, out bool inside)
+        {
+            inside = false;
+            if (instance == null || instance.activeShopFloorBounds.Count == 0) return false;
+            inside = instance.ContainsShopFloor(position);
+            return true;
+        }
+
+        public static bool TryGetNearestShopExit(Vector3 from, out Vector3 exit)
+        {
+            exit = from;
+            if (instance == null || instance.activeShopFloorBounds.Count == 0) return false;
+            return instance.FindNearestShopExit(from, out exit);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -103,7 +119,80 @@ namespace PickAndPlaceShop
                 5, "위탁 판매 구역", previousLevel > 0 && level > previousLevel && level == 5);
             if (level >= 6) CreateRoomExtension(origin + Vector3.right * 5f, 2);
             EnsureSharedShell(level);
+            RefreshActiveShopFloorBounds();
             ShopProductDisplayVisualController.RequestRefresh();
+        }
+
+        private void RefreshActiveShopFloorBounds()
+        {
+            activeShopFloorBounds.Clear();
+            Scene activeScene = SceneManager.GetActiveScene();
+            Renderer[] renderers = FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || renderer.gameObject.scene != activeScene) continue;
+                string objectName = renderer.gameObject.name;
+                if (objectName == "ShopFloor" || objectName == "ShopFloor (1)")
+                    AddShopFloorBounds(renderer.bounds);
+            }
+
+            for (int i = 0; i < generated.Count; i++)
+            {
+                GameObject root = generated[i];
+                if (root == null || !root.activeInHierarchy) continue;
+                Renderer[] generatedRenderers = root.GetComponentsInChildren<Renderer>(true);
+                for (int j = 0; j < generatedRenderers.Length; j++)
+                    if (generatedRenderers[j] != null && generatedRenderers[j].gameObject.name == "Floor")
+                        AddShopFloorBounds(generatedRenderers[j].bounds);
+            }
+        }
+
+        private void AddShopFloorBounds(Bounds bounds)
+        {
+            if (bounds.size.x <= 0.1f || bounds.size.z <= 0.1f) return;
+            bounds.Expand(new Vector3(0.2f, 4f, 0.2f));
+            activeShopFloorBounds.Add(bounds);
+        }
+
+        private bool ContainsShopFloor(Vector3 position)
+        {
+            for (int i = 0; i < activeShopFloorBounds.Count; i++)
+            {
+                Bounds bounds = activeShopFloorBounds[i];
+                if (position.x >= bounds.min.x && position.x <= bounds.max.x &&
+                    position.z >= bounds.min.z && position.z <= bounds.max.z)
+                    return true;
+            }
+            return false;
+        }
+
+        private bool FindNearestShopExit(Vector3 from, out Vector3 exit)
+        {
+            const float outsidePadding = 1.25f;
+            exit = from;
+            float bestDistance = float.MaxValue;
+            for (int i = 0; i < activeShopFloorBounds.Count; i++)
+            {
+                Bounds bounds = activeShopFloorBounds[i];
+                Vector3 clamped = bounds.ClosestPoint(from);
+                Vector3[] candidates =
+                {
+                    new(bounds.min.x - outsidePadding, from.y, clamped.z),
+                    new(bounds.max.x + outsidePadding, from.y, clamped.z),
+                    new(clamped.x, from.y, bounds.min.z - outsidePadding),
+                    new(clamped.x, from.y, bounds.max.z + outsidePadding)
+                };
+                for (int j = 0; j < candidates.Length; j++)
+                {
+                    if (ContainsShopFloor(candidates[j])) continue;
+                    float distance = (candidates[j] - from).sqrMagnitude;
+                    if (distance >= bestDistance) continue;
+                    bestDistance = distance;
+                    exit = candidates[j];
+                }
+            }
+            return bestDistance < float.MaxValue;
         }
 
         private void CaptureSceneDefaults()
@@ -393,6 +482,7 @@ namespace PickAndPlaceShop
             for (int i = 0; i < generated.Count; i++) if (generated[i] != null) Destroy(generated[i]);
             generated.Clear();
             customerBrowsePoints.Clear();
+            activeShopFloorBounds.Clear();
         }
 
         private void ClearSharedShell()
