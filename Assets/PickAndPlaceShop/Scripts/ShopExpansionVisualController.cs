@@ -20,8 +20,7 @@ namespace PickAndPlaceShop
         private CanvasGroup revealGroup;
         private Text revealText;
         private GameObject sharedShell;
-        private GameObject sharedCanopy;
-        private GameObject sharedOuterWall;
+        private GameObject sharedBoundary;
 
         public static int CustomerBrowsePointCount => instance != null
             ? instance.customerBrowsePoints.Count
@@ -314,6 +313,7 @@ namespace PickAndPlaceShop
 
         private void EnsureSharedShell(int level)
         {
+            RemoveLegacySharedVisuals();
             if (level < 3)
             {
                 if (sharedShell != null) sharedShell.SetActive(false);
@@ -323,11 +323,17 @@ namespace PickAndPlaceShop
             {
                 sharedShell = new GameObject("ExpansionSharedShell");
                 sharedShell.transform.SetParent(transform, false);
-                Color wall = config != null ? config.RoomWallColor : new Color(0.19f, 0.12f, 0.18f);
-                sharedOuterWall = CreatePart(sharedShell.transform, "OuterWall", Vector3.zero,
-                    Vector3.one, wall, true);
-                sharedCanopy = CreatePart(sharedShell.transform, "Canopy", Vector3.zero,
-                    Vector3.one, new Color(wall.r * 1.25f, wall.g * 1.25f, wall.b * 1.25f), true);
+            }
+            if (sharedBoundary == null)
+            {
+                Transform existingBoundary = sharedShell.transform.Find("ExpansionBoundary (Invisible)");
+                sharedBoundary = existingBoundary != null
+                    ? existingBoundary.gameObject
+                    : new GameObject("ExpansionBoundary (Invisible)");
+                sharedBoundary.transform.SetParent(sharedShell.transform, false);
+                if (sharedBoundary.GetComponent<BoxCollider>() == null)
+                    sharedBoundary.AddComponent<BoxCollider>();
+                sharedBoundary.isStatic = true;
             }
             sharedShell.SetActive(true);
             Vector2 zoneSize = config != null ? config.ZoneFloorSize : new Vector2(6f, 2.6f);
@@ -350,11 +356,27 @@ namespace PickAndPlaceShop
                 maxZ = Mathf.Max(maxZ, centers[i].z + zoneSize.y * 0.5f);
             }
             sharedShell.transform.position = Vector3.zero;
-            sharedCanopy.transform.position = new Vector3((minX + maxX) * 0.5f, 2.9f, (minZ + maxZ) * 0.5f);
-            sharedCanopy.transform.localScale = new Vector3(maxX - minX, 0.14f, maxZ - minZ);
-            sharedOuterWall.transform.position = new Vector3(maxX - 0.09f, 1.5f, (minZ + maxZ) * 0.5f);
-            sharedOuterWall.transform.localScale = new Vector3(0.18f, 3f, maxZ - minZ);
-            AddCarvingObstacle(sharedOuterWall, Vector3.zero, Vector3.one);
+            sharedBoundary.transform.position = new Vector3(maxX - 0.09f, 1.5f, (minZ + maxZ) * 0.5f);
+            sharedBoundary.transform.localScale = new Vector3(0.18f, 3f, maxZ - minZ);
+            AddCarvingObstacle(sharedBoundary, Vector3.zero, Vector3.one);
+        }
+
+        private void RemoveLegacySharedVisuals()
+        {
+            if (sharedShell == null)
+            {
+                Transform existingShell = transform.Find("ExpansionSharedShell");
+                if (existingShell != null) sharedShell = existingShell.gameObject;
+            }
+            if (sharedShell == null) return;
+
+            for (int i = sharedShell.transform.childCount - 1; i >= 0; i--)
+            {
+                GameObject child = sharedShell.transform.GetChild(i).gameObject;
+                if (child.name != "Canopy" && child.name != "OuterWall") continue;
+                child.SetActive(false);
+                Destroy(child);
+            }
         }
 
         private void CreateTemporaryZoneSign(Transform parent, int level, string label, Vector2 size)
@@ -489,8 +511,7 @@ namespace PickAndPlaceShop
         {
             if (sharedShell != null) Destroy(sharedShell);
             sharedShell = null;
-            sharedCanopy = null;
-            sharedOuterWall = null;
+            sharedBoundary = null;
         }
     }
 }
