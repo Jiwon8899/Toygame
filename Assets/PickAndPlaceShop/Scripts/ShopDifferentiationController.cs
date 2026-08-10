@@ -9,6 +9,9 @@ namespace PickAndPlaceShop
     [DefaultExecutionOrder(450)]
     public sealed class ShopDifferentiationController : MonoBehaviour
     {
+        private const float FacilityLabelCharacterSize = 0.04f;
+        private const int FacilityLabelFontSize = 64;
+
         public static ShopDifferentiationController Instance { get; private set; }
 
         private ShopDifferentiationConfig config;
@@ -468,13 +471,13 @@ namespace PickAndPlaceShop
             {
                 consignmentText = label.GetComponent<TextMesh>();
                 label.localPosition = new Vector3(0f, 0.75f, -0.55f);
-                consignmentText.characterSize = 0.075f;
-                consignmentText.fontSize = 42;
+                ConfigureFacilityLabel(consignmentText);
             }
             GameObject reject = BuildFacility("위탁 제안 거절", config.ConsignmentPosition +
                 new Vector3(1.8f, 0f, 0f), new Color(0.48f, 0.16f, 0.16f),
                 ShopAction.ConsignmentReject, "현재 위탁 제안 거절");
             reject.transform.localScale = new Vector3(0.65f, 0.65f, 0.65f);
+            ConfigureFacilityLabel(reject.transform.Find("위탁 제안 거절_Label")?.GetComponent<TextMesh>());
             consignmentRejectFacility = reject;
 
             GameObject visualHost = new("Consignment Product Visuals");
@@ -615,11 +618,27 @@ namespace PickAndPlaceShop
             label.text = objectName;
             label.anchor = TextAnchor.MiddleCenter;
             label.alignment = TextAlignment.Center;
-            label.characterSize = 0.12f;
-            label.fontSize = 48;
             label.color = Color.white;
             ShopUiFonts.Apply(label, ShopUiFontWeight.Bold);
+            ConfigureFacilityLabel(label);
             return root;
+        }
+
+        private static void ConfigureFacilityLabel(TextMesh label)
+        {
+            if (label == null) return;
+            label.characterSize = FacilityLabelCharacterSize;
+            label.fontSize = FacilityLabelFontSize;
+
+            Transform parent = label.transform.parent;
+            Vector3 scale = parent != null ? parent.lossyScale : Vector3.one;
+            label.transform.localScale = new Vector3(
+                Mathf.Abs(scale.x) > 0.0001f ? 1f / Mathf.Abs(scale.x) : 1f,
+                Mathf.Abs(scale.y) > 0.0001f ? 1f / Mathf.Abs(scale.y) : 1f,
+                Mathf.Abs(scale.z) > 0.0001f ? 1f / Mathf.Abs(scale.z) : 1f);
+
+            if (label.GetComponent<ShopWorldTextBillboard>() == null)
+                label.gameObject.AddComponent<ShopWorldTextBillboard>();
         }
 
         private void RefreshReviewBoard()
