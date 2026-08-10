@@ -714,31 +714,52 @@ namespace PickAndPlaceShop
 
         private void ServerCollectWarehouseItem(ulong requester)
         {
-            int sourceSlot = -1;
+            int sourceIndex = -1;
+            int sourceSlot = int.MaxValue;
             for (int i = 0; i < ItemContainers.Count; i++)
             {
                 ShopContainerItem item = ItemContainers[i];
                 if (!ShopContainerRules.BelongsTo(item, ShopContainerRules.SharedOwner,
                         ShopContainerKind.SharedStorage) || item.Quantity <= 0) continue;
-                if (sourceSlot < 0 || item.SlotIndex < sourceSlot) sourceSlot = item.SlotIndex;
+                if (item.SlotIndex >= sourceSlot) continue;
+                sourceIndex = i;
+                sourceSlot = item.SlotIndex;
             }
-            if (sourceSlot < 0)
+            if (sourceIndex < 0)
             {
                 SetEvent("창고에 가져갈 상품이 없습니다.");
                 return;
             }
 
-            int destinationSlot = ShopContainerRules.FindNearestFreeSlot(ItemContainers, requester,
-                ShopContainerKind.PersonalInventory, 0, ShopContainerRules.PersonalCapacity);
-            if (destinationSlot < 0)
+            ShopContainerItem sourceItem = ItemContainers[sourceIndex];
+            if (!ShopContainerRules.CanAcceptProduct(ItemContainers, requester,
+                    ShopContainerKind.PersonalInventory, sourceItem.ProductId,
+                    ShopContainerRules.PersonalCapacity))
             {
                 SetEvent("개인 인벤토리가 가득 차 창고 상품을 가져오지 못했습니다.");
                 return;
             }
 
+            int totalBefore = ShopContainerRules.TotalQuantity(ItemContainers,
+                                  ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage) +
+                              ShopContainerRules.TotalQuantity(ItemContainers, requester,
+                                  ShopContainerKind.PersonalInventory);
             if (ServerTryMoveItem(ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage,
-                    requester, ShopContainerKind.PersonalInventory, out _, -1))
+                    requester, ShopContainerKind.PersonalInventory, out ShopContainerItem moved,
+                    sourceItem.ProductId))
+            {
+                int totalAfter = ShopContainerRules.TotalQuantity(ItemContainers,
+                                     ShopContainerRules.SharedOwner, ShopContainerKind.SharedStorage) +
+                                 ShopContainerRules.TotalQuantity(ItemContainers, requester,
+                                     ShopContainerKind.PersonalInventory);
+                if (totalAfter != totalBefore)
+                    Debug.LogError("[WarehousePickup] CONSERVATION_FAILED before=" + totalBefore +
+                                   " after=" + totalAfter + " product=" + moved.ProductId, this);
+                else
+                    Debug.Log("[WarehousePickup] MOVED product=" + moved.ProductId +
+                              " storage+personal=" + totalAfter, this);
                 SetEvent("창고 상품 1개를 개인 인벤토리로 가져왔습니다.");
+            }
             else
                 SetEvent("창고 상품을 가져오지 못했습니다.");
         }
