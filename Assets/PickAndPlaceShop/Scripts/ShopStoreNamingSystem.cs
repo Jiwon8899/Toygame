@@ -83,6 +83,7 @@ namespace PickAndPlaceShop
         private void OnDestroy()
         {
             DisableWebInput();
+            ShopInputModeManager.SetGameplayHudSuppressed(this, false);
             if (instance == this) instance = null;
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             ShopInputModeManager.Pop(this);
@@ -90,6 +91,7 @@ namespace PickAndPlaceShop
 
         public void BeginNewGameNaming()
         {
+            ShopInputModeManager.SetGameplayHudSuppressed(this, true);
             HasConfirmedNames = false;
             PlayerShopName = string.Empty;
             RivalShopName = string.Empty;
@@ -130,6 +132,7 @@ namespace PickAndPlaceShop
             rivalNameInput = null;
             confirmButton = null;
             ShopInputModeManager.Pop(this);
+            ShopInputModeManager.SetGameplayHudSuppressed(this, false);
             ApplyNamesToSigns();
             ShopProgressionManager.Instance?.SetStoreNames(PlayerShopName, RivalShopName);
             NamesChanged?.Invoke();
@@ -149,6 +152,7 @@ namespace PickAndPlaceShop
             rivalNameInput = null;
             confirmButton = null;
             ShopInputModeManager.Pop(this);
+            ShopInputModeManager.SetGameplayHudSuppressed(this, false);
             ApplyNamesToSigns();
             NamesChanged?.Invoke();
         }

@@ -27,6 +27,7 @@ namespace PickAndPlaceShop
 
         private static ShopInputModeManager instance;
         private readonly List<Entry> stack = new();
+        private readonly HashSet<Object> gameplayHudSuppressors = new();
         private int sequence;
         private ShopInputMode appliedMode = ShopInputMode.Gameplay;
         private bool appliedOnce;
@@ -37,7 +38,8 @@ namespace PickAndPlaceShop
         public static bool AllowsGameplay => CurrentMode == ShopInputMode.Gameplay;
         public static bool AllowsClaw => CurrentMode == ShopInputMode.Claw;
         public static bool ShowsGameplayHud =>
-            CurrentMode == ShopInputMode.Gameplay || CurrentMode == ShopInputMode.Claw;
+            (CurrentMode == ShopInputMode.Gameplay || CurrentMode == ShopInputMode.Claw) &&
+            (instance == null || instance.gameplayHudSuppressors.Count == 0);
         public static bool IsUiOpen => IsPointerFreeMode(CurrentMode);
         public static bool SuppressLookThisFrame => instance != null && instance.suppressLookFrames > 0;
 
@@ -69,10 +71,19 @@ namespace PickAndPlaceShop
             instance.ApplyResolvedMode();
         }
 
+        public static void SetGameplayHudSuppressed(Object owner, bool suppressed)
+        {
+            if (owner == null) return;
+            if (instance == null) Bootstrap();
+            if (suppressed) instance.gameplayHudSuppressors.Add(owner);
+            else instance.gameplayHudSuppressors.Remove(owner);
+        }
+
         private void Update()
         {
             int previousCount = stack.Count;
             stack.RemoveAll(entry => entry.Owner == null);
+            gameplayHudSuppressors.RemoveWhere(owner => owner == null);
             if (stack.Count != previousCount) ApplyResolvedMode();
             else ApplyLocalPlayerInput(appliedMode);
             if (suppressLookFrames > 0) suppressLookFrames--;
