@@ -104,8 +104,6 @@ namespace PickAndPlaceShop
             if (stack.Count != previousCount) ApplyResolvedMode();
             else ApplyLocalPlayerInput(appliedMode);
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if (!IsPointerFreeMode(appliedMode) && Cursor.lockState != CursorLockMode.Locked)
-                pointerLockPending = true;
             if (pointerLockPending && !IsPointerFreeMode(appliedMode) && HasPointerLockGestureThisFrame())
                 ApplyCursorState(appliedMode);
 #endif
