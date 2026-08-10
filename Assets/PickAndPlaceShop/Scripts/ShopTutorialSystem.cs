@@ -66,6 +66,9 @@ namespace PickAndPlaceShop
         private Transform observedPlayer;
         private Vector3 previousPosition;
         private float movedDistance;
+        private ShopInteractable closingInteractable;
+        private GameObject closingDestinationMarker;
+        private float nextClosingSearchAt;
 
         public static bool IsActive => ShopProgressionManager.Instance != null &&
             !ShopProgressionManager.Instance.TutorialCompleted;
@@ -90,6 +93,7 @@ namespace PickAndPlaceShop
 
         private void Update()
         {
+            UpdateClosingDestinationMarker();
             if (!IsHostAuthority() || !IsActive || config == null) return;
             ShopProgressionManager progression = ShopProgressionManager.Instance;
             if (progression == null || progression.TutorialStep != 0) return;
@@ -109,6 +113,55 @@ namespace PickAndPlaceShop
             movedDistance += delta.magnitude;
             previousPosition = player.position;
             if (movedDistance >= config.MovementDistance) CompleteCurrentStep();
+        }
+
+        private void OnDestroy()
+        {
+            if (closingDestinationMarker != null) Destroy(closingDestinationMarker);
+            if (instance == this) instance = null;
+        }
+
+        private void UpdateClosingDestinationMarker()
+        {
+            ShopProgressionManager progression = ShopProgressionManager.Instance;
+            bool shouldShow = progression != null && !progression.TutorialCompleted &&
+                              progression.TutorialStep == 6;
+            if (!shouldShow)
+            {
+                if (closingDestinationMarker != null) Destroy(closingDestinationMarker);
+                closingDestinationMarker = null;
+                closingInteractable = null;
+                return;
+            }
+
+            if (closingInteractable == null && Time.unscaledTime >= nextClosingSearchAt)
+            {
+                nextClosingSearchAt = Time.unscaledTime + 0.5f;
+                ShopInteractable[] interactables = FindObjectsByType<ShopInteractable>(
+                    FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                for (int i = 0; i < interactables.Length; i++)
+                {
+                    if (interactables[i] == null || interactables[i].Action != ShopAction.EndDay) continue;
+                    closingInteractable = interactables[i];
+                    break;
+                }
+            }
+            if (closingInteractable == null) return;
+
+            if (closingDestinationMarker == null)
+            {
+                closingDestinationMarker = new GameObject("TutorialClosingDestinationMarker");
+                TextMesh marker = closingDestinationMarker.AddComponent<TextMesh>();
+                marker.text = "!";
+                marker.anchor = TextAnchor.MiddleCenter;
+                marker.alignment = TextAlignment.Center;
+                marker.fontSize = 96;
+                marker.characterSize = 0.12f;
+                marker.color = Color.red;
+                closingDestinationMarker.AddComponent<ShopWorldTextBillboard>();
+            }
+            closingDestinationMarker.transform.position = closingInteractable.InteractionWorldPosition +
+                                                          Vector3.up * 2.4f;
         }
 
         public static void Report(ShopTutorialAction action)
