@@ -74,7 +74,13 @@ namespace PickAndPlaceShop
         public static void SetGameplayHudSuppressed(Object owner, bool suppressed)
         {
             if (owner == null) return;
-            if (instance == null) Bootstrap();
+            // Scene teardown can destroy the persistent manager before modal owners run
+            // OnDestroy. Removing a stale suppression must not recreate the manager.
+            if (instance == null)
+            {
+                if (!suppressed) return;
+                Bootstrap();
+            }
             if (suppressed) instance.gameplayHudSuppressors.Add(owner);
             else instance.gameplayHudSuppressors.Remove(owner);
         }
