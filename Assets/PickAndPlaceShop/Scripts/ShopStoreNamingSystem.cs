@@ -323,7 +323,9 @@ namespace PickAndPlaceShop
             Canvas canvas = namingCanvas.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.overrideSorting = true;
-            canvas.sortingOrder = 50000;
+            // Canvas.sortingOrder is stored as a signed 16-bit value. Values above 32767 wrap
+            // negative in a player build and put the modal behind gameplay HUD canvases.
+            canvas.sortingOrder = 32760;
             CanvasScaler scaler = namingCanvas.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
