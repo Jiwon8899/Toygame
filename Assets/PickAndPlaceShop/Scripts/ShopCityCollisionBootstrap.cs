@@ -21,6 +21,9 @@ namespace PickAndPlaceShop
         private static void Apply(Scene scene)
         {
             if (!scene.IsValid() || !scene.isLoaded) return;
+            Transform legacyWarehouseZone = FindSceneTransform(scene, "Zone_Warehouse");
+            if (legacyWarehouseZone != null) legacyWarehouseZone.gameObject.SetActive(false);
+
             ShopWorldConfig config = ShopWorldConfig.Load();
             float buildingScale = config != null ? config.BuildingColliderScale : 0.96f;
             float vehicleScale = config != null ? config.VehicleColliderScale : 0.92f;
@@ -32,6 +35,7 @@ namespace PickAndPlaceShop
             foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
             {
                 if (filter == null || filter.sharedMesh == null) continue;
+                if (IsDescendantOrSelf(filter.transform, legacyWarehouseZone)) continue;
                 bool building = filter.transform.parent != null &&
                                 filter.transform.parent.name == "CITY_Buildings" &&
                                 filter.name.EndsWith("_body", System.StringComparison.OrdinalIgnoreCase);
@@ -73,6 +77,20 @@ namespace PickAndPlaceShop
             if (buildings > 0 || vehicles > 0 || storeFixtures > 0)
                 Debug.Log("[CityCollision] buildings=" + buildings + " vehicles=" + vehicles +
                           " storeFixtures=" + storeFixtures);
+        }
+
+        private static Transform FindSceneTransform(Scene scene, string objectName)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            foreach (Transform candidate in root.GetComponentsInChildren<Transform>(true))
+                if (candidate.name == objectName) return candidate;
+            return null;
+        }
+
+        private static bool IsDescendantOrSelf(Transform candidate, Transform ancestor)
+        {
+            if (candidate == null || ancestor == null) return false;
+            return candidate == ancestor || candidate.IsChildOf(ancestor);
         }
 
         private static bool IsStoreFixture(Transform target)

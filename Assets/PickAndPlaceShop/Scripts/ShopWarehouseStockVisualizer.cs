@@ -65,10 +65,22 @@ namespace PickAndPlaceShop
             if (stackRoot == null && !CreateStackRoot()) return;
 
             int signature = ReadSharedStorage(game, stock, out int totalQuantity);
-            if (hasObservedSignature && signature == observedSignature) return;
+            bool visualsMatchStock = totalQuantity <= 0
+                ? !HasVisibleStockProducts()
+                : HasVisibleStockProducts() && interactionTrigger != null && interactionTrigger.enabled;
+            if (hasObservedSignature && signature == observedSignature && visualsMatchStock) return;
             hasObservedSignature = true;
             observedSignature = signature;
             RebuildProducts(totalQuantity);
+        }
+
+        private bool HasVisibleStockProducts()
+        {
+            if (stackRoot == null) return false;
+            for (int i = 0; i < stackRoot.childCount; i++)
+                if (stackRoot.GetChild(i).name.StartsWith("Stock_", System.StringComparison.Ordinal))
+                    return true;
+            return false;
         }
 
         private bool CreateStackRoot()
