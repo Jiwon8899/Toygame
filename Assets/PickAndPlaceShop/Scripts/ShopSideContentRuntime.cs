@@ -50,8 +50,8 @@ namespace PickAndPlaceShop
         };
 
         private ShopNetworkGame game;
-        private TextMesh trashLabel;
-        private Transform trashRoot;
+        private readonly List<TextMesh> trashLabels = new();
+        private readonly List<Transform> trashRoots = new();
         private readonly List<ShopRivalShelfInteractable> rivalShelves = new();
         private readonly Dictionary<int, GameObject> rivalVisuals = new();
         private int observedRivalRevision = -1;
@@ -85,8 +85,12 @@ namespace PickAndPlaceShop
         private void Update()
         {
             if (game == null) return;
-            if (trashLabel != null)
-                trashLabel.text = $"오늘 {game.TrashIncomeToday.Value:N0} / {game.SideContentConfig.TrashDailyCap:N0}원";
+            string trashStatus = $"오늘 {game.TrashIncomeToday.Value:N0} / {game.SideContentConfig.TrashDailyCap:N0}원";
+            for (int i = trashLabels.Count - 1; i >= 0; i--)
+            {
+                if (trashLabels[i] == null) trashLabels.RemoveAt(i);
+                else trashLabels[i].text = trashStatus;
+            }
             if (observedRivalRevision != game.RivalStockRevision.Value) RefreshRivalVisuals();
             ObserveLocalRivalShopVisit();
             UpdateRivalOwner();
@@ -181,7 +185,32 @@ namespace PickAndPlaceShop
 
         private void ConfigureTrash()
         {
-            GameObject target = FindNamedObject("S2_p.001");
+            trashLabels.Clear();
+            trashRoots.Clear();
+            Transform[] allTransforms = FindObjectsByType<Transform>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            List<GameObject> targets = allTransforms
+                .Where(candidate => candidate != null && IsCityTrashModel(candidate))
+                .Select(candidate => candidate.gameObject)
+                .OrderBy(candidate => candidate.name, StringComparer.Ordinal)
+                .ToList();
+            for (int i = 0; i < targets.Count; i++) ConfigureTrashTarget(targets[i], i);
+        }
+
+        private static bool IsCityTrashModel(Transform candidate)
+        {
+            if (candidate.name != "S2_p" && candidate.name != "S2_p.001") return false;
+            Transform parent = candidate.parent;
+            while (parent != null)
+            {
+                if (parent.name == "CITY_Props") return true;
+                parent = parent.parent;
+            }
+            return false;
+        }
+
+        private void ConfigureTrashTarget(GameObject target, int index)
+        {
             if (target == null) return;
 
             Renderer modelRenderer = target.GetComponentsInChildren<Renderer>(true)
@@ -190,13 +219,15 @@ namespace PickAndPlaceShop
             if (modelRenderer == null) return;
             Bounds modelBounds = modelRenderer.bounds;
 
-            trashRoot = transform.Find("TrashInteractionRoot");
+            string rootName = $"TrashInteractionRoot_{index + 1}";
+            Transform trashRoot = transform.Find(rootName);
             if (trashRoot == null)
             {
-                GameObject rootObject = new("TrashInteractionRoot");
+                GameObject rootObject = new(rootName);
                 trashRoot = rootObject.transform;
                 trashRoot.SetParent(transform, false);
             }
+            trashRoots.Add(trashRoot);
             trashRoot.position = modelBounds.center;
             trashRoot.rotation = Quaternion.identity;
             trashRoot.localScale = Vector3.one;
@@ -248,13 +279,14 @@ namespace PickAndPlaceShop
             }
             labelTransform.localPosition = Vector3.up * (solidCollider.size.y * 0.5f + 0.42f);
             labelTransform.localScale = Vector3.one;
-            trashLabel = labelTransform.GetComponent<TextMesh>();
+            TextMesh trashLabel = labelTransform.GetComponent<TextMesh>();
             if (trashLabel == null) trashLabel = labelTransform.gameObject.AddComponent<TextMesh>();
             trashLabel.anchor = TextAnchor.MiddleCenter;
             trashLabel.alignment = TextAlignment.Center;
             trashLabel.characterSize = 0.075f;
             trashLabel.fontSize = 48;
             trashLabel.color = new Color(1f, 0.82f, 0.28f);
+            trashLabels.Add(trashLabel);
             if (labelTransform.GetComponent<ShopWorldTextBillboard>() == null)
                 labelTransform.gameObject.AddComponent<ShopWorldTextBillboard>();
         }
