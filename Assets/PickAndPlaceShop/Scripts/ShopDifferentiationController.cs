@@ -68,7 +68,11 @@ namespace PickAndPlaceShop
         {
             if (config == null) config = ShopDifferentiationConfig.Load();
             if (config == null || ShopNetworkGame.Instance == null) return;
-            if (facilitiesRoot == null) BuildFacilities();
+            if (facilitiesRoot == null)
+            {
+                ResetSceneFacilityReferences();
+                BuildFacilities();
+            }
             RefreshUpcycleDecorations();
             RefreshReviewBoard();
             RefreshFacilityUnlocks();
@@ -430,6 +434,26 @@ namespace PickAndPlaceShop
                 "보유 상품 1개 감정하기");
             BuildConsignmentCorner();
             RefreshFacilityUnlocks();
+        }
+
+        private void ResetSceneFacilityReferences()
+        {
+            // This controller survives scene changes, but every facility it creates belongs to
+            // the scene that was unloaded. Clear Unity's destroyed-object references before the
+            // next scene rebuild so Update never drives stale decorations or UI objects.
+            facilitiesRoot = null;
+            upcycleDecorations.Clear();
+            reviewBoardText = null;
+            lastReviewSnapshot = null;
+            consignmentNpc = null;
+            consignmentVisualRoot = null;
+            consignmentText = null;
+            consignmentVisuals.Clear();
+            consignmentSnapshot = null;
+            capsuleRecyclerFacility = null;
+            appraisalFacility = null;
+            consignmentFacility = null;
+            consignmentRejectFacility = null;
         }
 
         private void BuildConsignmentCorner()

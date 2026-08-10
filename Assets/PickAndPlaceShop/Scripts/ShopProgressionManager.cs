@@ -57,6 +57,7 @@ namespace PickAndPlaceShop
         private bool dirty;
         private float nextAutosaveTime;
         private ShopNetworkGame boundGame;
+        private ShopNetworkGame containersRestoredGame;
         private float bindAt;
         private int observedGameFunds;
         private int observedGameReputation;
@@ -516,8 +517,16 @@ namespace PickAndPlaceShop
             loadedSaveData = save;
             ApplySaveData(save);
             loadedFromSave = true;
+            ShopNetworkGame liveGame = ShopNetworkGame.Instance;
+            if (liveGame != null && liveGame.IsSpawned && liveGame.IsServer)
+            {
+                boundGame = liveGame;
+                bindAt = 0f;
+            }
             ApplyStateToBoundGame();
-            RestoreContainersTo(boundGame);
+            if (!TryRestoreContainersTo(boundGame, "explicit-load", true))
+                Debug.LogError("[Progression] RESTORE_SESSION_FAILED gameReady=" +
+                               (boundGame != null && boundGame.IsSpawned && boundGame.IsServer), this);
             EvaluateProgress();
             StateChanged?.Invoke();
             return true;
@@ -573,11 +582,13 @@ namespace PickAndPlaceShop
             if (game == null || !game.IsSpawned)
             {
                 boundGame = null;
+                containersRestoredGame = null;
                 return;
             }
             if (boundGame != game)
             {
                 boundGame = game;
+                containersRestoredGame = null;
                 bindAt = Time.unscaledTime + GameBindingDelay;
                 return;
             }
@@ -585,7 +596,11 @@ namespace PickAndPlaceShop
             {
                 if (Time.unscaledTime < bindAt) return;
                 bindAt = 0f;
-                if (loadedFromSave || loadedSaveData != null) ApplyStateToBoundGame();
+                if (loadedFromSave || loadedSaveData != null)
+                {
+                    ApplyStateToBoundGame();
+                    TryRestoreContainersTo(game, "delayed-bind", false);
+                }
                 else
                 {
                     teamFunds = game.Coins.Value;
@@ -1130,15 +1145,36 @@ namespace PickAndPlaceShop
 
         public void RestoreContainersTo(ShopNetworkGame game)
         {
-            if (game == null || !game.IsServer) return;
+            TryRestoreContainersTo(game, "network-spawn", false);
+        }
+
+        private bool TryRestoreContainersTo(ShopNetworkGame game, string reason, bool force)
+        {
+            if (game == null || !game.IsSpawned || !game.IsServer)
+            {
+                Debug.LogWarning("[Containers] RESTORE_DEFERRED reason=" + reason +
+                                 " game=" + (game != null) +
+                                 " spawned=" + (game != null && game.IsSpawned) +
+                                 " server=" + (game != null && game.IsServer), this);
+                return false;
+            }
+            if (!force && containersRestoredGame == game) return true;
+
+            ulong localOwner = game.NetworkManager != null ? game.NetworkManager.LocalClientId : 0;
+            int expectedEntries = 0;
+            int expectedQuantity = 0;
             game.ItemContainers.Clear();
             foreach (ShopContainerItemSave saved in pendingContainerItems)
             {
                 if (saved == null || saved.quantity <= 0) continue;
+                ShopContainerKind container = (ShopContainerKind)Mathf.Clamp(saved.container, 0, 5);
+                ulong owner = container == ShopContainerKind.PersonalInventory
+                    ? localOwner
+                    : ShopContainerRules.SharedOwner;
                 game.ItemContainers.Add(new ShopContainerItem
                 {
-                    OwnerClientId = saved.ownerClientId,
-                    Container = (ShopContainerKind)Mathf.Clamp(saved.container, 0, 5),
+                    OwnerClientId = owner,
+                    Container = container,
                     SlotIndex = Mathf.Max(0, saved.slotIndex),
                     ProductId = saved.productId,
                     VisualPrefabIndex = saved.visualPrefabIndex,
@@ -1151,9 +1187,30 @@ namespace PickAndPlaceShop
                     InstanceId = saved.instanceId,
                     AppraisalGrade = (ShopAppraisalGrade)Mathf.Clamp(saved.appraisalGrade, 0, 4)
                 });
+                expectedEntries++;
+                expectedQuantity += Mathf.Max(1, saved.quantity);
             }
             game.SyncLegacyContainerCounts();
-            Debug.Log("[Containers] SAVE_RESTORED count=" + game.ItemContainers.Count, game);
+            containersRestoredGame = game;
+
+            int restoredQuantity = 0;
+            for (int i = 0; i < game.ItemContainers.Count; i++)
+                restoredQuantity += Mathf.Max(0, game.ItemContainers[i].Quantity);
+            if (game.ItemContainers.Count != expectedEntries || restoredQuantity != expectedQuantity)
+            {
+                Debug.LogError("[Containers] RESTORE_FAILED reason=" + reason +
+                               " expectedEntries=" + expectedEntries +
+                               " actualEntries=" + game.ItemContainers.Count +
+                               " expectedQuantity=" + expectedQuantity +
+                               " actualQuantity=" + restoredQuantity, game);
+                return false;
+            }
+
+            Debug.Log("[Containers] RESTORE_COMPLETE reason=" + reason +
+                      " entries=" + game.ItemContainers.Count +
+                      " quantity=" + restoredQuantity +
+                      " localOwner=" + localOwner, game);
+            return true;
         }
 
         private static List<ShopContainerItemSave> CaptureContainerItems()
