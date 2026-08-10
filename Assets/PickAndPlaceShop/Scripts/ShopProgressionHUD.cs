@@ -447,6 +447,7 @@ namespace PickAndPlaceShop
                 new Vector2(0.5f, 1f));
             notificationText = CreateText("Content", notificationPanel.transform, string.Empty,
                 27, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
+            notificationText.verticalOverflow = VerticalWrapMode.Overflow;
             RectTransform textRect = notificationText.rectTransform;
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
@@ -858,6 +859,7 @@ namespace PickAndPlaceShop
         {
             if (notificationPanel == null || notificationText == null || string.IsNullOrWhiteSpace(message)) return;
             notificationText.text = message;
+            ResizeNotification();
             notificationPanel.SetActive(true);
             hideNotificationAt = Time.unscaledTime + Mathf.Max(0.1f, duration);
         }
@@ -872,8 +874,16 @@ namespace PickAndPlaceShop
             }
             if (notificationQueue.Count == 0) return;
             notificationText.text = notificationQueue.Dequeue();
+            ResizeNotification();
             notificationPanel.SetActive(true);
             hideNotificationAt = Time.unscaledTime + 3.2f;
+        }
+
+        private void ResizeNotification()
+        {
+            if (notificationPanel == null || notificationText == null) return;
+            float height = Mathf.Clamp(notificationText.preferredHeight + 32f, 112f, 240f);
+            notificationPanel.GetComponent<RectTransform>().sizeDelta = new Vector2(920f, height);
         }
 
         private static string FormatCurrent(ShopProgressConditionType type, int value)
