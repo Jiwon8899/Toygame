@@ -23,6 +23,7 @@ namespace PickAndPlaceShop
         private readonly Button[] tabButtons = new Button[4];
         private ShopProgressionManager manager;
         private GameObject objectivePanel;
+        private LayoutElement objectiveLayout;
         private CanvasGroup objectiveGroup;
         private Text objectiveText;
         private Text objectiveStepText;
@@ -50,6 +51,7 @@ namespace PickAndPlaceShop
         private bool objectiveVisible = true;
         private bool resetScroll;
         private RectTransform objectiveVisualRoot;
+        private RectTransform objectiveProgressTrack;
         private float objectiveVisibility = 1f;
 
         public static bool IsOpen => instance != null && instance.open;
@@ -282,6 +284,7 @@ namespace PickAndPlaceShop
         {
             objectivePanel = ShopHudStack.Instance.CreateItem(this, ShopHudStackSlot.Objective,
                 "CurrentObjective", 124f);
+            objectiveLayout = objectivePanel.GetComponent<LayoutElement>();
             objectiveGroup = objectivePanel.AddComponent<CanvasGroup>();
             objectiveVisualRoot = new GameObject("ObjectiveContent", typeof(RectTransform))
                 .GetComponent<RectTransform>();
@@ -303,13 +306,15 @@ namespace PickAndPlaceShop
 
             objectiveText = CreateText("ObjectiveText", objectiveVisualRoot, "목표를 불러오는 중",
                 17, FontStyle.Bold, TextAnchor.UpperLeft, ShopUiSkin.TextBody);
-            SetRect(objectiveText.rectTransform, new Vector2(88f, -16f), new Vector2(202f, 70f),
+            SetRect(objectiveText.rectTransform, new Vector2(88f, -16f), new Vector2(348f, 70f),
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            objectiveText.verticalOverflow = VerticalWrapMode.Overflow;
 
             tutorialSkipButton = CreateButton("TutorialSkip", objectiveVisualRoot, "건너뛰기 (Y×2)",
                 new Vector2(136f, 36f), HandleSkipButton);
-            SetRect(tutorialSkipButton.GetComponent<RectTransform>(), new Vector2(-16f, -16f),
-                new Vector2(136f, 36f), Vector2.one, Vector2.one, Vector2.one);
+            SetRect(tutorialSkipButton.GetComponent<RectTransform>(), new Vector2(-16f, 28f),
+                new Vector2(136f, 36f), new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(1f, 0f));
             Image skipImage = tutorialSkipButton.GetComponent<Image>();
             skipImage.color = ShopUiSkin.CreamBackground;
             ShopUiSkin.Pill(skipImage);
@@ -320,6 +325,7 @@ namespace PickAndPlaceShop
 
             GameObject track = CreatePanel("ProgressTrack", objectiveVisualRoot,
                 new Vector2(420f, 10f), ShopUiSkin.Divider);
+            objectiveProgressTrack = track.GetComponent<RectTransform>();
             SetRect(track.GetComponent<RectTransform>(), new Vector2(16f, 14f), new Vector2(420f, 10f),
                 Vector2.zero, Vector2.zero, Vector2.zero);
             ShopUiSkin.Pill(track.GetComponent<Image>());
@@ -605,6 +611,7 @@ namespace PickAndPlaceShop
                                          ? (tutorialCurrent / 10f).ToString("0.0") + "m / " +
                                            (tutorialTarget / 10f).ToString("0.0") + "m"
                                          : "실제 행동을 완료하면 다음 단계로 넘어갑니다.");
+                ResizeObjective(true);
                 objectiveFill.rectTransform.anchorMax = new Vector2(
                     tutorialTarget <= 0 ? 0f : Mathf.Clamp01(tutorialCurrent / (float)tutorialTarget), 1f);
                 return;
@@ -655,7 +662,22 @@ namespace PickAndPlaceShop
             float progress = target <= 0 ? 1f : Mathf.Clamp01(current / (float)target);
             objectiveText.text = "현재 목표 · " + label + "\n" +
                                  FormatCurrent(type, current) + " / " + FormatDisplayTarget(type, target);
+            ResizeObjective(false);
             objectiveFill.rectTransform.anchorMax = new Vector2(progress, 1f);
+        }
+
+        private void ResizeObjective(bool showSkip)
+        {
+            if (objectiveText == null || objectiveLayout == null) return;
+            float preferredTextHeight = Mathf.Max(42f, objectiveText.preferredHeight);
+            float panelHeight = Mathf.Clamp(preferredTextHeight + (showSkip ? 78f : 52f),
+                showSkip ? 140f : 124f, 240f);
+            objectiveText.rectTransform.sizeDelta = new Vector2(348f, preferredTextHeight);
+            objectiveLayout.preferredHeight = panelHeight;
+            objectiveLayout.minHeight = panelHeight;
+            if (objectiveProgressTrack != null)
+                objectiveProgressTrack.anchoredPosition = new Vector2(16f, 14f);
+            LayoutRebuilder.MarkLayoutForRebuild(objectivePanel.transform.parent as RectTransform);
         }
 
         private bool TryGetCurrentGoal(out ShopProgressGoalSave result)
