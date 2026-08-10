@@ -32,6 +32,7 @@ namespace PickAndPlaceShop
         private ShopInputMode appliedMode = ShopInputMode.Gameplay;
         private bool appliedOnce;
         private int suppressLookFrames;
+        private bool pointerLockPending;
 
         public static ShopInputMode CurrentMode =>
             instance != null ? instance.ResolveMode() : ShopInputMode.Gameplay;
@@ -71,6 +72,16 @@ namespace PickAndPlaceShop
             instance.ApplyResolvedMode();
         }
 
+        /// <summary>
+        /// Re-applies the resolved input mode after a player/session transition.
+        /// Cursor ownership stays centralized here instead of being duplicated by scene code.
+        /// </summary>
+        public static void RefreshInputState()
+        {
+            if (instance == null) Bootstrap();
+            instance.ApplyResolvedMode(true);
+        }
+
         public static void SetGameplayHudSuppressed(Object owner, bool suppressed)
         {
             if (owner == null) return;
@@ -92,6 +103,12 @@ namespace PickAndPlaceShop
             gameplayHudSuppressors.RemoveWhere(owner => owner == null);
             if (stack.Count != previousCount) ApplyResolvedMode();
             else ApplyLocalPlayerInput(appliedMode);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (!IsPointerFreeMode(appliedMode) && Cursor.lockState != CursorLockMode.Locked)
+                pointerLockPending = true;
+            if (pointerLockPending && !IsPointerFreeMode(appliedMode) && HasPointerLockGestureThisFrame())
+                ApplyCursorState(appliedMode);
+#endif
             if (suppressLookFrames > 0) suppressLookFrames--;
         }
 
@@ -128,23 +145,47 @@ namespace PickAndPlaceShop
             }
 
             bool pointerFree = IsPointerFreeMode(next);
-#if UNITY_WEBGL && !UNITY_EDITOR
-            bool returningToLockedPointer = false;
-#else
             bool returningToLockedPointer = !pointerFree;
-#endif
             appliedMode = next;
             appliedOnce = true;
-#if UNITY_WEBGL && !UNITY_EDITOR
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = pointerFree;
-#else
-            Cursor.lockState = pointerFree ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = pointerFree;
-#endif
+            ApplyCursorState(next);
             if (returningToLockedPointer) suppressLookFrames = Mathf.Max(suppressLookFrames, 1);
             ApplyLocalPlayerInput(next);
         }
+
+        private void ApplyCursorState(ShopInputMode mode)
+        {
+            bool pointerFree = IsPointerFreeMode(mode);
+            if (pointerFree)
+            {
+                pointerLockPending = false;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                return;
+            }
+
+            Cursor.visible = false;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Browsers only grant pointer lock while processing a user gesture. UI close
+            // buttons and keyboard close actions both satisfy this check; scene loads do not.
+            pointerLockPending = Cursor.lockState != CursorLockMode.Locked;
+            if (pointerLockPending && !HasPointerLockGestureThisFrame()) return;
+#endif
+            Cursor.lockState = CursorLockMode.Locked;
+            pointerLockPending = false;
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private static bool HasPointerLockGestureThisFrame()
+        {
+            bool mouseGesture = Mouse.current != null &&
+                (Mouse.current.leftButton.wasPressedThisFrame ||
+                 Mouse.current.rightButton.wasPressedThisFrame ||
+                 Mouse.current.middleButton.wasPressedThisFrame);
+            bool keyboardGesture = Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame;
+            return mouseGesture || keyboardGesture;
+        }
+#endif
 
         private void ApplyLocalPlayerInput(ShopInputMode mode)
         {

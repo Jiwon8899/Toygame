@@ -21,12 +21,16 @@ namespace PickAndPlaceShop
                     document.rootVisualElement.style.display = UnityEngine.UIElements.DisplayStyle.None;
                 document.enabled = false;
             }
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            ShopInputModeManager.Push(this, ShopInputMode.Menu);
             OnClick("BtnEndingRestart", RestartCampaign);
             OnClick("BtnEndingMenu", () => StartCoroutine(ShutdownAndGo(null)));
             OnClick("BtnEndingQuit", () => StartCoroutine(ShutdownAndGo("QUIT")));
             RenderResult();
+        }
+
+        private void OnDestroy()
+        {
+            ShopInputModeManager.Pop(this);
         }
 
         private void Start()

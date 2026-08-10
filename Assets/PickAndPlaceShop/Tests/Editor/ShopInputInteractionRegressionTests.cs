@@ -109,7 +109,7 @@ namespace PickAndPlaceShop.Tests
         }
 
         [Test]
-        public void WebGlGameplay_DoesNotRequestUnsupportedPointerLock()
+        public void WebGlGameplay_ReacquiresPointerLockFromAUserGesture()
         {
             string inputModes = File.ReadAllText(
                 "Assets/PickAndPlaceShop/Scripts/ShopInputModeManager.cs");
@@ -117,16 +117,10 @@ namespace PickAndPlaceShop.Tests
                 "Assets/Core/Scripts/Runtime/Components/GameManager.cs");
 
             StringAssert.Contains("#if UNITY_WEBGL && !UNITY_EDITOR", inputModes);
-            StringAssert.Contains("Cursor.lockState = CursorLockMode.None", inputModes);
-            StringAssert.Contains("Cursor.visible = pointerFree", inputModes);
-            Assert.GreaterOrEqual(
-                gameManager.Split(new[] { "#if UNITY_WEBGL && !UNITY_EDITOR" },
-                    System.StringSplitOptions.None).Length - 1,
-                2);
-            Assert.GreaterOrEqual(
-                gameManager.Split(new[] { "Cursor.visible = false" },
-                    System.StringSplitOptions.None).Length - 1,
-                2);
+            StringAssert.Contains("HasPointerLockGestureThisFrame", inputModes);
+            StringAssert.Contains("Cursor.lockState = CursorLockMode.Locked", inputModes);
+            StringAssert.Contains("pointerLockPending", inputModes);
+            StringAssert.DoesNotContain("Cursor.lockState", gameManager);
         }
 
         [Test]

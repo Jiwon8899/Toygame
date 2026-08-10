@@ -49,8 +49,6 @@ namespace PickAndPlaceShop
             NormalizeTitlePresentation();
             BuildTitleArtwork();
             ShopInputModeManager.Push(this, ShopInputMode.Menu);
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
             Text title = Find<Text>("TitleText");
             Text subtitle = Find<Text>("TitleSubtitle");
             Text version = Find<Text>("VersionText");
