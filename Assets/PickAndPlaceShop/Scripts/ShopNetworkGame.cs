@@ -223,7 +223,7 @@ namespace PickAndPlaceShop
                 NetworkObject.SetOwnershipStatus(NetworkObject.OwnershipStatus.SessionOwner, true);
             if (IsServer && Day.Value < 1)
             {
-                ResetCampaign();
+                InitializeNewCampaignState();
             }
             else if (IsServer && KoreanMode && LastEvent.Value.ToString().StartsWith("Open a claw"))
             {
@@ -1157,17 +1157,16 @@ namespace PickAndPlaceShop
             }
 
             int rent = ShopEconomy.CalculateRent(Day.Value);
-            int wages = ServerPayStaffWages();
+            int protectedCarryover = Coins.Value > 0 ? 1 : 0;
+            int rentPaid = ServerTryPayDailyExpense(rent, protectedCarryover);
+            int wages = ServerPayStaffWages(protectedCarryover);
             if (nightSales != null)
             {
                 nightSales.ServerTakeUnsoldStock(out _, out _);
-                ServerReturnAllDisplayedToStorage();
             }
-            else
-            {
-                ServerReturnAllDisplayedToStorage();
-            }
-            Coins.Value = Mathf.Max(0, Coins.Value - rent);
+
+            // SharedDisplay is persistent shop state. Only the daily sales ledger is
+            // cleared; it is rebuilt from these exact slots when the next day opens.
 
             int completedDay = Day.Value;
             if (completedDay >= CampaignDays)
@@ -1184,25 +1183,22 @@ namespace PickAndPlaceShop
                 return;
             }
 
-            Day.Value++;
-            SideContentDay.Value = 0;
-            ServerEnsureSideContentDay();
-            SoldToday.Value = 0;
-            RareSoldToday.Value = 0;
-            TrendPercent.Value = Random.Range(-10, 36);
-            Phase.Value = ShopPhase.PrizeHunt;
+            BeginNextDayKeepingPersistentState();
+            int unpaidOperatingCosts = Mathf.Max(0, rent - rentPaid);
             SetEvent(KoreanMode
-                ? completedDay + "일 차 마감. 임대료 " + rent + "원 · 알바 급여 " + wages +
-                  "원을 지불했고 새 유행이 공개되었습니다."
-                : "Day " + completedDay + " closed. Rent " + rent + " and wages " + wages +
-                  " paid. New trend revealed.");
+                ? completedDay + "일차 마감 · 임대료 " + rentPaid + "원 · 급여 " + wages + "원" +
+                  (unpaidOperatingCosts > 0 ? " · 미납 " + unpaidOperatingCosts + "원" : string.Empty)
+                : "Day " + completedDay + " closed. Rent " + rentPaid + " and wages " + wages +
+                  " paid" + (unpaidOperatingCosts > 0
+                      ? "; " + unpaidOperatingCosts + " rent deferred"
+                      : string.Empty) + ". New trend revealed.");
             ShopTutorialRuntime.Report(ShopTutorialAction.DayClosed);
             ShopProgressionManager nextDayProgression = ShopProgressionManager.Instance;
             nextDayProgression?.CaptureAuthoritativeSessionState();
             nextDayProgression?.SaveNowWithFeedback();
         }
 
-        private void ResetCampaign()
+        private void InitializeNewCampaignState()
         {
             Day.Value = 1;
             SideContentDay.Value = 0;
@@ -1244,7 +1240,28 @@ namespace PickAndPlaceShop
         public void ServerResetCampaign()
         {
             if (!IsServer) return;
-            ResetCampaign();
+            InitializeNewCampaignState();
+        }
+
+        private void BeginNextDayKeepingPersistentState()
+        {
+            // Daily state only. Funds, containers (including slot positions), upgrades,
+            // staff, expansion and collection progression deliberately remain untouched.
+            Day.Value++;
+            SideContentDay.Value = 0;
+            ServerEnsureSideContentDay();
+            SoldToday.Value = 0;
+            RareSoldToday.Value = 0;
+            TrendPercent.Value = Random.Range(-10, 36);
+            Phase.Value = ShopPhase.PrizeHunt;
+        }
+
+        private int ServerTryPayDailyExpense(int amount, int protectedCarryover)
+        {
+            if (!IsServer || amount <= 0) return 0;
+            if (Coins.Value - amount < Mathf.Max(0, protectedCarryover)) return 0;
+            Coins.Value -= amount;
+            return amount;
         }
 
         public void ServerRecordAcquired(int amount)
@@ -2126,6 +2143,11 @@ namespace PickAndPlaceShop
 
         public int ServerPayStaffWages()
         {
+            return ServerPayStaffWages(0);
+        }
+
+        private int ServerPayStaffWages(int protectedCarryover)
+        {
             if (!IsServer) return 0;
             ShopWorkforceConfig workforce = ShopWorkforceConfig.Load();
             if (workforce == null) return 0;
@@ -2136,7 +2158,7 @@ namespace PickAndPlaceShop
                 int bit = 1 << i;
                 if ((StaffHiredMask.Value & bit) == 0) continue;
                 int wage = workforce.DailyWage((ShopStaffRole)i);
-                if (Coins.Value < wage) continue;
+                if (Coins.Value - wage < Mathf.Max(0, protectedCarryover)) continue;
                 Coins.Value -= wage;
                 paid += wage;
                 attendance |= bit;

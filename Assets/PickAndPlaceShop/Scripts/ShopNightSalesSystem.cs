@@ -689,6 +689,19 @@ namespace PickAndPlaceShop
             if (NegotiationActive.Value) ClearNegotiation(true);
             queue.Clear();
             QueueCount.Value = 0;
+            CustomersInStore.Value = 0;
+            VisitCount.Value = 0;
+            PurchaseCustomerCount.Value = 0;
+            GiveUpCount.Value = 0;
+            TotalSaleQuantity.Value = 0;
+            TotalRevenue.Value = 0;
+            CurrentRevenue.Value = 0;
+            ReputationDelta.Value = 0;
+            TopProductName.Value = new FixedString64Bytes("없음");
+            productSales.Clear();
+            giveUpsProcessed.Clear();
+            browsePointReservations.Clear();
+            inspectPointReservations.Clear();
             RebuildLedgerFromNetworkStock();
             SyncStockVariables();
         }
