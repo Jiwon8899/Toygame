@@ -32,6 +32,8 @@ namespace PickAndPlaceShop
         private readonly List<Card> cards = new();
         private GameObject overlay;
         private Text moneyText;
+        private Button staffPlacementButton;
+        private Text staffPlacementLabel;
         private Font uiFont;
         private bool open;
         private GameObject staffAssignmentPanel;
@@ -187,6 +189,23 @@ namespace PickAndPlaceShop
             moneyText.rectTransform.anchorMax = Vector2.one;
             moneyText.rectTransform.offsetMin = new Vector2(66f, 4f);
             moneyText.rectTransform.offsetMax = new Vector2(-12f, -4f);
+
+            GameObject staffPlacement = CreatePanel("StaffPlacement", panel.transform,
+                new Vector2(260f, 62f), ShopUiSkin.Teal);
+            SetRect(staffPlacement.GetComponent<RectTransform>(), new Vector2(-456f, -24f),
+                new Vector2(260f, 62f), Vector2.one);
+            ShopUiSkin.Pill(staffPlacement.GetComponent<Image>());
+            ShopUiSkin.AddIcon("People", staffPlacement.transform, ShopUiIcon.People, ShopUiSkin.BrownMid,
+                new Vector2(44f, 44f), new Vector2(10f, -9f), new Vector2(0f, 1f));
+            staffPlacementButton = staffPlacement.AddComponent<Button>();
+            staffPlacementButton.targetGraphic = staffPlacement.GetComponent<Image>();
+            staffPlacementButton.onClick.AddListener(OpenStaffManagement);
+            staffPlacementLabel = CreateText("Label", staffPlacement.transform, "알바 배치", 19,
+                FontStyle.Bold, TextAnchor.MiddleLeft, Color.white);
+            staffPlacementLabel.rectTransform.anchorMin = Vector2.zero;
+            staffPlacementLabel.rectTransform.anchorMax = Vector2.one;
+            staffPlacementLabel.rectTransform.offsetMin = new Vector2(66f, 4f);
+            staffPlacementLabel.rectTransform.offsetMax = new Vector2(-12f, -4f);
 
             GameObject close = CreatePanel("Close", panel.transform, new Vector2(58f, 58f), ShopUiSkin.BrownMid);
             SetRect(close.GetComponent<RectTransform>(), new Vector2(-24f, -26f), new Vector2(58f, 58f), new Vector2(1f, 1f));
@@ -372,6 +391,11 @@ namespace PickAndPlaceShop
             ShopNetworkGame game = ShopNetworkGame.Instance;
             if (game == null) return;
             moneyText.text = game.Coins.Value.ToString("N0") + "원  ·  " + game.TotalUpgradeLevel + "/" + ShopNetworkGame.TotalSupportedUpgradeLevels;
+            bool hasAssignableStaff = game.IsStaffHired(ShopStaffRole.Stocker) ||
+                                      game.IsStaffHired(ShopStaffRole.Collector);
+            if (staffPlacementButton != null) staffPlacementButton.interactable = hasAssignableStaff;
+            if (staffPlacementLabel != null)
+                staffPlacementLabel.text = hasAssignableStaff ? "알바 배치" : "고용된 알바가 없습니다";
             for (int i = 0; i < cards.Count; i++)
             {
                 Card card = cards[i];
