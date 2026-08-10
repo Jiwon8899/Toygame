@@ -19,7 +19,7 @@ namespace PickAndPlaceShop
     /// </summary>
     public static class ShopNpcRoutePlanner
     {
-        private static readonly RaycastHit[] CastHits = new RaycastHit[32];
+        private static readonly RaycastHit[] CastHits = new RaycastHit[64];
         private static readonly Vector3[] Candidates = new Vector3[8];
         private static float nextNavMeshProbeTime;
         private static bool hasNavMeshData;
@@ -79,6 +79,8 @@ namespace PickAndPlaceShop
             Candidates[7] = new Vector3(bounds.center.x, y, front);
 
             float bestScore = float.MaxValue;
+            float stagedScore = float.MaxValue;
+            Vector3 stagedWaypoint = destination;
             waypoint = destination;
             int offset = Mathf.Abs(attempt) % Candidates.Length;
             for (int index = 0; index < Candidates.Length; index++)
@@ -87,11 +89,30 @@ namespace PickAndPlaceShop
                 if ((candidate - origin).sqrMagnitude <= 0.4f * 0.4f) continue;
                 if (TryFindBlockingCollider(origin, candidate, radius, height, ignoreRoot, out _)) continue;
                 float score = Vector3.Distance(origin, candidate) + Vector3.Distance(candidate, destination);
-                // Alternate equally good left/right routes after a failed attempt.
                 score += index * 0.002f;
+                // A corner is only a valid detour when the second leg is clear as well.
+                // Checking the first leg alone allowed staff to reach a counter corner and
+                // then choose a straight segment back through the counter on the next tick.
+                // Dense fixture groups can require two corners. Preserve the best safe first
+                // leg as a staged waypoint instead of falling back to the blocked destination.
+                if (TryFindBlockingCollider(candidate, destination, radius, height, ignoreRoot, out _))
+                {
+                    if (score < stagedScore)
+                    {
+                        stagedScore = score;
+                        stagedWaypoint = candidate;
+                    }
+                    continue;
+                }
                 if (score >= bestScore) continue;
                 bestScore = score;
                 waypoint = candidate;
+            }
+
+            if (bestScore == float.MaxValue && stagedScore < float.MaxValue)
+            {
+                waypoint = stagedWaypoint;
+                bestScore = stagedScore;
             }
 
             status = bestScore < float.MaxValue
@@ -106,8 +127,9 @@ namespace PickAndPlaceShop
             Transform group = blocker.transform;
             for (Transform current = blocker.transform; current != null; current = current.parent)
             {
-                if (current.name == "Zone_Warehouse" || current.name == "Shared Display Shelves" ||
-                    current.name == "TrashInteractionRoot")
+                if (current.name == "Counter" || current.name == "Zone_Warehouse" ||
+                    current.name == "Shared Display Shelves" ||
+                    current.name.StartsWith("TrashInteractionRoot", System.StringComparison.Ordinal))
                 {
                     group = current;
                     break;

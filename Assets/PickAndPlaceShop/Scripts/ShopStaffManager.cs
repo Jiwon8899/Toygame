@@ -119,7 +119,9 @@ namespace PickAndPlaceShop
         private static readonly int MovingParameter = Animator.StringToHash("Moving");
         private static ShopStaffManager instance;
         private readonly List<StaffActor> actors = new();
-        private readonly Collider[] targetOverlapBuffer = new Collider[24];
+        // Max expansion has enough shelf and fixture colliders to overflow the old
+        // 24-entry query, which could hide the counter collider from this probe.
+        private readonly Collider[] targetOverlapBuffer = new Collider[96];
         private ShopWorkforceConfig config;
         private float nextRefresh;
 
@@ -374,30 +376,39 @@ namespace PickAndPlaceShop
             approach.Normalize();
             float radius = Mathf.Max(0.1f, actor.Controller.radius);
             float height = Mathf.Max(radius * 2f, actor.Controller.height);
-            for (float correction = 0f; correction <= 2.5f; correction += 0.15f)
+            if (!IsTargetBlocked(actor, requested, radius, height)) return requested;
+
+            for (float correction = 0.15f; correction <= 2.5f; correction += 0.15f)
             {
-                Vector3 candidate = requested - approach * correction;
-                Vector3 bottom = candidate + Vector3.up * radius;
-                Vector3 top = candidate + Vector3.up * Mathf.Max(radius, height - radius);
-                int count = Physics.OverlapCapsuleNonAlloc(bottom, top, radius + 0.06f,
-                    targetOverlapBuffer, ~0, QueryTriggerInteraction.Ignore);
-                bool blocked = false;
-                for (int i = 0; i < count; i++)
+                for (int directionIndex = 0; directionIndex < 8; directionIndex++)
                 {
-                    Collider hit = targetOverlapBuffer[i];
-                    if (hit == null || hit.transform == actor.Root.transform ||
-                        hit.transform.IsChildOf(actor.Root.transform) ||
-                        hit.bounds.max.y <= candidate.y + 0.12f) continue;
-                    blocked = true;
-                    break;
+                    Vector3 direction = Quaternion.Euler(0f, directionIndex * 45f, 0f) * approach;
+                    Vector3 candidate = requested + direction * correction;
+                    if (!IsTargetBlocked(actor, candidate, radius, height)) return candidate;
                 }
-                if (!blocked) return candidate;
             }
             // Do not silently cancel a machine assignment when every sampled point is
             // occupied by the machine's own cabinet collider. The controller can still
             // approach the configured front offset and the stuck recovery below will
             // resolve a genuinely blocked route.
             return requested;
+        }
+
+        private bool IsTargetBlocked(StaffActor actor, Vector3 candidate, float radius, float height)
+        {
+            Vector3 bottom = candidate + Vector3.up * radius;
+            Vector3 top = candidate + Vector3.up * Mathf.Max(radius, height - radius);
+            int count = Physics.OverlapCapsuleNonAlloc(bottom, top, radius + 0.06f,
+                targetOverlapBuffer, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                Collider hit = targetOverlapBuffer[i];
+                if (hit == null || hit.transform == actor.Root.transform ||
+                    hit.transform.IsChildOf(actor.Root.transform) ||
+                    hit.bounds.max.y <= candidate.y + 0.12f) continue;
+                return true;
+            }
+            return false;
         }
 
         private void RecoverBlockedActor(StaffActor actor)
