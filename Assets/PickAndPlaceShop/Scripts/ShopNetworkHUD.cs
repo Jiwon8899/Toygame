@@ -53,6 +53,9 @@ namespace PickAndPlaceShop
 
             HideLegacyStatusObjects();
             if (statusPanel != null) statusPanel.SetActive(!modalOpen);
+            if (reputationChipText != null && reputationChipText.transform.parent != null)
+                reputationChipText.transform.parent.gameObject.SetActive(
+                    !ShopClawMachineNetwork.LocalOperatorActive);
             if (networkPanel != null) networkPanel.SetActive(false);
 
             if (!connected || game == null || !game.IsSpawned)
